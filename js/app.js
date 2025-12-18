@@ -4,7 +4,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstati
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 // Importe sua configuração
-import { firebaseConfig } from "./firebase-config.js"; 
+import { firebaseConfig } from "./firebase-config.js";
 
 // --- Inicialização Firebase ---
 let db, storage, auth, user = null;
@@ -15,7 +15,7 @@ try {
         db = getFirestore(app);
         storage = getStorage(app);
         auth = getAuth(app);
-        
+
         onAuthStateChanged(auth, (currentUser) => {
             user = currentUser;
             updateUserUI();
@@ -37,7 +37,7 @@ let currentFile = null;
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     document.getElementById('data-relatorio').valueAsDate = new Date();
-    
+
     // Listeners de Botões
     document.getElementById('btn-login').addEventListener('click', handleLogin);
     document.getElementById('btn-logout').addEventListener('click', handleLogout);
@@ -45,13 +45,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-pdf').addEventListener('click', generatePDF);
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
+    document.getElementById('upload-input').addEventListener('change', handleFileSelect);
     document.getElementById('btn-clear-file').addEventListener('click', clearFile);
 });
 
 // --- Lógica de Abas ---
-window.switchTab = function(type) {
+window.switchTab = function (type) {
     currentType = type;
-    
+
     // Classes
     const baseClass = "tab-btn ";
     const hidBtn = document.getElementById('tab-hidrante');
@@ -71,7 +72,7 @@ window.switchTab = function(type) {
 
 // --- Autenticação ---
 async function handleLogin() {
-    if(!auth) return alert("Firebase não configurado");
+    if (!auth) return alert("Firebase não configurado");
     try {
         await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (e) {
@@ -80,7 +81,7 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-    if(auth) signOut(auth);
+    if (auth) signOut(auth);
 }
 
 function updateUserUI() {
@@ -102,7 +103,7 @@ function updateUserUI() {
 
 // --- Manipulação de Arquivo ---
 function handleFileSelect(event) {
-    if(event.target.files && event.target.files[0]) {
+    if (event.target.files && event.target.files[0]) {
         currentFile = event.target.files[0];
         document.getElementById('file-info').classList.remove('hidden');
         document.getElementById('file-info').classList.add('flex');
@@ -112,6 +113,7 @@ function handleFileSelect(event) {
 function clearFile() {
     currentFile = null;
     document.getElementById('camera-input').value = "";
+    document.getElementById('upload-input').value = "";
     document.getElementById('file-info').classList.add('hidden');
     document.getElementById('file-info').classList.remove('flex');
 }
@@ -172,7 +174,7 @@ function addItem() {
 
     items.push({ ...baseItem, ...specifics });
     renderList();
-    
+
     // Limpar campos de repetição
     document.getElementById('item-id').value = "";
     document.getElementById('item-id').focus();
@@ -181,8 +183,8 @@ function addItem() {
     document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
 }
 
-window.removeItem = function(uid) {
-    if(confirm("Remover este item?")) {
+window.removeItem = function (uid) {
+    if (confirm("Remover este item?")) {
         items = items.filter(i => i.uid !== uid);
         renderList();
     }
@@ -233,11 +235,11 @@ function renderList() {
 
 // --- Gerar PDF ---
 function generatePDF() {
-    if(items.length === 0) return alert("Lista vazia!");
-    
+    if (items.length === 0) return alert("Lista vazia!");
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
+
     const cliente = document.getElementById('cliente').value || "Cliente";
     const local = document.getElementById('local').value || "Local";
     const data = document.getElementById('data-relatorio').value.split('-').reverse().join('/');
@@ -253,40 +255,40 @@ function generatePDF() {
 
     // Hidrantes
     const hid = items.filter(i => i.type === 'hidrante');
-    if(hid.length > 0) {
-        doc.setFontSize(12); doc.setTextColor(37, 99, 235); doc.text("Hidrantes (NBR 13485)", 14, yPos); yPos+=2;
+    if (hid.length > 0) {
+        doc.setFontSize(12); doc.setTextColor(37, 99, 235); doc.text("Hidrantes (NBR 13485)", 14, yPos); yPos += 2;
         doc.autoTable({
             startY: yPos,
             head: [['Local', 'ID', 'Mang', 'Esg', 'Val.Mang', 'Aces', 'Abrigo', 'Valv']],
-            body: hid.map(i => [i.andar, i.id, i.mangueira, i.esguicho, i.validade_mang, i.check_acesso?'OK':'X', i.check_abrigo?'OK':'X', i.check_valvula?'OK':'X']),
-            theme: 'grid', headStyles: {fillColor:[37, 99, 235]}, styles: {fontSize: 8}
+            body: hid.map(i => [i.andar, i.id, i.mangueira, i.esguicho, i.validade_mang, i.check_acesso ? 'OK' : 'X', i.check_abrigo ? 'OK' : 'X', i.check_valvula ? 'OK' : 'X']),
+            theme: 'grid', headStyles: { fillColor: [37, 99, 235] }, styles: { fontSize: 8 }
         });
         yPos = doc.lastAutoTable.finalY + 10;
     }
 
     // Extintores
     const ext = items.filter(i => i.type === 'extintor');
-    if(ext.length > 0) {
-        doc.setFontSize(12); doc.setTextColor(220, 38, 38); doc.text("Extintores (NBR 12962)", 14, yPos); yPos+=2;
+    if (ext.length > 0) {
+        doc.setFontSize(12); doc.setTextColor(220, 38, 38); doc.text("Extintores (NBR 12962)", 14, yPos); yPos += 2;
         doc.autoTable({
             startY: yPos,
             head: [['Local', 'ID', 'Tipo', 'Recarga', 'Lacre', 'Manom', 'Sinal', 'Mang']],
-            body: ext.map(i => [i.andar, i.id, i.tipo, i.recarga, i.check_lacre?'OK':'X', i.check_manometro?'OK':'X', i.check_sinalizacao?'OK':'X', i.check_mangueira?'OK':'X']),
-            theme: 'grid', headStyles: {fillColor:[220, 38, 38]}, styles: {fontSize: 8}
+            body: ext.map(i => [i.andar, i.id, i.tipo, i.recarga, i.check_lacre ? 'OK' : 'X', i.check_manometro ? 'OK' : 'X', i.check_sinalizacao ? 'OK' : 'X', i.check_mangueira ? 'OK' : 'X']),
+            theme: 'grid', headStyles: { fillColor: [220, 38, 38] }, styles: { fontSize: 8 }
         });
         yPos = doc.lastAutoTable.finalY + 10;
     }
 
     // Luz
     const luz = items.filter(i => i.type === 'luz');
-    if(luz.length > 0) {
-        if(yPos > 250) { doc.addPage(); yPos=20; }
-        doc.setFontSize(12); doc.setTextColor(217, 119, 6); doc.text("Iluminação (NBR 10898)", 14, yPos); yPos+=2;
+    if (luz.length > 0) {
+        if (yPos > 250) { doc.addPage(); yPos = 20; }
+        doc.setFontSize(12); doc.setTextColor(217, 119, 6); doc.text("Iluminação (NBR 10898)", 14, yPos); yPos += 2;
         doc.autoTable({
             startY: yPos,
             head: [['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Funcional', 'LED']],
-            body: luz.map(i => [i.andar, i.id, i.tipo, i.estado, i.autonomia, i.check_acendimento?'OK':'X', i.check_led?'OK':'X']),
-            theme: 'grid', headStyles: {fillColor:[217, 119, 6]}, styles: {fontSize: 8}
+            body: luz.map(i => [i.andar, i.id, i.tipo, i.estado, i.autonomia, i.check_acendimento ? 'OK' : 'X', i.check_led ? 'OK' : 'X']),
+            theme: 'grid', headStyles: { fillColor: [217, 119, 6] }, styles: { fontSize: 8 }
         });
     }
 
@@ -295,9 +297,9 @@ function generatePDF() {
 
 // --- Salvar Firebase ---
 async function saveToFirebase() {
-    if(!db) return alert("Firebase não configurado");
-    if(!user) {
-        if(confirm("É necessário login para salvar na nuvem. Fazer login?")) handleLogin();
+    if (!db) return alert("Firebase não configurado");
+    if (!user) {
+        if (confirm("É necessário login para salvar na nuvem. Fazer login?")) handleLogin();
         return;
     }
 

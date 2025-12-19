@@ -5,41 +5,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0f172a">
-    <meta name="description" content="App de Vistoria de Segurança Contra Incêndio">
-    <title>FireCheck Pro - NBR</title>
+    <title>FireCheck Pro</title>
 
-    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-
-    <!-- CSS Externo -->
     <link rel="stylesheet" href="css/style.css">
-
-    <!-- Tailwind CSS (CDN para MVP) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Bibliotecas PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-
-    <!-- Ícones -->
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body class="bg-gray-100 pb-32">
 
-    <!-- Navbar -->
-    <nav class="bg-slate-900 text-white p-3 shadow-lg sticky top-0 z-50 border-b-4 border-slate-700">
+    <div id="menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden backdrop-blur-sm" onclick="toggleMenu()"></div>
+
+    <aside id="sidebar"
+        class="fixed top-0 left-0 w-64 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+            <h2 class="font-bold text-lg"><i data-lucide="history" class="inline w-5 h-5"></i> Histórico</h2>
+            <button onclick="toggleMenu()"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <p class="text-sm text-gray-500 text-center mt-10">Carregando histórico...</p>
+        </div>
+        <div class="p-4 border-t bg-gray-50">
+            <button id="btn-logout-side"
+                class="w-full border border-red-500 text-red-600 rounded p-2 text-sm font-bold hover:bg-red-50 hidden">Sair
+                da Conta</button>
+        </div>
+    </aside>
+
+    <nav class="bg-slate-900 text-white p-3 shadow-lg sticky top-0 z-30 border-b-4 border-slate-700">
         <div class="container mx-auto max-w-3xl flex justify-between items-center">
-            <h1 class="text-lg font-bold flex items-center gap-2">
-                <i data-lucide="shield-check" class="text-emerald-400"></i> FireCheck Pro
-            </h1>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMenu()" class="p-1 hover:bg-slate-800 rounded">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h1 class="text-lg font-bold">FireCheck Pro</h1>
+            </div>
             <div>
                 <button id="btn-login"
                     class="bg-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 transition-colors">Entrar</button>
                 <div id="user-info" class="hidden items-center gap-2">
                     <span id="user-name" class="text-xs font-bold text-slate-300">User</span>
-                    <button id="btn-logout"><i data-lucide="log-out"
-                            class="w-4 h-4 text-white hover:text-red-400"></i></button>
                 </div>
             </div>
         </div>
@@ -47,16 +56,14 @@
 
     <main class="container mx-auto p-4 max-w-3xl">
 
-        <!-- Header -->
         <div class="bg-white p-4 rounded-lg shadow-sm mb-4 border-l-4 border-slate-800">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input type="text" id="cliente" class="input-std" placeholder="Cliente / Empresa">
-                <input type="text" id="local" class="input-std" placeholder="Prédio / Local">
-                <input type="date" id="data-relatorio" class="input-std md:col-span-2">
+                <input type="text" id="cliente" class="input-std save-state" placeholder="Cliente / Empresa">
+                <input type="text" id="local" class="input-std save-state" placeholder="Prédio / Local">
+                <input type="date" id="data-relatorio" class="input-std md:col-span-2 save-state">
             </div>
         </div>
 
-        <!-- Seletor de Tipo (Abas) -->
         <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
             <button id="tab-hidrante" class="tab-btn tab-active-hidrante" onclick="window.switchTab('hidrante')">
                 <i data-lucide="droplets" class="w-5 h-5"></i> <span>Hidrante</span>
@@ -69,28 +76,24 @@
             </button>
         </div>
 
-        <!-- Formulário Principal -->
         <section class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
-
-            <!-- Campos Comuns -->
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div>
                     <label class="label-std">Local/Andar</label>
-                    <input type="text" id="andar" class="input-std" placeholder="Ex: Térreo">
+                    <input type="text" id="andar" class="input-std save-state" placeholder="Ex: Térreo">
                 </div>
                 <div>
                     <label class="label-std">ID</label>
-                    <input type="text" id="item-id" class="input-std" placeholder="Ex: H-01">
+                    <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01">
                 </div>
             </div>
 
-            <!-- FORMULÁRIO HIDRANTE -->
             <div id="form-hidrante" class="form-section">
                 <h4 class="section-title text-blue-800 border-blue-100">NBR 13485 - Hidrantes</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="label-std" for="h-mangueira">Mangueira</label>
-                        <select id="h-mangueira" class="input-std">
+                        <label class="label-std">Mangueira</label>
+                        <select id="h-mangueira" class="input-std save-state">
                             <option value="">Selecione...</option>
                             <option value="15m">15m</option>
                             <option value="30m">30m</option>
@@ -98,8 +101,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="label-std" for="h-esguicho">Esguicho</label>
-                        <select id="h-esguicho" class="input-std">
+                        <label class="label-std">Esguicho</label>
+                        <select id="h-esguicho" class="input-std save-state">
                             <option value="">Selecione...</option>
                             <option value="OK">Jato Sólido</option>
                             <option value="Regulavel">Regulável</option>
@@ -107,82 +110,87 @@
                         </select>
                     </div>
                     <div>
-                        <label class="label-std" for="h-chave">Chave Storz</label>
-                        <select id="h-chave" class="input-std">
+                        <label class="label-std">Chave Storz</label>
+                        <select id="h-chave" class="input-std save-state">
                             <option value="">Selecione...</option>
                             <option value="OK">Presente</option>
                             <option value="Ausente">Ausente</option>
                         </select>
                     </div>
                     <div>
-                        <label class="label-std" for="h-validade">Validade Mang.</label>
-                        <input type="month" id="h-validade" class="input-std">
+                        <label class="label-std">Validade Mang.</label>
+                        <input type="month" id="h-validade" class="input-std save-state">
                     </div>
                 </div>
                 <div class="checklist-grid">
-                    <label class="check-group"><input type="checkbox" id="h-acesso"> <span>Acesso Livre</span></label>
-                    <label class="check-group"><input type="checkbox" id="h-abrigo"> <span>Abrigo Íntegro</span></label>
-                    <label class="check-group"><input type="checkbox" id="h-aduchada"> <span>Aduchamento
+                    <label class="check-group"><input type="checkbox" id="h-acesso" class="save-state"> <span>Acesso
+                            Livre</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-abrigo" class="save-state"> <span>Abrigo
+                            Íntegro</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-aduchada" class="save-state">
+                        <span>Aduchamento OK</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-valvula" class="save-state"> <span>Válvula
                             OK</span></label>
-                    <label class="check-group"><input type="checkbox" id="h-valvula"> <span>Válvula OK</span></label>
                 </div>
             </div>
 
-            <!-- FORMULÁRIO EXTINTOR -->
             <div id="form-extintor" class="form-section hidden">
                 <h4 class="section-title text-red-800 border-red-100">NBR 12962 - Extintores</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="label-std" for="e-tipo">Tipo</label>
-                        <select id="e-tipo" class="input-std">
+                        <label class="label-std">Tipo</label>
+                        <select id="e-tipo" class="input-std save-state">
                             <option value="AP">Água (AP)</option>
                             <option value="PQS">Pó Químico</option>
                             <option value="CO2">CO2</option>
                         </select>
                     </div>
                     <div>
-                        <label class="label-std" for="e-peso">Peso (Kg)</label>
-                        <input type="number" id="e-peso" class="input-std" placeholder="Ex: 6">
+                        <label class="label-std">Peso (Kg)</label>
+                        <input type="number" id="e-peso" class="input-std save-state">
                     </div>
                     <div>
-                        <label class="label-std" for="e-recarga">Prox. Recarga</label>
-                        <input type="month" id="e-recarga" class="input-std">
+                        <label class="label-std">Recarga</label>
+                        <input type="month" id="e-recarga" class="input-std save-state">
                     </div>
                     <div>
-                        <label class="label-std" for="e-teste">Teste Hidro (5a)</label>
-                        <input type="month" id="e-teste" class="input-std">
+                        <label class="label-std">Teste Hidro</label>
+                        <input type="month" id="e-teste" class="input-std save-state">
                     </div>
                 </div>
                 <div class="checklist-grid">
-                    <label class="check-group"><input type="checkbox" id="e-lacre"> <span>Lacre</span></label>
-                    <label class="check-group"><input type="checkbox" id="e-manometro"> <span>Manômetro</span></label>
-                    <label class="check-group"><input type="checkbox" id="e-sinalizacao">
+                    <label class="check-group"><input type="checkbox" id="e-lacre" class="save-state">
+                        <span>Lacre</span></label>
+                    <label class="check-group"><input type="checkbox" id="e-manometro" class="save-state">
+                        <span>Manômetro</span></label>
+                    <label class="check-group"><input type="checkbox" id="e-sinalizacao" class="save-state">
                         <span>Sinalização</span></label>
-                    <label class="check-group"><input type="checkbox" id="e-mangueira"> <span>Mangueira</span></label>
+                    <label class="check-group"><input type="checkbox" id="e-mangueira" class="save-state">
+                        <span>Mangueira</span></label>
                 </div>
             </div>
-            <!-- FORMULÁRIO LUZ -->
+
             <div id="form-luz" class="form-section hidden">
                 <h4 class="section-title text-amber-700 border-amber-100">NBR 10898 - Iluminação</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
-                        <label class="label-std" for="l-tipo">Tipo</label>
-                        <select id="l-tipo" class="input-std">
+                        <label class="label-std">Tipo</label>
+                        <select id="l-tipo" class="input-std save-state">
                             <option value="Balizamento">Balizamento</option>
                             <option value="Aclaramento">Aclaramento</option>
                         </select>
                     </div>
                     <div>
-                        <label class="label-std" for="l-estado">Estado</label>
-                        <select id="l-estado" class="input-std">
+                        <label class="label-std">Estado</label>
+                        <select id="l-estado" class="input-std save-state">
                             <option value="OK">Operacional</option>
                             <option value="Queimada">Queimada</option>
                             <option value="Bateria Fraca">Bateria Fraca</option>
                         </select>
                     </div>
                     <div class="col-span-2">
-                        <label class="label-std" for="l-autonomia">Autonomia da Bateria</label>
-                        <select id="l-autonomia" class="input-std">
+                        <label class="label-std">Autonomia</label>
+                        <select id="l-autonomia" class="input-std save-state">
                             <option value="Nao Testado">Autonomia Não Testada</option>
                             <option value="Aprovado 1h">Aprovado (>1h)</option>
                             <option value="Reprovado">Reprovado (<1h)< /option>
@@ -190,18 +198,21 @@
                     </div>
                 </div>
                 <div class="checklist-grid">
-                    <label class="check-group"><input type="checkbox" id="l-acendimento">
+                    <label class="check-group"><input type="checkbox" id="l-acendimento" class="save-state">
                         <span>Acendimento</span></label>
-                    <label class="check-group"><input type="checkbox" id="l-led"> <span>LED Carga</span></label>
-                    <label class="check-group"><input type="checkbox" id="l-fixacao"> <span>Fixação</span></label>
-                    <label class="check-group"><input type="checkbox" id="l-lux"> <span>Luz OK</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-led" class="save-state"> <span>LED
+                            Carga</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-fixacao" class="save-state">
+                        <span>Fixação</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"> <span>Lux
+                            OK</span></label>
                 </div>
             </div>
-            <!-- Ações -->
+
             <div class="mt-4 pt-4 border-t border-gray-100">
                 <div class="flex gap-2 mb-3">
                     <label class="btn-secondary flex-1 cursor-pointer">
-                        <i data-lucide="camera" class="w-4 h-4"></i> Foto
+                        <i data-lucide="camera" class="w-4 h-4"></i> Câmera
                         <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
                     </label>
                     <label class="btn-secondary flex-1 cursor-pointer">
@@ -214,6 +225,7 @@
                         <button id="btn-clear-file" class="ml-auto text-red-500 font-bold p-1">X</button>
                     </div>
                 </div>
+
                 <button id="btn-add-item"
                     class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-lg shadow-lg flex justify-center items-center gap-2 active:scale-95 transition-transform">
                     <i data-lucide="plus-circle"></i> Adicionar Item
@@ -221,7 +233,6 @@
             </div>
         </section>
 
-        <!-- Lista -->
         <section class="mt-8">
             <h3 class="text-sm font-bold text-gray-500 uppercase mb-2 flex justify-between">
                 Itens Inspecionados <span id="count" class="bg-slate-200 text-slate-700 px-2 rounded text-xs">0</span>
@@ -235,7 +246,6 @@
 
     </main>
 
-    <!-- Footer Fixo -->
     <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 shadow-lg flex gap-3 z-40">
         <button id="btn-pdf"
             class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
@@ -243,20 +253,27 @@
         </button>
         <button id="btn-save"
             class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
-            <i data-lucide="cloud-upload"></i> Salvar
+            <i data-lucide="cloud-upload"></i> Salvar Nuvem
         </button>
     </div>
 
-    <!-- Main Logic -->
     <script type="module" src="js/app.js"></script>
-
-    <!-- PWA Registration -->
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => console.log('Service Worker Registrado'))
-                .catch((err) => console.log('Erro SW:', err));
+        // Menu Toggle
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('menu-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                // Carregar histórico ao abrir
+                if (window.loadHistory) window.loadHistory();
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
         }
+        window.toggleMenu = toggleMenu;
     </script>
 </body>
 

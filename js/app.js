@@ -48,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-add-item').addEventListener('click', addItem);
     document.getElementById('btn-pdf').addEventListener('click', generatePDF);
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
-
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
     document.getElementById('upload-input').addEventListener('change', handleFileSelect);
     document.getElementById('btn-clear-file').addEventListener('click', clearFile);
@@ -74,7 +73,7 @@ function restoreFormState() {
 
 function clearFormState(keepHeader = true) {
     // Limpa apenas campos do item, mantendo cabeçalho se desejado
-    const idsToClear = ['andar', 'item-id', 'h-mangueira', 'h-esguicho', 'h-chave', 'h-validade', 'e-peso', 'e-recarga', 'e-teste', 'l-autonomia']; // Adicione outros IDs conforme necessário
+    const idsToClear = ['andar', 'item-id', 'h-mangueira', 'h-esguicho', 'h-chave', 'h-validade', 'e-peso', 'e-recarga', 'e-teste', 'l-autonomia', 'b-obs']; // Adicione outros IDs conforme necessário
 
     idsToClear.forEach(id => {
         const el = document.getElementById(id);
@@ -105,13 +104,13 @@ window.switchTab = function (type) {
     currentType = type;
     const baseClass = "tab-btn ";
 
-    ['hidrante', 'extintor', 'luz'].forEach(t => {
+    ['hidrante', 'extintor', 'luz', 'bomba'].forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         const form = document.getElementById(`form-${t}`);
 
         if (t === type) {
             form.classList.remove('hidden');
-            let color = t === 'hidrante' ? 'blue' : (t === 'extintor' ? 'red' : 'amber'); // Ajuste de cor simples
+            let color = t === 'hidrante' ? 'blue' : (t === 'extintor' ? 'red' : (t === 'luz' ? 'luz' : 'bomba')); // Ajuste de cor simples
             if (t === 'luz') color = 'luz'; // classe css especifica
             btn.className = baseClass + `tab-active-${t}`;
         } else {
@@ -264,6 +263,19 @@ function addItem() {
             check_fixacao: document.getElementById('l-fixacao').checked,
             check_lux: document.getElementById('l-lux').checked
         };
+    } else if (currentType === 'bomba') {
+        specifics = {
+            operacao: document.getElementById('b-operacao').checked,
+            teste_pressao: document.getElementById('b-teste').checked,
+            necessita_manutencao: document.getElementById('b-manutencao').checked,
+            obs: document.getElementById('b-obs').value
+        };
+
+        if (specifics.necessita_manutencao && !specifics.obs.trim()) {
+            alert("⚠️ ATENÇÃO: Você indicou que a bomba necessita manutenção.\n\nPor favor, descreva o problema no campo 'Observação' antes de salvar.");
+            document.getElementById('b-obs').focus(); // Leva o cursor para o campo
+            return; // Cancela a função, não salva nada
+        }
     }
 
     items.push({ ...baseItem, ...specifics });
@@ -295,8 +307,10 @@ function renderList() {
     items.forEach(item => {
         // ... (Lógica de renderização igual à anterior) ...
         // Simplificado para brevidade, use o mesmo HTML de antes
-        let icon = item.type === 'hidrante' ? 'droplets' : (item.type === 'extintor' ? 'fire-extinguisher' : 'lightbulb');
-        let color = item.type === 'hidrante' ? 'blue' : (item.type === 'extintor' ? 'red' : 'amber');
+        let icon = item.type === 'hidrante' ? 'droplets' : (item.type === 'extintor' ? 'fire-extinguisher' : (item.type === 'luz' ? 'lightbulb' : 'activity'));
+        let color = item.type === 'hidrante' ? 'blue' :
+            (item.type === 'extintor' ? 'red' :
+                (item.type === 'luz' ? 'amber' : 'purple'));
 
         const html = `
             <div class="bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center">
@@ -342,7 +356,6 @@ async function generatePDF() {
         const local = document.getElementById('local').value || "Local";
         const data = document.getElementById('data-relatorio').value.split('-').reverse().join('/');
 
-        // --- Tabelas (Mesma lógica de antes) ---
         doc.setFillColor(30, 41, 59);
         doc.rect(0, 0, 210, 28, 'F');
         doc.setTextColor(255);
@@ -350,10 +363,6 @@ async function generatePDF() {
         doc.setFontSize(10); doc.setTextColor(200); doc.text(`Cliente: ${cliente} | Local: ${local} | Data: ${data}`, 14, 22);
 
         let yPos = 40;
-
-        // Tabelas de Hidrantes, Extintores e Luz...
-        // (Copie a lógica do seu código anterior para gerar as tabelas aqui)
-        // Para garantir que funcione, vou colocar um exemplo genérico que percorre tudo:
 
         const hid = items.filter(i => i.type === 'hidrante');
         if (hid.length > 0) {
@@ -367,7 +376,6 @@ async function generatePDF() {
             yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // Repita para Extintor e Luz...
         const ext = items.filter(i => i.type === 'extintor');
         if (ext.length > 0) {
             doc.setFontSize(12); doc.setTextColor(220, 38, 38); doc.text("Extintores", 14, yPos); yPos += 2;
@@ -376,6 +384,32 @@ async function generatePDF() {
                 head: [['Local', 'ID', 'Tipo', 'Peso', 'Recarga', 'Lacre/Manom']],
                 body: ext.map(i => [i.andar, i.id, i.tipo, i.peso, i.recarga, (i.check_lacre && i.check_manometro) ? 'OK' : 'Verificar']),
                 theme: 'grid', headStyles: { fillColor: [220, 38, 38] }
+            });
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+
+        const bombas = items.filter(i => i.type === 'bomba');
+        if (bombas.length > 0) {
+            doc.setFontSize(12);
+            doc.setTextColor(124, 58, 237); // Cor Roxa (RGB)
+            doc.text("Sistema de Pressurização (Bombas)", 14, yPos);
+            yPos += 2;
+
+            doc.autoTable({
+                startY: yPos,
+                // Cabeçalho da tabela
+                head: [['Local', 'ID', 'Operação', 'Teste Pressão', 'Manutenção', 'Obs']],
+                // Corpo da tabela (Convertendo true/false em Sim/Não)
+                body: bombas.map(i => [
+                    i.andar,
+                    i.id,
+                    i.operacao ? 'Normal' : 'FALHA',
+                    i.teste_pressao ? 'Realizado' : 'Não Feito',
+                    i.necessita_manutencao ? 'SIM' : 'Não',
+                    i.obs || '-'
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [124, 58, 237] } // Cabeçalho Roxo
             });
             yPos = doc.lastAutoTable.finalY + 10;
         }

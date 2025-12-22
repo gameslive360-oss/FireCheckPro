@@ -10,6 +10,7 @@
     outline: none;
     transition: all 0.2s;
 }
+
 .input-std:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
@@ -29,6 +30,7 @@
     grid-template-columns: 1fr;
     gap: 0.5rem;
 }
+
 @media (min-width: 768px) {
     .checklist-grid {
         grid-template-columns: 1fr 1fr;
@@ -47,6 +49,7 @@
     font-size: 0.875rem;
     color: #374151;
 }
+
 .check-group:hover {
     background-color: #fff;
     border-color: #d1d5db;
@@ -67,6 +70,7 @@
     white-space: nowrap;
     border: 1px solid transparent;
 }
+
 @media (min-width: 768px) {
     .tab-btn {
         flex-direction: row;
@@ -100,6 +104,20 @@
     box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4);
 }
 
+/* Adicione junto com os outros tab-active-... */
+.tab-active-bomba {
+    background-color: #7c3aed;
+    /* Roxo */
+    color: white;
+    border-color: #5b21b6;
+    box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.4);
+}
+
+/* Opcional: borda colorida para o card na lista */
+.border-bomba-500 {
+    border-color: #7c3aed;
+}
+
 .section-title {
     font-size: 0.75rem;
     font-weight: 700;
@@ -124,6 +142,7 @@
     border: 1px solid #cbd5e1;
     transition: background-color 0.2s;
 }
+
 .btn-secondary:hover {
     background-color: #e2e8f0;
 }

@@ -74,6 +74,9 @@
             <button id="tab-luz" class="tab-btn tab-inactive" onclick="window.switchTab('luz')">
                 <i data-lucide="lightbulb" class="w-5 h-5"></i> <span>Iluminação</span>
             </button>
+            <button id="tab-bomba" class="tab-btn tab-inactive" onclick="window.switchTab('bomba')">
+                <i data-lucide="activity" class="w-5 h-5"></i> <span>Bombas</span>
+            </button>
         </div>
 
         <section class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
@@ -206,6 +209,29 @@
                         <span>Fixação</span></label>
                     <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"> <span>Lux
                             OK</span></label>
+                </div>
+            </div>
+
+            <div id="form-bomba" class="form-section hidden">
+                <h4 class="section-title text-purple-800 border-purple-100">Sistema de Pressurização (Bombas)</h4>
+                <div class="tab-active-grid">
+                    <label class="check-group">
+                        <input type="checkbox" id="b-operacao" class="save-state">
+                        <span>Operação Normal (Automático)</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="b-teste" class="save-state">
+                        <span>Teste de Pressão Realizado</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="b-manutencao" class="save-state">
+                        <span>Necessita Manutenção</span>
+                    </label>
+                </div>
+                <div class="mt-3">
+                    <label class="label-std">Observação da Bomba</label>
+                    <textarea id="b-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva anomalias ou pressão aferida..."></textarea>
                 </div>
             </div>
 

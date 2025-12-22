@@ -55,3 +55,58 @@ O sistema valida os itens de inspeção com base nos checklists das seguintes no
 ```bash
 git clone https://github.com/gameslive360-oss/firecheck-pro.git
 cd firecheck-pro
+```
+
+## 🔧 Configuração do Firebase
+
+### 2️⃣ Configure o Firebase
+
+- Crie um projeto no **Console do Firebase**
+- Habilite **Authentication** (Provedor Google)
+- Crie um banco de dados **Firestore**
+- Crie um **Storage Bucket**
+- Copie as credenciais do **App Web**
+
+---
+
+### 3️⃣ Adicione as Chaves
+
+Crie ou renomeie o arquivo:
+
+```text
+public/js/firebase-config.js
+```
+### Adicione as credenciais no formato abaixo:
+
+```javascript
+export const firebaseConfig = {
+  apiKey: "SUA_API_KEY",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+```
+### 4️⃣ Execute Localmente
+
+**Opção 1 (Recomendada):**
+ - Utilize a extensão Live Server do VS Code
+**Opção 2 (Firebase CLI):**
+```bash
+firebase serve
+```
+**Opção 3 (Servidor estático):**
+```bash
+python -m http.server
+```
+### 📁 Estrutura de Pastas
+
+```text
+/public
+├── css/              # Estilos personalizados
+├── js/               # Lógica da aplicação (app.js, firebase-config.js)
+├── index.html        # Interface principal
+├── manifest.json     # Configuração PWA
+└── sw.js             # Service Worker (Cache / Offline)
+```

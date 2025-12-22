@@ -66,7 +66,7 @@ Passo a Passo
 
 Clone o repositório:
 
-git clone [https://github.com/SEU-USUARIO/firecheck-pro.git](https://github.com/SEU-USUARIO/firecheck-pro.git)
+git clone [https://github.com/gameslive360-oss/firecheck-pro.git](https://github.com/gameslive360-oss/firecheck-pro.git)
 cd firecheck-pro
 
 

@@ -104,18 +104,11 @@
     box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4);
 }
 
-/* Adicione junto com os outros tab-active-... */
 .tab-active-bomba {
     background-color: #7c3aed;
-    /* Roxo */
     color: white;
     border-color: #5b21b6;
     box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.4);
-}
-
-/* Opcional: borda colorida para o card na lista */
-.border-bomba-500 {
-    border-color: #7c3aed;
 }
 
 .section-title {

@@ -68,7 +68,7 @@
             <button id="tab-hidrante" class="tab-btn tab-active-hidrante" onclick="window.switchTab('hidrante')">
                 <i data-lucide="droplets" class="w-5 h-5"></i> <span>Hidrante</span>
             </button>
-            <button id="tab-extintor" class="tab-btn tab-inactive" onclick="window.switchTab('extintor')">
+            <button id="tab-extintor" class="tab-btn tab-inactive hidden" onclick="window.switchTab('extintor')">
                 <i data-lucide="fire-extinguisher" class="w-5 h-5"></i> <span>Extintor</span>
             </button>
             <button id="tab-luz" class="tab-btn tab-inactive" onclick="window.switchTab('luz')">
@@ -92,48 +92,81 @@
             </div>
 
             <div id="form-hidrante" class="form-section">
-                <h4 class="section-title text-blue-800 border-blue-100">NBR 13485 - Hidrantes</h4>
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div>
-                        <label class="label-std">Mangueira</label>
-                        <select id="h-mangueira" class="input-std save-state">
-                            <option value="">Selecione...</option>
-                            <option value="15m">15m</option>
-                            <option value="30m">30m</option>
-                            <option value="Ausente">Ausente</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label-std">Esguicho</label>
-                        <select id="h-esguicho" class="input-std save-state">
-                            <option value="">Selecione...</option>
-                            <option value="OK">Jato Sólido</option>
-                            <option value="Regulavel">Regulável</option>
-                            <option value="Ausente">Ausente</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label-std">Chave Storz</label>
-                        <select id="h-chave" class="input-std save-state">
-                            <option value="">Selecione...</option>
-                            <option value="OK">Presente</option>
-                            <option value="Ausente">Ausente</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="label-std">Validade Mang.</label>
-                        <input type="month" id="h-validade" class="input-std save-state">
+                <h4 class="section-title text-blue-800 border-blue-100">NBR 12779 - Hidrantes</h4>
+
+                <div class="mb-4">
+                    <label class="label-std mb-2 text-blue-900">Componentes Presentes</label>
+                    <div class="checklist-grid">
+                        <label class="check-group">
+                            <input type="checkbox" id="h-registro" class="save-state">
+                            <span>Registro Globo</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="h-adaptador" class="save-state">
+                            <span>Adaptador Engate Rápido</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="h-chave" class="save-state">
+                            <span>Chave de Mangueira</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="h-esguicho" class="save-state">
+                            <span>Esguicho</span>
+                        </label>
                     </div>
                 </div>
-                <div class="checklist-grid">
-                    <label class="check-group"><input type="checkbox" id="h-acesso" class="save-state"> <span>Acesso
-                            Livre</span></label>
-                    <label class="check-group"><input type="checkbox" id="h-abrigo" class="save-state"> <span>Abrigo
-                            Íntegro</span></label>
-                    <label class="check-group"><input type="checkbox" id="h-aduchada" class="save-state">
-                        <span>Aduchamento OK</span></label>
-                    <label class="check-group"><input type="checkbox" id="h-valvula" class="save-state"> <span>Válvula
-                            OK</span></label>
+
+                <div class="border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="label-std text-blue-900 mb-0">Detalhes da Mangueira</label>
+                        <label
+                            class="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-1 rounded border border-blue-100">
+                            <input type="checkbox" id="h-tem-mangueira" class="save-state" checked
+                                onchange="toggleMangueiraFields()">
+                            <span class="text-sm font-bold text-blue-800">Possui Mangueira?</span>
+                        </label>
+                    </div>
+
+                    <div id="h-detalhes-container" class="transition-opacity duration-200">
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="label-std">Selo de Teste</label>
+                                <select id="h-selo" class="input-std save-state">
+                                    <option value="Sim">Sim</option>
+                                    <option value="Nao">Não</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="label-std">Vencimento</label>
+                                <input type="month" id="h-validade" class="input-std save-state">
+                            </div>
+                            <div>
+                                <label class="label-std">Nº Lances</label>
+                                <input type="number" id="h-lances" class="input-std save-state" placeholder="Qtd"
+                                    value="1">
+                            </div>
+                            <div>
+                                <label class="label-std">Metragem</label>
+                                <select id="h-metragem" class="input-std save-state">
+                                    <option value="15m">15 metros</option>
+                                    <option value="20m">20 metros</option>
+                                    <option value="25m">25 metros</option>
+                                    <option value="30m">30 metros</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="label-std">Observações</label>
+                                <button id="btn-phrases-h" onclick="window.phrases.open('h-obs', 'hidrante')"
+                                    class="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                    <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                                </button>
+                            </div>
+                            <textarea id="h-obs" class="input-std save-state" rows="2"
+                                placeholder="Descreva anomalias..."></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -236,20 +269,19 @@
             </div>
 
             <div class="mt-4 pt-4 border-t border-gray-100">
+                <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3">
+                </div>
+
                 <div class="flex gap-2 mb-3">
-                    <label class="btn-secondary flex-1 cursor-pointer">
+                    <label class="btn-secondary flex-1 cursor-pointer relative">
                         <i data-lucide="camera" class="w-4 h-4"></i> Câmera
-                        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+                        <input type="file" id="camera-input" accept="image/*" capture="environment" multiple
+                            class="hidden">
                     </label>
-                    <label class="btn-secondary flex-1 cursor-pointer">
+                    <label class="btn-secondary flex-1 cursor-pointer relative">
                         <i data-lucide="paperclip" class="w-4 h-4"></i> Galeria
-                        <input type="file" id="upload-input" accept="image/*" class="hidden">
+                        <input type="file" id="upload-input" accept="image/*" multiple class="hidden">
                     </label>
-                    <div id="file-info"
-                        class="hidden flex-1 items-center gap-2 text-xs text-green-700 bg-green-50 px-2 rounded border border-green-200">
-                        <i data-lucide="check" class="w-3 h-3"></i> <span>Foto OK</span>
-                        <button id="btn-clear-file" class="ml-auto text-red-500 font-bold p-1">X</button>
-                    </div>
                 </div>
 
                 <button id="btn-add-item"
@@ -281,6 +313,53 @@
             class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
             <i data-lucide="cloud-upload"></i> Salvar Nuvem
         </button>
+    </div>
+
+    <div id="modal-phrases"
+        class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-lg">
+                <h3 class="font-bold text-slate-700">Frases Rápidas</h3>
+                <button onclick="window.phrases.close()" class="text-gray-400 hover:text-red-500"><i
+                        data-lucide="x"></i></button>
+            </div>
+
+            <div id="phrases-list" class="p-4 overflow-y-auto space-y-2 flex-1">
+            </div>
+
+            <div class="p-3 border-t bg-slate-50 rounded-b-lg flex gap-2">
+                <input type="text" id="new-phrase-input" class="input-std flex-1"
+                    placeholder="Nova frase personalizada...">
+                <button onclick="window.phrases.addCustom()"
+                    class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-confirm" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
+            <div class="flex items-center gap-3 mb-4 text-slate-800">
+                <div class="p-2 bg-blue-100 text-blue-600 rounded-full">
+                    <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                </div>
+                <h3 id="modal-confirm-title" class="font-bold text-lg">Confirmação</h3>
+            </div>
+            
+            <p id="modal-confirm-msg" class="text-slate-600 mb-6 leading-relaxed">Tem certeza?</p>
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="window.closeConfirmModal()" 
+                    class="px-4 py-2 text-slate-500 hover:bg-slate-100 font-semibold rounded-lg transition-colors">
+                    Cancelar
+                </button>
+                <button id="btn-confirm-action" 
+                    class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2">
+                    Confirmar
+                </button>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/app.js"></script>

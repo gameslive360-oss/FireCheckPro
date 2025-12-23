@@ -1,4 +1,4 @@
-const CACHE_NAME = 'firecheck-v2';
+const CACHE_NAME = 'firecheck-v1.0.0';
 const urlsToCache = [
   './',
   './index.html',

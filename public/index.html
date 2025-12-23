@@ -1,89 +1,306 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="pt-BR">
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.7.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.7.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.7.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <title>FireCheck Pro</title>
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-gray-100 pb-32">
+
+    <div id="menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden backdrop-blur-sm" onclick="toggleMenu()"></div>
+
+    <aside id="sidebar"
+        class="fixed top-0 left-0 w-64 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+            <h2 class="font-bold text-lg"><i data-lucide="history" class="inline w-5 h-5"></i> Histórico</h2>
+            <button onclick="toggleMenu()"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <div id="history-list" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <p class="text-sm text-gray-500 text-center mt-10">Carregando histórico...</p>
+        </div>
+        <div class="p-4 border-t bg-gray-50">
+            <button id="btn-logout-side"
+                class="w-full border border-red-500 text-red-600 rounded p-2 text-sm font-bold hover:bg-red-50 hidden">Sair
+                da Conta</button>
+        </div>
+    </aside>
+
+    <nav class="bg-slate-900 text-white p-3 shadow-lg sticky top-0 z-30 border-b-4 border-slate-700">
+        <div class="container mx-auto max-w-3xl flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMenu()" class="p-1 hover:bg-slate-800 rounded">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h1 class="text-lg font-bold">FireCheck Pro</h1>
+            </div>
+            <div>
+                <button id="btn-login"
+                    class="bg-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 transition-colors">Entrar</button>
+                <div id="user-info" class="hidden items-center gap-2">
+                    <span id="user-name" class="text-xs font-bold text-slate-300">User</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4 max-w-3xl">
+
+        <div class="bg-white p-4 rounded-lg shadow-sm mb-4 border-l-4 border-slate-800">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input type="text" id="cliente" class="input-std save-state" placeholder="Cliente / Empresa">
+                <input type="text" id="local" class="input-std save-state" placeholder="Prédio / Local">
+                <input type="date" id="data-relatorio" class="input-std md:col-span-2 save-state">
+            </div>
+        </div>
+
+        <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+            <button id="tab-hidrante" class="tab-btn tab-active-hidrante" onclick="window.switchTab('hidrante')">
+                <i data-lucide="droplets" class="w-5 h-5"></i> <span>Hidrante</span>
+            </button>
+            <button id="tab-extintor" class="tab-btn tab-inactive" onclick="window.switchTab('extintor')">
+                <i data-lucide="fire-extinguisher" class="w-5 h-5"></i> <span>Extintor</span>
+            </button>
+            <button id="tab-luz" class="tab-btn tab-inactive" onclick="window.switchTab('luz')">
+                <i data-lucide="lightbulb" class="w-5 h-5"></i> <span>Iluminação</span>
+            </button>
+            <button id="tab-bomba" class="tab-btn tab-inactive" onclick="window.switchTab('bomba')">
+                <i data-lucide="activity" class="w-5 h-5"></i> <span>Bombas</span>
+            </button>
+        </div>
+
+        <section class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label class="label-std">Local/Andar</label>
+                    <input type="text" id="andar" class="input-std save-state" placeholder="Ex: Térreo">
+                </div>
+                <div>
+                    <label class="label-std">ID</label>
+                    <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01">
+                </div>
+            </div>
+
+            <div id="form-hidrante" class="form-section">
+                <h4 class="section-title text-blue-800 border-blue-100">NBR 13485 - Hidrantes</h4>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="label-std">Mangueira</label>
+                        <select id="h-mangueira" class="input-std save-state">
+                            <option value="">Selecione...</option>
+                            <option value="15m">15m</option>
+                            <option value="30m">30m</option>
+                            <option value="Ausente">Ausente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Esguicho</label>
+                        <select id="h-esguicho" class="input-std save-state">
+                            <option value="">Selecione...</option>
+                            <option value="OK">Jato Sólido</option>
+                            <option value="Regulavel">Regulável</option>
+                            <option value="Ausente">Ausente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Chave Storz</label>
+                        <select id="h-chave" class="input-std save-state">
+                            <option value="">Selecione...</option>
+                            <option value="OK">Presente</option>
+                            <option value="Ausente">Ausente</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Validade Mang.</label>
+                        <input type="month" id="h-validade" class="input-std save-state">
+                    </div>
+                </div>
+                <div class="checklist-grid">
+                    <label class="check-group"><input type="checkbox" id="h-acesso" class="save-state"> <span>Acesso
+                            Livre</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-abrigo" class="save-state"> <span>Abrigo
+                            Íntegro</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-aduchada" class="save-state">
+                        <span>Aduchamento OK</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-valvula" class="save-state"> <span>Válvula
+                            OK</span></label>
+                </div>
+            </div>
+
+            <div id="form-extintor" class="form-section hidden">
+                <h4 class="section-title text-red-800 border-red-100">NBR 12962 - Extintores</h4>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="label-std">Tipo</label>
+                        <select id="e-tipo" class="input-std save-state">
+                            <option value="AP">Água (AP)</option>
+                            <option value="PQS">Pó Químico</option>
+                            <option value="CO2">CO2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Peso (Kg)</label>
+                        <input type="number" id="e-peso" class="input-std save-state">
+                    </div>
+                    <div>
+                        <label class="label-std">Recarga</label>
+                        <input type="month" id="e-recarga" class="input-std save-state">
+                    </div>
+                    <div>
+                        <label class="label-std">Teste Hidro</label>
+                        <input type="month" id="e-teste" class="input-std save-state">
+                    </div>
+                </div>
+                <div class="checklist-grid">
+                    <label class="check-group"><input type="checkbox" id="e-lacre" class="save-state">
+                        <span>Lacre</span></label>
+                    <label class="check-group"><input type="checkbox" id="e-manometro" class="save-state">
+                        <span>Manômetro</span></label>
+                    <label class="check-group"><input type="checkbox" id="e-sinalizacao" class="save-state">
+                        <span>Sinalização</span></label>
+                    <label class="check-group"><input type="checkbox" id="e-mangueira" class="save-state">
+                        <span>Mangueira</span></label>
+                </div>
+            </div>
+
+            <div id="form-luz" class="form-section hidden">
+                <h4 class="section-title text-amber-700 border-amber-100">NBR 10898 - Iluminação</h4>
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="label-std">Tipo</label>
+                        <select id="l-tipo" class="input-std save-state">
+                            <option value="Balizamento">Balizamento</option>
+                            <option value="Aclaramento">Aclaramento</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Estado</label>
+                        <select id="l-estado" class="input-std save-state">
+                            <option value="OK">Operacional</option>
+                            <option value="Queimada">Queimada</option>
+                            <option value="Bateria Fraca">Bateria Fraca</option>
+                        </select>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="label-std">Autonomia</label>
+                        <select id="l-autonomia" class="input-std save-state">
+                            <option value="Nao Testado">Autonomia Não Testada</option>
+                            <option value="Aprovado 1h">Aprovado (>1h)</option>
+                            <option value="Reprovado">Reprovado (<1h)< /option>
+                        </select>
+                    </div>
+                </div>
+                <div class="checklist-grid">
+                    <label class="check-group"><input type="checkbox" id="l-acendimento" class="save-state">
+                        <span>Acendimento</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-led" class="save-state"> <span>LED
+                            Carga</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-fixacao" class="save-state">
+                        <span>Fixação</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"> <span>Lux
+                            OK</span></label>
+                </div>
+            </div>
+
+            <div id="form-bomba" class="form-section hidden">
+                <h4 class="section-title text-purple-800 border-purple-100">Sistema de Pressurização (Bombas)</h4>
+                <div class="checklist-grid">
+                    <label class="check-group">
+                        <input type="checkbox" id="b-operacao" class="save-state">
+                        <span>Operação Normal (Automático)</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="b-teste" class="save-state">
+                        <span>Teste de Pressão Realizado</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="b-manutencao" class="save-state">
+                        <span>Necessita Manutenção</span>
+                    </label>
+                </div>
+                <div class="mt-3">
+                    <label class="label-std">Observação da Bomba</label>
+                    <textarea id="b-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva anomalias ou pressão aferida..."></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-100">
+                <div class="flex gap-2 mb-3">
+                    <label class="btn-secondary flex-1 cursor-pointer">
+                        <i data-lucide="camera" class="w-4 h-4"></i> Câmera
+                        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden">
+                    </label>
+                    <label class="btn-secondary flex-1 cursor-pointer">
+                        <i data-lucide="paperclip" class="w-4 h-4"></i> Galeria
+                        <input type="file" id="upload-input" accept="image/*" class="hidden">
+                    </label>
+                    <div id="file-info"
+                        class="hidden flex-1 items-center gap-2 text-xs text-green-700 bg-green-50 px-2 rounded border border-green-200">
+                        <i data-lucide="check" class="w-3 h-3"></i> <span>Foto OK</span>
+                        <button id="btn-clear-file" class="ml-auto text-red-500 font-bold p-1">X</button>
+                    </div>
+                </div>
+
+                <button id="btn-add-item"
+                    class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-lg shadow-lg flex justify-center items-center gap-2 active:scale-95 transition-transform">
+                    <i data-lucide="plus-circle"></i> Adicionar Item
+                </button>
+            </div>
+        </section>
+
+        <section class="mt-8">
+            <h3 class="text-sm font-bold text-gray-500 uppercase mb-2 flex justify-between">
+                Itens Inspecionados <span id="count" class="bg-slate-200 text-slate-700 px-2 rounded text-xs">0</span>
+            </h3>
+            <div id="lista-itens" class="space-y-3 pb-10">
+                <div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
+                    Sua lista está vazia.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 shadow-lg flex gap-3 z-40">
+        <button id="btn-pdf"
+            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
+            <i data-lucide="file-text"></i> PDF
+        </button>
+        <button id="btn-save"
+            class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
+            <i data-lucide="cloud-upload"></i> Salvar Nuvem
+        </button>
     </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
 
+    <script type="module" src="js/app.js"></script>
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
+        // Menu Toggle
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('menu-overlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                // Carregar histórico ao abrir
+                if (window.loadHistory) window.loadHistory();
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
         }
-      });
+        window.toggleMenu = toggleMenu;
     </script>
-  </body>
+</body>
+
 </html>

@@ -51,6 +51,16 @@ export class PhraseManager {
                 "Fotoluminescência fraca ou inexistente.",
                 "Sinalização suja/engordurada.",
                 "Placa de tipo incorreto para o local."
+            ],
+            eletro: [
+                "Sistema operando em automático, sem anomalias.",
+                "Botoeira de acionamento manual travada/danificada.",
+                "Necessita manutenção: Vibração excessiva no motor.",
+                "Painel apresentando falha de comunicação.",
+                "Baterias do gerador com carga baixa.",
+                "Sistema de pressurização não partiu no teste manual.",
+                "Luzes piloto do painel queimadas.",
+                "Dampers atuando corretamente."
             ]
         };
     }

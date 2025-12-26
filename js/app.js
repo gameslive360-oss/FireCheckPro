@@ -6,7 +6,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { PhraseManager } from "./phrases.js";
 
 // --- Configuração ---
-const TABS = ['hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao'];
+const TABS = ['hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro'];
 
 // --- Inicialização Firebase ---
 let db, storage, auth, user = null;
@@ -198,7 +198,7 @@ function clearFormState(keepHeader = true) {
         'e-peso', 'e-recarga', 'e-teste', 'e-obs',
         'l-autonomia', 'l-obs',
         'b-obs',
-        's-obs', 's-tipo'
+        's-obs', 's-tipo', 'el-tipo', 'el-botoeiras', 'el-manutencao', 'el-obs'
     ];
 
     idsToClear.forEach(id => {
@@ -219,10 +219,14 @@ function clearFormState(keepHeader = true) {
         else if (el.id === 'h-tem-mangueira') {
             el.checked = true;
         }
+        else if (['el-painel', 'el-piloto', 'el-ruido', 'el-fixacao'].includes(el.id)) {
+            el.checked = true;
+        }
         // Outros checkboxes (anomalias): Padrão é FALSE (Desmarcado)
         else {
             el.checked = false;
         }
+
         localStorage.removeItem(el.id);
     });
 
@@ -368,9 +372,27 @@ function addItem() {
             check_legivel: existe === 'Sim' ? document.getElementById('s-legivel').checked : false,
             obs: document.getElementById('s-obs').value
         };
+    } else if (currentType === 'eletro') {
+        specifics = {
+            tipo_sistema: document.getElementById('el-tipo').value,
+            botoeiras: document.getElementById('el-botoeiras').value,
+            precisa_manutencao: document.getElementById('el-manutencao').value,
+            check_painel: document.getElementById('el-painel').checked,
+            check_piloto: document.getElementById('el-piloto').checked,
+            check_ruido: document.getElementById('el-ruido').checked,
+            check_fixacao: document.getElementById('el-fixacao').checked,
+            obs: document.getElementById('el-obs').value
+        };
+
+        // Alerta simples se marcar manutenção sem observação
+        if (specifics.precisa_manutencao === 'Sim' && !specifics.obs.trim()) {
+            alert("⚠️ Por favor, descreva o motivo da manutenção na observação.");
+            document.getElementById('el-obs').focus();
+            return;
+        }
     }
 
-    // Salva o item na lista global
+    // Salva o item na lista global (Agora dentro da função addItem corretamente)
     items.push({ ...baseItem, ...specifics });
     renderList();
     clearFormState();
@@ -434,6 +456,15 @@ window.editItem = function (uid) {
             document.getElementById('s-legivel').checked = item.check_legivel;
             document.getElementById('s-obs').value = item.obs || '';
             window.toggleSinalizacaoFields();
+        } else if (item.type === 'eletro') {
+            document.getElementById('el-tipo').value = item.tipo_sistema;
+            document.getElementById('el-botoeiras').value = item.botoeiras;
+            document.getElementById('el-manutencao').value = item.precisa_manutencao;
+            document.getElementById('el-painel').checked = item.check_painel;
+            document.getElementById('el-piloto').checked = item.check_piloto;
+            document.getElementById('el-ruido').checked = item.check_ruido;
+            document.getElementById('el-fixacao').checked = item.check_fixacao;
+            document.getElementById('el-obs').value = item.obs || '';
         }
 
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
@@ -455,6 +486,8 @@ window.removeItem = function (uid) {
 function renderList() {
     const listEl = document.getElementById('lista-itens');
     document.getElementById('count').innerText = items.length;
+
+    // Limpa a lista visualmente
     listEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -462,44 +495,60 @@ function renderList() {
         return;
     }
 
+    // Cria um fragmento de memória (Melhor performance)
     const fragment = document.createDocumentFragment();
 
     items.slice().reverse().forEach(item => {
+        // 1. Definição de Ícones
         let icon = item.type === 'hidrante' ? 'droplets' :
             (item.type === 'extintor' ? 'fire-extinguisher' :
                 (item.type === 'luz' ? 'lightbulb' :
-                    (item.type === 'bomba' ? 'activity' : 'signpost')));
+                    (item.type === 'bomba' ? 'activity' :
+                        (item.type === 'sinalizacao' ? 'signpost' :
+                            (item.type === 'eletro' ? 'zap' : 'circle'))))); // 'zap' para Eletro
 
+        // 2. Definição de Cores
         let color = item.type === 'hidrante' ? 'blue' :
             (item.type === 'extintor' ? 'red' :
                 (item.type === 'luz' ? 'amber' :
-                    (item.type === 'bomba' ? 'purple' : 'teal')));
+                    (item.type === 'bomba' ? 'purple' :
+                        (item.type === 'sinalizacao' ? 'teal' :
+                            (item.type === 'eletro' ? 'indigo' : 'gray'))))); // 'indigo' para Eletro
 
+        // 3. Badge de Foto
+        const photoBadge = (item.imageFiles && item.imageFiles.length > 0)
+            ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1 flex items-center gap-1"><i data-lucide="camera" class="w-3 h-3"></i> ${item.imageFiles.length}</span>`
+            : '';
+
+        // 4. Construção do Elemento HTML
         const div = document.createElement('div');
-        div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in`;
+        div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in group hover:shadow-md transition-all`;
 
         div.innerHTML = `
             <div class="flex items-center gap-3 overflow-hidden">
-                <div class="p-2 bg-gray-50 rounded-full text-gray-600 flex-shrink-0">
+                <div class="p-2 bg-gray-50 rounded-full text-gray-600 flex-shrink-0 group-hover:bg-${color}-50 group-hover:text-${color}-600 transition-colors">
                     <i data-lucide="${icon}" class="w-5 h-5"></i>
                 </div>
                 <div class="min-w-0">
                     <div class="font-bold text-gray-800 text-sm truncate" id="item-title-${item.uid}"></div>
-                    <div class="text-xs text-gray-500 truncate">
-                        ${item.type.toUpperCase()} 
-                        ${(item.imageFiles && item.imageFiles.length > 0) ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1">📷 ${item.imageFiles.length}</span>` : ''}
+                    <div class="text-xs text-gray-500 truncate flex items-center">
+                        ${item.type.toUpperCase()} ${photoBadge}
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button class="btn-edit text-blue-400 hover:text-blue-600 p-2"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                <button class="btn-del text-red-300 hover:text-red-600 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <div class="flex items-center gap-1">
+                <button class="btn-edit text-blue-400 hover:text-blue-600 p-2 rounded hover:bg-blue-50 transition-colors" title="Editar">
+                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
+                <button class="btn-del text-red-300 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors" title="Excluir">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
             </div>
         `;
 
         div.querySelector(`#item-title-${item.uid}`).textContent = `${item.id} | ${item.andar}`;
-        div.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
-        div.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
+        div.querySelector('.btn-edit').addEventListener('click', () => window.editItem(item.uid));
+        div.querySelector('.btn-del').addEventListener('click', () => window.removeItem(item.uid));
 
         fragment.appendChild(div);
     });
@@ -539,38 +588,31 @@ async function generatePDF(mode = 'save') {
         const avcbRaw = document.getElementById('validade-avcb').value;
         const dataAvcb = avcbRaw ? avcbRaw.split('-').reverse().join('/') : "Não Informado";
 
-        // --- DESIGN DO CABEÇALHO (Atualizado) ---
-        // Fundo Azul Escuro
+        // --- DESIGN DO CABEÇALHO ---
         doc.setFillColor(30, 41, 59);
         doc.rect(0, 0, 210, 40, 'F');
 
-        // Título Principal
         doc.setTextColor(255);
         doc.setFontSize(18);
         doc.setFont(undefined, 'bold');
         doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 15, { align: 'center' });
 
-        // Subtítulo / Norma
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(200, 200, 200);
         doc.text("Projeto Planejamento e Implatação de Sistemas LTDA", 105, 22, { align: 'center' });
 
-        // Dados do Cabeçalho (Desenhados em caixas brancas virtuais para organização)
         doc.setFontSize(9);
         doc.setTextColor(255);
 
-        // Coluna Esquerda
         doc.text(`Cliente: ${cliente}`, 10, 32);
         doc.text(`Local: ${local}`, 10, 37);
 
-        // Coluna Direita (Alinhada)
         doc.text(`Resp. Técnico: ${tecnico}`, 110, 32, { align: 'center' });
         doc.text(`Classificação: ${classificacao}`, 110, 37, { align: 'center' });
 
-        // Datas (Canto Direito Superior ou na linha)
         doc.setFontSize(8);
-        doc.setTextColor(150, 200, 250); // Azul claro
+        doc.setTextColor(150, 200, 250);
         doc.text(`Data Vistoria: ${dataRelatorio}`, 200, 32, { align: 'right' });
         doc.text(`Valid. AVCB: ${dataAvcb}`, 200, 37, { align: 'right' });
 
@@ -579,7 +621,7 @@ async function generatePDF(mode = 'save') {
         // --- HIDRANTES ---
         const hid = items.filter(i => i.type === 'hidrante');
         if (hid.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(37, 99, 235); // Blue
+            doc.setFontSize(12); doc.setTextColor(37, 99, 235);
             doc.text("Hidrantes", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
@@ -601,7 +643,7 @@ async function generatePDF(mode = 'save') {
         // --- EXTINTORES ---
         const ext = items.filter(i => i.type === 'extintor');
         if (ext.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(220, 38, 38); // Red
+            doc.setFontSize(12); doc.setTextColor(220, 38, 38);
             doc.text("Extintores", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
@@ -614,7 +656,7 @@ async function generatePDF(mode = 'save') {
         // --- ILUMINAÇÃO ---
         const luzes = items.filter(i => i.type === 'luz');
         if (luzes.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(217, 119, 6); // Amber
+            doc.setFontSize(12); doc.setTextColor(217, 119, 6);
             doc.text("Iluminação de Emergência", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
@@ -627,7 +669,7 @@ async function generatePDF(mode = 'save') {
         // --- BOMBAS ---
         const bombas = items.filter(i => i.type === 'bomba');
         if (bombas.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(124, 58, 237); // Purple
+            doc.setFontSize(12); doc.setTextColor(124, 58, 237);
             doc.text("Sistema de Pressurização (Bombas)", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos, head: [['Local', 'ID', 'Operação', 'Teste Pressão', 'Manutenção', 'Obs']],
@@ -639,16 +681,14 @@ async function generatePDF(mode = 'save') {
         // --- SINALIZAÇÃO ---
         const sinalizacao = items.filter(i => i.type === 'sinalizacao');
         if (sinalizacao.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(13, 148, 136); // Teal
+            doc.setFontSize(12); doc.setTextColor(13, 148, 136);
             doc.text("Sinalização de Emergência", 14, yPos); yPos += 2;
-
             doc.autoTable({
                 startY: yPos,
                 head: [['Local', 'ID', 'Existente', 'Tipo', 'Estado/Conformidade', 'Obs']],
                 body: sinalizacao.map(i => {
                     let status = '-';
                     let tipoTexto = '-';
-
                     if (i.existente === 'Sim') {
                         tipoTexto = i.tipo || 'Saida';
                         let falhas = [];
@@ -656,13 +696,33 @@ async function generatePDF(mode = 'save') {
                         if (!i.check_fixacao) falhas.push('Solta');
                         if (!i.check_visivel) falhas.push('Obstruída');
                         if (!i.check_legivel) falhas.push('Ilegível');
-
                         status = falhas.length === 0 ? 'OK' : falhas.join(', ');
                     }
-
                     return [i.andar, i.id, i.existente, tipoTexto, status, i.obs || '-'];
                 }),
                 theme: 'grid', headStyles: { fillColor: [13, 148, 136] }
+            }); yPos = doc.lastAutoTable.finalY + 10;
+        }
+
+        // --- ELETROMECANIZAÇÃO ---
+        const eletros = items.filter(i => i.type === 'eletro');
+        if (eletros.length > 0) {
+            doc.setFontSize(12); doc.setTextColor(79, 70, 229);
+            doc.text("Sistema de Eletromecanização", 14, yPos); yPos += 2;
+            doc.autoTable({
+                startY: yPos,
+                head: [['Local', 'Sistema', 'Botoeiras', 'Manutenção?', 'Status NBR', 'Obs']],
+                body: eletros.map(i => {
+                    let falhas = [];
+                    if (!i.check_painel) falhas.push('Painel Manual/Off');
+                    if (!i.check_piloto) falhas.push('Luz Piloto Falha');
+                    if (!i.check_ruido) falhas.push('Ruído/Vibração');
+                    if (!i.check_fixacao) falhas.push('Fixação Solta');
+                    const statusNbr = falhas.length === 0 ? 'Conforme' : falhas.join(', ');
+                    const manutencaoTexto = i.precisa_manutencao === 'Sim' ? 'SIM (URGENTE)' : 'Não';
+                    return [i.andar, i.tipo_sistema, i.botoeiras, manutencaoTexto, statusNbr, i.obs || '-'];
+                }),
+                theme: 'grid', headStyles: { fillColor: [79, 70, 229] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
@@ -671,11 +731,9 @@ async function generatePDF(mode = 'save') {
         if (itemsWithPhotos.length > 0) {
             doc.addPage(); doc.setTextColor(0); doc.setFontSize(14); doc.text("Relatório Fotográfico", 14, 20);
             let x = 14; let y = 30; const imgWidth = 85; const imgHeight = 85; const gap = 10;
-
             for (const item of itemsWithPhotos) {
                 if (y + 10 > 280) { doc.addPage(); y = 20; }
                 doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.text(`Item: ${item.id} - ${item.andar} (${item.type})`, 14, y); y += 5;
-
                 for (let i = 0; i < item.imageFiles.length; i++) {
                     try {
                         const imgData = await readFileAsDataURL(item.imageFiles[i]);
@@ -683,7 +741,6 @@ async function generatePDF(mode = 'save') {
                         doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
                         doc.setFont(undefined, 'normal'); doc.setFontSize(8);
                         doc.text(`Foto ${i + 1}`, x, y + imgHeight + 3);
-
                         if (x === 14) { x = 14 + imgWidth + gap; } else { x = 14; y += imgHeight + 10; }
                     } catch (err) { console.error("Erro imagem PDF", err); }
                 }
@@ -691,15 +748,12 @@ async function generatePDF(mode = 'save') {
             }
         }
 
-        // --- FINALIZAÇÃO ---
         if (mode === 'save') {
             doc.save(`Relatorio_${cliente}.pdf`);
         } else {
-            // Modo Preview
             const blob = doc.output('bloburl');
             document.getElementById('pdf-frame').src = blob;
         }
-
     } catch (e) {
         console.error(e);
         if (mode === 'save') alert("Erro PDF: " + e.message);
@@ -713,71 +767,51 @@ async function generatePDF(mode = 'save') {
 
 async function saveToFirebase() {
     if (!db || !user) return alert("Faça login para salvar!");
-
-    // Feedback visual no botão
     const btn = document.getElementById('btn-save');
     const oldText = btn.innerHTML;
-    btn.innerHTML = "Salvando...";
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Salvando...`;
+    lucide.createIcons();
     btn.disabled = true;
 
     try {
-        // Criação do objeto com os dados do cabeçalho, incluindo os novos campos técnicos
         const headerData = {
             userId: user.uid,
             cliente: document.getElementById('cliente').value || "Não Informado",
             local: document.getElementById('local').value || "Não Informado",
-
-            // Novos Campos adicionados conforme NBR/Padrão de Mercado
             respTecnico: document.getElementById('resp-tecnico').value || "Não Informado",
             classificacao: document.getElementById('classificacao').value || "-",
             validadeAvcb: document.getElementById('validade-avcb').value || null,
-
             data: document.getElementById('data-relatorio').value,
-            timestamp: new Date(), // Data/Hora do salvamento real
+            timestamp: new Date(),
             totalItens: items.length
         };
 
-        // 1. Salva o documento principal da vistoria
         const vistoriaRef = await addDoc(collection(db, "vistorias"), headerData);
-
-        // 2. Processa cada item e suas fotos para salvar na subcoleção
         const promises = items.map(async (item) => {
             let urls = [];
-
-            // Upload de imagens (se houver)
             if (item.imageFiles && item.imageFiles.length > 0) {
                 const uploadPromises = item.imageFiles.map(async (file, index) => {
-                    // Cria uma referência única para a imagem no Storage
                     const imgRef = ref(storage, `fotos/${user.uid}/${vistoriaRef.id}/${item.id}_${index}_${Date.now()}`);
                     await uploadBytes(imgRef, file);
                     return await getDownloadURL(imgRef);
                 });
                 urls = await Promise.all(uploadPromises);
             }
-
-            // Remove o array de arquivos brutos (imageFiles) antes de salvar no banco
-            // pois o Firestore não aceita objetos File, apenas as URLs geradas acima
             const { imageFiles, ...itemData } = item;
-
-            // Salva o item na subcoleção 'itens'
             return addDoc(collection(db, `vistorias/${vistoriaRef.id}/itens`), {
                 ...itemData,
                 fotoUrls: urls
             });
         });
-
-        // Aguarda todos os itens serem salvos
         await Promise.all(promises);
-
-        alert("Vistoria salva com sucesso!");
-        loadHistory(); // Atualiza a barra lateral
-
+        alert("Vistoria salva com sucesso na nuvem!");
+        loadHistory();
     } catch (e) {
         console.error(e);
         alert("Erro ao salvar: " + e.message);
     } finally {
-        // Restaura o botão
         btn.innerHTML = oldText;
         btn.disabled = false;
+        lucide.createIcons();
     }
 }

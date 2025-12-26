@@ -91,7 +91,7 @@
                 </div>
             </div>
         </div>
-
+        <!-- Div dos botões -->
         <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
             <button id="tab-hidrante" class="tab-btn tab-active-hidrante" onclick="window.switchTab('hidrante')">
                 <i data-lucide="droplets" class="w-5 h-5"></i> <span>Hidrante</span>
@@ -107,6 +107,9 @@
             </button>
             <button id="tab-sinalizacao" class="tab-btn tab-inactive" onclick="window.switchTab('sinalizacao')">
                 <i data-lucide="signpost" class="w-5 h-5"></i> <span>Sinalização</span>
+            </button>
+            <button id="tab-eletro" class="tab-btn tab-inactive" onclick="window.switchTab('eletro')">
+                <i data-lucide="zap" class="w-5 h-5"></i> <span>Eletromec.</span>
             </button>
         </div>
 
@@ -393,6 +396,139 @@
                 </div>
             </div>
             <!-- Fim Botão Bomba  -->
+            <!-- Inicio Eletromecanização  -->
+            <div id="form-eletro" class="form-section hidden">
+                <h4 class="section-title text-indigo-800 border-indigo-100">Sistemas Eletromecânicos</h4>
+
+                <div class="mb-4">
+                    <label class="label-std">Tipo de Sistema</label>
+                    <select id="el-tipo" class="input-std save-state">
+                        <option value="Pressurizacao">Pressurização de Escada</option>
+                        <option value="Gerador">Grupo Gerador</option>
+                        <option value="Dampers">Dampers Corta-Fogo</option>
+                        <option value="Exaustao">Exaustão de Fumaça</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="label-std">Botoeiras Operantes?</label>
+                        <select id="el-botoeiras" class="input-std save-state font-bold">
+                            <option value="Sim">Sim</option>
+                            <option value="Nao">Não</option>
+                            <option value="N/A">N/A</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Necessita Manutenção?</label>
+                        <select id="el-manutencao" class="input-std save-state text-red-700 font-bold">
+                            <option value="Nao">Não</option>
+                            <option value="Sim">Sim</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-3 mb-3">
+                    <label class="label-std text-indigo-900 mb-2">Checklist Técnico (NBR)</label>
+                    <div class="checklist-grid">
+                        <label class="check-group">
+                            <input type="checkbox" id="el-painel" class="save-state" checked>
+                            <span>Painel em Automático</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="el-piloto" class="save-state" checked>
+                            <span>Luzes Piloto/Sinaliz. OK</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="el-ruido" class="save-state" checked>
+                            <span>Sem Ruído/Vibração Anormal</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="el-fixacao" class="save-state" checked>
+                            <span>Fixação/Trilhos OK</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observações</label>
+                        <button onclick="window.phrases.open('el-obs', 'eletro')"
+                            class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                        </button>
+                    </div>
+                    <textarea id="el-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva falhas nas botoeiras, ruídos ou detalhes da manutenção..."></textarea>
+                </div>
+            </div>
+            <!-- Fim Eletromecanização -->
+
+            <div id="form-eletro" class="form-section hidden">
+                <h4 class="section-title text-indigo-800 border-indigo-100">Sistemas Eletromecânicos</h4>
+
+                <div class="mb-4">
+                    <label class="label-std">Tipo de Sistema</label>
+                    <select id="el-tipo" class="input-std save-state">
+                        <option value="Pressurizacao">Pressurização de Escada</option>
+                        <option value="Gerador">Grupo Gerador</option>
+                        <option value="Dampers">Dampers Corta-Fogo</option>
+                        <option value="Exaustao">Exaustão de Fumaça</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                        <label class="label-std">Botoeiras Operantes?</label>
+                        <select id="el-botoeiras" class="input-std save-state font-bold">
+                            <option value="Sim">Sim</option>
+                            <option value="Nao">Não</option>
+                            <option value="N/A">N/A</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label-std">Necessita Manutenção?</label>
+                        <select id="el-manutencao" class="input-std save-state text-red-700 font-bold">
+                            <option value="Nao">Não</option>
+                            <option value="Sim">Sim</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-3 mb-3">
+                    <label class="label-std text-indigo-900 mb-2">Checklist Técnico (NBR)</label>
+                    <div class="checklist-grid">
+                        <label class="check-group">
+                            <input type="checkbox" id="el-painel" class="save-state" checked>
+                            <span>Painel em Automático</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="el-piloto" class="save-state" checked>
+                            <span>Luzes Piloto/Sinaliz. OK</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="el-ruido" class="save-state" checked>
+                            <span>Sem Ruído/Vibração Anormal</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="el-fixacao" class="save-state" checked>
+                            <span>Fixação/Trilhos OK</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observações</label>
+                        <button onclick="window.phrases.open('el-obs', 'eletro')"
+                            class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                        </button>
+                    </div>
+                    <textarea id="el-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva falhas nas botoeiras, ruídos ou detalhes da manutenção..."></textarea>
+                </div>
+            </div>
             <div class="mt-4 pt-4 border-t border-gray-100">
                 <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3">
                 </div>

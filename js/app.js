@@ -158,7 +158,7 @@ function restoreFormState() {
 }
 
 function clearFormState(keepHeader = true) {
-    const idsToClear = ['h-lances', 'h-obs', 'h-validade', 'e-peso', 'e-recarga', 'e-teste', 'l-autonomia', 'b-obs'];
+    const idsToClear = ['h-lances', 'h-obs', 'h-validade', 'e-peso', 'e-recarga', 'e-teste', 'l-autonomia', 'b-obs', 'e-obs', 'l-obs'];
     idsToClear.forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.value = ""; localStorage.removeItem(id); }
@@ -263,16 +263,26 @@ function addItem() {
         };
     } else if (currentType === 'extintor') {
         specifics = {
-            tipo: document.getElementById('e-tipo').value, peso: document.getElementById('e-peso').value,
-            recarga: document.getElementById('e-recarga').value || '-', teste_hidro: document.getElementById('e-teste').value || '-',
-            check_lacre: document.getElementById('e-lacre').checked, check_manometro: document.getElementById('e-manometro').checked,
-            check_sinalizacao: document.getElementById('e-sinalizacao').checked, check_mangueira: document.getElementById('e-mangueira').checked
+            tipo: document.getElementById('e-tipo').value,
+            peso: document.getElementById('e-peso').value,
+            recarga: document.getElementById('e-recarga').value || '-',
+            teste_hidro: document.getElementById('e-teste').value || '-',
+            check_lacre: document.getElementById('e-lacre').checked,
+            check_manometro: document.getElementById('e-manometro').checked,
+            check_sinalizacao: document.getElementById('e-sinalizacao').checked,
+            check_mangueira: document.getElementById('e-mangueira').checked,
+            obs: document.getElementById('e-obs').value
         };
     } else if (currentType === 'luz') {
         specifics = {
-            tipo: document.getElementById('l-tipo').value, estado: document.getElementById('l-estado').value, autonomia: document.getElementById('l-autonomia').value,
-            check_acendimento: document.getElementById('l-acendimento').checked, check_led: document.getElementById('l-led').checked,
-            check_fixacao: document.getElementById('l-fixacao').checked, check_lux: document.getElementById('l-lux').checked
+            tipo: document.getElementById('l-tipo').value,
+            estado: document.getElementById('l-estado').value,
+            autonomia: document.getElementById('l-autonomia').value,
+            check_acendimento: document.getElementById('l-acendimento').checked,
+            check_led: document.getElementById('l-led').checked,
+            check_fixacao: document.getElementById('l-fixacao').checked,
+            check_lux: document.getElementById('l-lux').checked,
+            obs: document.getElementById('l-obs').value
         };
     } else if (currentType === 'bomba') {
         specifics = {
@@ -394,6 +404,8 @@ async function generatePDF() {
         doc.setFontSize(16); doc.text("Relatório Técnico de Segurança", 14, 12); doc.setFontSize(10); doc.setTextColor(200); doc.text(`Cliente: ${cliente} | Local: ${local} | Data: ${data}`, 14, 22);
 
         let yPos = 40;
+
+        // Bloco Hidrantes
         const hid = items.filter(i => i.type === 'hidrante');
         if (hid.length > 0) {
             doc.setFontSize(12); doc.setTextColor(37, 99, 235); doc.text("Hidrantes", 14, yPos); yPos += 2;
@@ -408,17 +420,20 @@ async function generatePDF() {
                 }), theme: 'grid', headStyles: { fillColor: [37, 99, 235] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
-
+        // Bloco extintor
         const ext = items.filter(i => i.type === 'extintor');
         if (ext.length > 0) {
             doc.setFontSize(12); doc.setTextColor(220, 38, 38); doc.text("Extintores", 14, yPos); yPos += 2;
             doc.autoTable({
-                startY: yPos, head: [['Local', 'ID', 'Tipo', 'Peso', 'Recarga', 'Lacre/Manom']],
-                body: ext.map(i => [i.andar, i.id, i.tipo, i.peso, i.recarga, (i.check_lacre && i.check_manometro) ? 'OK' : 'Verificar']),
+                startY: yPos,
+                // Adicionado 'Obs' no final do head
+                head: [['Local', 'ID', 'Tipo', 'Peso', 'Recarga', 'Lacre/Manom', 'Obs']],
+                // Adicionado i.obs no final do body
+                body: ext.map(i => [i.andar, i.id, i.tipo, i.peso, i.recarga, (i.check_lacre && i.check_manometro) ? 'OK' : 'Verificar', i.obs || '-']),
                 theme: 'grid', headStyles: { fillColor: [220, 38, 38] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
-
+        // Bloco Bombas
         const bombas = items.filter(i => i.type === 'bomba');
         if (bombas.length > 0) {
             doc.setFontSize(12); doc.setTextColor(124, 58, 237); doc.text("Sistema de Pressurização (Bombas)", 14, yPos); yPos += 2;
@@ -426,6 +441,18 @@ async function generatePDF() {
                 startY: yPos, head: [['Local', 'ID', 'Operação', 'Teste Pressão', 'Manutenção', 'Obs']],
                 body: bombas.map(i => [i.andar, i.id, i.operacao ? 'Normal' : 'FALHA', i.teste_pressao ? 'Realizado' : 'Não Feito', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-']),
                 theme: 'grid', headStyles: { fillColor: [124, 58, 237] }
+            }); yPos = doc.lastAutoTable.finalY + 10;
+        }
+
+        // Bloco Iluminação
+        const luzes = items.filter(i => i.type === 'luz');
+        if (luzes.length > 0) {
+            doc.setFontSize(12); doc.setTextColor(217, 119, 6); doc.text("Iluminação de Emergência", 14, yPos); yPos += 2;
+            doc.autoTable({
+                startY: yPos,
+                head: [['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Obs']],
+                body: luzes.map(i => [i.andar, i.id, i.tipo, i.estado, i.autonomia, i.obs || '-']),
+                theme: 'grid', headStyles: { fillColor: [217, 119, 6] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 

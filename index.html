@@ -17,9 +17,7 @@
 </head>
 
 <body class="bg-gray-100 pb-32">
-
     <div id="menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden backdrop-blur-sm" onclick="toggleMenu()"></div>
-
     <aside id="sidebar"
         class="fixed top-0 left-0 w-64 h-full bg-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
         <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
@@ -35,7 +33,6 @@
                 da Conta</button>
         </div>
     </aside>
-
     <nav class="bg-slate-900 text-white p-3 shadow-lg sticky top-0 z-30 border-b-4 border-slate-700">
         <div class="container mx-auto max-w-3xl flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -55,7 +52,6 @@
     </nav>
 
     <main class="container mx-auto p-4 max-w-3xl">
-
         <div class="bg-white p-4 rounded-lg shadow-sm mb-4 border-l-4 border-slate-800">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <input type="text" id="cliente" class="input-std save-state" placeholder="Cliente / Empresa">
@@ -90,7 +86,7 @@
                     <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01">
                 </div>
             </div>
-
+            <!-- Inicio Botão Hidrante  -->
             <div id="form-hidrante" class="form-section">
                 <h4 class="section-title text-blue-800 border-blue-100">NBR 12779 - Hidrantes</h4>
 
@@ -169,7 +165,8 @@
                     </div>
                 </div>
             </div>
-
+            <!-- Fim Botão Hidrante  -->
+            <!-- Inicio Botão extintor  -->
             <div id="form-extintor" class="form-section hidden">
                 <h4 class="section-title text-red-800 border-red-100">NBR 12962 - Extintores</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
@@ -204,8 +201,21 @@
                     <label class="check-group"><input type="checkbox" id="e-mangueira" class="save-state">
                         <span>Mangueira</span></label>
                 </div>
-            </div>
 
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observações</label>
+                        <button onclick="window.phrases.open('e-obs', 'extintor')"
+                            class="text-xs text-red-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                        </button>
+                    </div>
+                    <textarea id="e-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva anomalias no extintor..."></textarea>
+                </div>
+            </div>
+            <!-- Fim Botão extintor  -->
+            <!-- Inicio Botão Iluminação  -->
             <div id="form-luz" class="form-section hidden">
                 <h4 class="section-title text-amber-700 border-amber-100">NBR 10898 - Iluminação</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
@@ -243,8 +253,21 @@
                     <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"> <span>Lux
                             OK</span></label>
                 </div>
+                <div class="border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observações</label>
+                        <button onclick="window.phrases.open('l-obs', 'luz')"
+                            class="text-xs text-amber-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                        </button>
+                    </div>
+                    <textarea id="l-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva anomalias na iluminação..."></textarea>
+                </div>
             </div>
-
+            </div>
+            <!-- Fim Botão Iluminação  -->
+            <!-- Inicio Botão Bomba  -->
             <div id="form-bomba" class="form-section hidden">
                 <h4 class="section-title text-purple-800 border-purple-100">Sistema de Pressurização (Bombas)</h4>
                 <div class="checklist-grid">
@@ -261,13 +284,19 @@
                         <span>Necessita Manutenção</span>
                     </label>
                 </div>
-                <div class="mt-3">
-                    <label class="label-std">Observação da Bomba</label>
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observação da Bomba</label>
+                        <button onclick="window.phrases.open('b-obs', 'bomba')"
+                            class="text-xs text-purple-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                        </button>
+                    </div>
                     <textarea id="b-obs" class="input-std save-state" rows="2"
                         placeholder="Descreva anomalias ou pressão aferida..."></textarea>
                 </div>
             </div>
-
+            <!-- Fim Botão Bomba  -->
             <div class="mt-4 pt-4 border-t border-gray-100">
                 <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3">
                 </div>
@@ -338,7 +367,8 @@
         </div>
     </div>
 
-    <div id="modal-confirm" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="modal-confirm"
+        class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
             <div class="flex items-center gap-3 mb-4 text-slate-800">
                 <div class="p-2 bg-blue-100 text-blue-600 rounded-full">
@@ -346,15 +376,15 @@
                 </div>
                 <h3 id="modal-confirm-title" class="font-bold text-lg">Confirmação</h3>
             </div>
-            
+
             <p id="modal-confirm-msg" class="text-slate-600 mb-6 leading-relaxed">Tem certeza?</p>
-            
+
             <div class="flex justify-end gap-3">
-                <button onclick="window.closeConfirmModal()" 
+                <button onclick="window.closeConfirmModal()"
                     class="px-4 py-2 text-slate-500 hover:bg-slate-100 font-semibold rounded-lg transition-colors">
                     Cancelar
                 </button>
-                <button id="btn-confirm-action" 
+                <button id="btn-confirm-action"
                     class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2">
                     Confirmar
                 </button>

@@ -1,6 +1,9 @@
-/* Estilos Customizados */
+:root {
+    /* Variáveis para abas ativas (Tons neutros/Cinza) */
+    --tab-active-bg: #475569;    /* Slate 600 */
+    --tab-active-border: #334155; /* Slate 700 */
+}
 
-/* Inputs Padrão */
 .input-std {
     width: 100%;
     padding: 0.5rem;
@@ -83,33 +86,37 @@
     border-color: #e5e7eb;
 }
 
+/* --- ABAS ATIVAS UNIFICADAS PELO ROOT --- */
+
 .tab-active-hidrante {
-    background-color: #2563eb;
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
     color: white;
-    border-color: #1d4ed8;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4);
+    /* Box-shadow removido */
 }
 
 .tab-active-extintor {
-    background-color: #dc2626;
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
     color: white;
-    border-color: #b91c1c;
-    box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.4);
+    /* Box-shadow removido */
 }
 
 .tab-active-luz {
-    background-color: #d97706;
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
     color: white;
-    border-color: #b45309;
-    box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4);
+    /* Box-shadow removido */
 }
 
 .tab-active-bomba {
-    background-color: #7c3aed;
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
     color: white;
-    border-color: #5b21b6;
-    box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.4);
+    /* Box-shadow removido */
 }
+
+/* ---------------------------------------- */
 
 .section-title {
     font-size: 0.75rem;

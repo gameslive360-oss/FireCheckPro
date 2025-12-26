@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
     document.getElementById('upload-input').addEventListener('change', handleFileSelect);
+    document.getElementById('btn-pdf').addEventListener('click', () => generatePDF('save'));
 
     document.getElementById('btn-confirm-action').addEventListener('click', () => {
         if (pendingAction) pendingAction();
@@ -70,6 +71,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// --- Visualização (Lista vs PDF) ---
+window.togglePreviewMode = function (mode) {
+    const btnList = document.getElementById('view-btn-list');
+    const btnPdf = document.getElementById('view-btn-pdf');
+    const divList = document.getElementById('lista-itens');
+    const divPdf = document.getElementById('pdf-preview-container');
+
+    if (mode === 'list') {
+        // Ativar botão Lista
+        btnList.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+        btnList.classList.remove('text-gray-500');
+
+        // Desativar botão PDF
+        btnPdf.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+        btnPdf.classList.add('text-gray-500');
+
+        // Mostrar Lista / Esconder PDF
+        divList.classList.remove('hidden');
+        divPdf.classList.add('hidden');
+    } else {
+        // Ativar botão PDF
+        btnPdf.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
+        btnPdf.classList.remove('text-gray-500');
+
+        // Desativar botão Lista
+        btnList.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
+        btnList.classList.add('text-gray-500');
+
+        // Mostrar PDF / Esconder Lista
+        divPdf.classList.remove('hidden');
+        divList.classList.add('hidden');
+
+        // Gerar a prévia
+        generatePDF('preview');
+    }
+};
 
 const phrasesManager = new PhraseManager();
 window.phrases = phrasesManager;
@@ -393,58 +431,73 @@ function renderList() {
 
 const readFileAsDataURL = (file) => { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => resolve(e.target.result); reader.onerror = reject; reader.readAsDataURL(file); }); };
 
-async function generatePDF() {
-    if (items.length === 0) return alert("Lista vazia!");
-    const btn = document.getElementById('btn-pdf'); const oldText = btn.innerHTML; btn.innerHTML = "Gerando..."; btn.disabled = true;
-    try {
-        const { jsPDF } = window.jspdf; const doc = new jsPDF();
-        const cliente = document.getElementById('cliente').value || "Cliente"; const local = document.getElementById('local').value || "Local"; const data = document.getElementById('data-relatorio').value.split('-').reverse().join('/');
+async function generatePDF(mode = 'save') {
+    if (items.length === 0 && mode === 'save') return alert("Lista vazia!");
 
-        doc.setFillColor(30, 41, 59); doc.rect(0, 0, 210, 28, 'F'); doc.setTextColor(255);
-        doc.setFontSize(16); doc.text("Relatório Técnico de Segurança", 14, 12); doc.setFontSize(10); doc.setTextColor(200); doc.text(`Cliente: ${cliente} | Local: ${local} | Data: ${data}`, 14, 22);
+    // Configuração de feedback visual apenas se for download
+    const btn = document.getElementById('btn-pdf');
+    let oldText = "";
+    if (mode === 'save') {
+        oldText = btn.innerHTML;
+        btn.innerHTML = "Gerando...";
+        btn.disabled = true;
+    } else {
+        // Se for preview, mostra um loading no iframe se quiser, ou apenas espera
+        const frame = document.getElementById('pdf-frame');
+        // Opcional: frame.src = "about:blank"; 
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const cliente = document.getElementById('cliente').value || "Cliente";
+        const local = document.getElementById('local').value || "Local";
+        const dataRaw = document.getElementById('data-relatorio').value;
+        const data = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
+
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 28, 'F');
+        doc.setTextColor(255);
+        doc.setFontSize(16);
+        doc.text("Relatório Técnico de Segurança", 14, 12);
+        doc.setFontSize(10);
+        doc.setTextColor(200);
+        doc.text(`Cliente: ${cliente} | Local: ${local} | Data: ${data}`, 14, 22);
 
         let yPos = 40;
 
-        // Bloco Hidrantes
+        // --- HIDRANTES ---
         const hid = items.filter(i => i.type === 'hidrante');
         if (hid.length > 0) {
             doc.setFontSize(12); doc.setTextColor(37, 99, 235); doc.text("Hidrantes", 14, yPos); yPos += 2;
             doc.autoTable({
-                startY: yPos, head: [['Local', 'ID', 'Mangueira', 'Vencimento', 'Selo', 'Comp. Faltantes', 'Observações']],
+                startY: yPos,
+                head: [['Local', 'ID', 'Mangueira', 'Vencimento', 'Selo', 'Comp. Faltantes', 'Observações']],
                 body: hid.map(i => {
                     let faltantes = [];
                     if (!i.check_registro) faltantes.push('Reg'); if (!i.check_adaptador) faltantes.push('Adap'); if (!i.check_chave) faltantes.push('Chv'); if (!i.check_esguicho) faltantes.push('Esg');
                     const statusComp = faltantes.length === 0 ? 'OK' : faltantes.join(', ');
                     const mangueiraInfo = i.tem_mangueira ? `${i.lances}x ${i.metragem}` : 'AUSENTE';
                     return [i.andar, i.id, mangueiraInfo, i.tem_mangueira ? i.validade : '-', i.tem_mangueira ? i.selo : '-', statusComp, i.obs || '-'];
-                }), theme: 'grid', headStyles: { fillColor: [37, 99, 235] }
+                }),
+                theme: 'grid', headStyles: { fillColor: [37, 99, 235] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
-        // Bloco extintor
+
+        // --- EXTINTORES ---
         const ext = items.filter(i => i.type === 'extintor');
         if (ext.length > 0) {
             doc.setFontSize(12); doc.setTextColor(220, 38, 38); doc.text("Extintores", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
-                // Adicionado 'Obs' no final do head
                 head: [['Local', 'ID', 'Tipo', 'Peso', 'Recarga', 'Lacre/Manom', 'Obs']],
-                // Adicionado i.obs no final do body
                 body: ext.map(i => [i.andar, i.id, i.tipo, i.peso, i.recarga, (i.check_lacre && i.check_manometro) ? 'OK' : 'Verificar', i.obs || '-']),
                 theme: 'grid', headStyles: { fillColor: [220, 38, 38] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
-        // Bloco Bombas
-        const bombas = items.filter(i => i.type === 'bomba');
-        if (bombas.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(124, 58, 237); doc.text("Sistema de Pressurização (Bombas)", 14, yPos); yPos += 2;
-            doc.autoTable({
-                startY: yPos, head: [['Local', 'ID', 'Operação', 'Teste Pressão', 'Manutenção', 'Obs']],
-                body: bombas.map(i => [i.andar, i.id, i.operacao ? 'Normal' : 'FALHA', i.teste_pressao ? 'Realizado' : 'Não Feito', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-']),
-                theme: 'grid', headStyles: { fillColor: [124, 58, 237] }
-            }); yPos = doc.lastAutoTable.finalY + 10;
-        }
 
-        // Bloco Iluminação
+        // --- ILUMINAÇÃO ---
         const luzes = items.filter(i => i.type === 'luz');
         if (luzes.length > 0) {
             doc.setFontSize(12); doc.setTextColor(217, 119, 6); doc.text("Iluminação de Emergência", 14, yPos); yPos += 2;
@@ -456,26 +509,60 @@ async function generatePDF() {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
+        // --- BOMBAS ---
+        const bombas = items.filter(i => i.type === 'bomba');
+        if (bombas.length > 0) {
+            doc.setFontSize(12); doc.setTextColor(124, 58, 237); doc.text("Sistema de Pressurização (Bombas)", 14, yPos); yPos += 2;
+            doc.autoTable({
+                startY: yPos, head: [['Local', 'ID', 'Operação', 'Teste Pressão', 'Manutenção', 'Obs']],
+                body: bombas.map(i => [i.andar, i.id, i.operacao ? 'Normal' : 'FALHA', i.teste_pressao ? 'Realizado' : 'Não Feito', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-']),
+                theme: 'grid', headStyles: { fillColor: [124, 58, 237] }
+            }); yPos = doc.lastAutoTable.finalY + 10;
+        }
+
+        // --- FOTOS ---
         const itemsWithPhotos = items.filter(i => i.imageFiles && i.imageFiles.length > 0);
         if (itemsWithPhotos.length > 0) {
             doc.addPage(); doc.setTextColor(0); doc.setFontSize(14); doc.text("Relatório Fotográfico", 14, 20);
             let x = 14; let y = 30; const imgWidth = 85; const imgHeight = 85; const gap = 10;
+
             for (const item of itemsWithPhotos) {
                 if (y + 10 > 280) { doc.addPage(); y = 20; }
                 doc.setFontSize(10); doc.setFont(undefined, 'bold'); doc.text(`Item: ${item.id} - ${item.andar} (${item.type})`, 14, y); y += 5;
+
                 for (let i = 0; i < item.imageFiles.length; i++) {
                     try {
                         const imgData = await readFileAsDataURL(item.imageFiles[i]);
                         if (y + imgHeight > 285) { doc.addPage(); y = 20; doc.text(`Item: ${item.id} (Continuação)`, 14, y - 5); }
-                        doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight); doc.setFont(undefined, 'normal'); doc.setFontSize(8); doc.text(`Foto ${i + 1}`, x, y + imgHeight + 3);
+                        doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+                        doc.setFont(undefined, 'normal'); doc.setFontSize(8);
+                        doc.text(`Foto ${i + 1}`, x, y + imgHeight + 3);
+
                         if (x === 14) { x = 14 + imgWidth + gap; } else { x = 14; y += imgHeight + 10; }
                     } catch (err) { console.error("Erro imagem PDF", err); }
                 }
                 if (x > 14) { x = 14; y += imgHeight + 10; } y += 5;
             }
         }
-        doc.save(`Relatorio_${cliente}.pdf`);
-    } catch (e) { console.error(e); alert("Erro PDF: " + e.message); } finally { btn.innerHTML = oldText; btn.disabled = false; }
+
+        // --- FINALIZAÇÃO ---
+        if (mode === 'save') {
+            doc.save(`Relatorio_${cliente}.pdf`);
+        } else {
+            // Modo Preview: Gera URL Blob e define no iframe
+            const blob = doc.output('bloburl');
+            document.getElementById('pdf-frame').src = blob;
+        }
+
+    } catch (e) {
+        console.error(e);
+        if (mode === 'save') alert("Erro PDF: " + e.message);
+    } finally {
+        if (mode === 'save') {
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+        }
+    }
 }
 
 async function saveToFirebase() {

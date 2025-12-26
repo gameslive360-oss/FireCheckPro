@@ -1,7 +1,9 @@
 :root {
     /* Variáveis para abas ativas (Tons neutros/Cinza) */
-    --tab-active-bg: #475569;    /* Slate 600 */
-    --tab-active-border: #334155; /* Slate 700 */
+    --tab-active-bg: #475569;
+    /* Slate 600 */
+    --tab-active-border: #334155;
+    /* Slate 700 */
 }
 
 .input-std {
@@ -114,6 +116,12 @@
     border-color: var(--tab-active-border);
     color: white;
     /* Box-shadow removido */
+}
+
+.tab-active-sinalizacao {
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
+    color: white;
 }
 
 /* ---------------------------------------- */

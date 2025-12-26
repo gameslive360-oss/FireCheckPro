@@ -38,6 +38,19 @@ export class PhraseManager {
                 "Bateria viciada.",
                 "Lâmpada queimada.",
                 "Não acendeu no teste."
+            ],
+            sinalizacao: [
+                "Sinalização em conformidade com NBR 13434.",
+                "Placa obstruída visualmente.",
+                "Placa desbotada ou ilegível.",
+                "Ausência de sinalização de Rota de Fuga.",
+                "Ausência de sinalização de Equipamento.",
+                "Placa danificada/quebrada.",
+                "Instalada em altura incorreta.",
+                "Má fixação (solta na parede).",
+                "Fotoluminescência fraca ou inexistente.",
+                "Sinalização suja/engordurada.",
+                "Placa de tipo incorreto para o local."
             ]
         };
     }

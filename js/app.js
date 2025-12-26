@@ -6,8 +6,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { PhraseManager } from "./phrases.js";
 
 // --- Configuração ---
-// Lista de abas do sistema. Para desativar a lógica de uma, basta remover daqui.
-const TABS = ['hidrante', 'extintor', 'luz', 'bomba'];
+const TABS = ['hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao'];
 
 // --- Inicialização Firebase ---
 let db, storage, auth, user = null;
@@ -49,11 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('data-relatorio').valueAsDate = new Date();
     }
 
+    if (document.getElementById('s-existente')) {
+        window.toggleSinalizacaoFields();
+    }
+
     // Listeners
     document.getElementById('btn-login').addEventListener('click', handleLogin);
     document.getElementById('btn-logout-side').addEventListener('click', handleLogout);
     document.getElementById('btn-add-item').addEventListener('click', addItem);
-    document.getElementById('btn-pdf').addEventListener('click', generatePDF);
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
     document.getElementById('upload-input').addEventListener('change', handleFileSelect);
@@ -80,31 +82,19 @@ window.togglePreviewMode = function (mode) {
     const divPdf = document.getElementById('pdf-preview-container');
 
     if (mode === 'list') {
-        // Ativar botão Lista
         btnList.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
         btnList.classList.remove('text-gray-500');
-
-        // Desativar botão PDF
         btnPdf.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
         btnPdf.classList.add('text-gray-500');
-
-        // Mostrar Lista / Esconder PDF
         divList.classList.remove('hidden');
         divPdf.classList.add('hidden');
     } else {
-        // Ativar botão PDF
         btnPdf.classList.add('bg-white', 'text-slate-800', 'shadow-sm');
         btnPdf.classList.remove('text-gray-500');
-
-        // Desativar botão Lista
         btnList.classList.remove('bg-white', 'text-slate-800', 'shadow-sm');
         btnList.classList.add('text-gray-500');
-
-        // Mostrar PDF / Esconder Lista
         divPdf.classList.remove('hidden');
         divList.classList.add('hidden');
-
-        // Gerar a prévia
         generatePDF('preview');
     }
 };
@@ -112,34 +102,23 @@ window.togglePreviewMode = function (mode) {
 const phrasesManager = new PhraseManager();
 window.phrases = phrasesManager;
 
-// --- Lógica de Abas (Refatorada para não apagar classes manuais) ---
+// --- Lógica de Abas ---
 window.switchTab = function (type) {
     currentType = type;
-
     TABS.forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         const form = document.getElementById(`form-${t}`);
-
-        // Define a classe de cor específica desta aba (ex: tab-active-hidrante)
         const activeClass = `tab-active-${t}`;
 
         if (t === type) {
-            // -- ATIVAR --
             form.classList.remove('hidden');
-
-            // Remove estilo inativo e adiciona o ativo específico
             btn.classList.remove('tab-inactive');
             btn.classList.add(activeClass);
         } else {
-            // -- DESATIVAR --
             form.classList.add('hidden');
-
-            // Remove o estilo ativo específico e adiciona inativo
             btn.classList.remove(activeClass);
             btn.classList.add('tab-inactive');
         }
-        // NOTA: Como usamos classList.add/remove, se você colocou 'hidden' 
-        // manualmente no HTML do botão, ele SERÁ PRESERVADO.
     });
 };
 
@@ -184,6 +163,24 @@ window.toggleMangueiraFields = function () {
     }
 };
 
+// --- Sinalização Toggle ---
+window.toggleSinalizacaoFields = function () {
+    const select = document.getElementById('s-existente');
+    const container = document.getElementById('s-detalhes-container');
+
+    if (!select || !container) return;
+
+    const inputs = container.querySelectorAll('input, select');
+
+    if (select.value === 'Sim') {
+        container.classList.remove('opacity-50', 'pointer-events-none');
+        inputs.forEach(el => el.disabled = false);
+    } else {
+        container.classList.add('opacity-50', 'pointer-events-none');
+        inputs.forEach(el => el.disabled = true);
+    }
+};
+
 // --- Persistência ---
 function restoreFormState() {
     document.querySelectorAll('.save-state').forEach(input => {
@@ -196,20 +193,49 @@ function restoreFormState() {
 }
 
 function clearFormState(keepHeader = true) {
-    const idsToClear = ['h-lances', 'h-obs', 'h-validade', 'e-peso', 'e-recarga', 'e-teste', 'l-autonomia', 'b-obs', 'e-obs', 'l-obs'];
+    const idsToClear = [
+        'h-lances', 'h-obs', 'h-validade',
+        'e-peso', 'e-recarga', 'e-teste', 'e-obs',
+        'l-autonomia', 'l-obs',
+        'b-obs',
+        's-obs', 's-tipo'
+    ];
+
     idsToClear.forEach(id => {
         const el = document.getElementById(id);
-        if (el) { el.value = ""; localStorage.removeItem(id); }
+        if (el) {
+            el.value = "";
+            localStorage.removeItem(id);
+        }
     });
+
+    // Reset dos Checkboxes
     document.querySelectorAll('input[type="checkbox"]').forEach(el => {
-        el.checked = (el.id === 'h-tem-mangueira');
+        // Checkboxes de Sinalização: Padrão é TRUE (Marcado = OK)
+        if (['s-foto', 's-fixacao', 's-visivel', 's-legivel'].includes(el.id)) {
+            el.checked = true;
+        }
+        // Checkbox Mangueira: Padrão é TRUE (Tem mangueira)
+        else if (el.id === 'h-tem-mangueira') {
+            el.checked = true;
+        }
+        // Outros checkboxes (anomalias): Padrão é FALSE (Desmarcado)
+        else {
+            el.checked = false;
+        }
         localStorage.removeItem(el.id);
     });
+
+    // Reset dos Selects (volta para a primeira opção)
     document.querySelectorAll('select.save-state').forEach(el => {
         el.selectedIndex = 0;
         localStorage.removeItem(el.id);
     });
-    window.toggleMangueiraFields();
+
+    // Atualiza a interface visual (bloqueios)
+    if (window.toggleMangueiraFields) window.toggleMangueiraFields();
+    if (window.toggleSinalizacaoFields) window.toggleSinalizacaoFields();
+
     if (!keepHeader) localStorage.clear();
 }
 
@@ -331,8 +357,20 @@ function addItem() {
             alert("⚠️ ATENÇÃO: Você indicou manutenção na bomba.\n\nPor favor, descreva o problema na observação.");
             document.getElementById('b-obs').focus(); return;
         }
+    } else if (currentType === 'sinalizacao') {
+        const existe = document.getElementById('s-existente').value;
+        specifics = {
+            existente: existe,
+            tipo: existe === 'Sim' ? document.getElementById('s-tipo').value : '-',
+            check_foto: existe === 'Sim' ? document.getElementById('s-foto').checked : false,
+            check_fixacao: existe === 'Sim' ? document.getElementById('s-fixacao').checked : false,
+            check_visivel: existe === 'Sim' ? document.getElementById('s-visivel').checked : false,
+            check_legivel: existe === 'Sim' ? document.getElementById('s-legivel').checked : false,
+            obs: document.getElementById('s-obs').value
+        };
     }
 
+    // Salva o item na lista global
     items.push({ ...baseItem, ...specifics });
     renderList();
     clearFormState();
@@ -372,6 +410,7 @@ window.editItem = function (uid) {
             document.getElementById('e-manometro').checked = item.check_manometro;
             document.getElementById('e-sinalizacao').checked = item.check_sinalizacao;
             document.getElementById('e-mangueira').checked = item.check_mangueira;
+            document.getElementById('e-obs').value = item.obs || '';
         } else if (item.type === 'luz') {
             document.getElementById('l-tipo').value = item.tipo;
             document.getElementById('l-estado').value = item.estado;
@@ -380,11 +419,21 @@ window.editItem = function (uid) {
             document.getElementById('l-led').checked = item.check_led;
             document.getElementById('l-fixacao').checked = item.check_fixacao;
             document.getElementById('l-lux').checked = item.check_lux;
+            document.getElementById('l-obs').value = item.obs || '';
         } else if (item.type === 'bomba') {
             document.getElementById('b-operacao').checked = item.operacao;
             document.getElementById('b-teste').checked = item.teste_pressao;
             document.getElementById('b-manutencao').checked = item.necessita_manutencao;
             document.getElementById('b-obs').value = item.obs;
+        } else if (item.type === 'sinalizacao') {
+            document.getElementById('s-existente').value = item.existente;
+            document.getElementById('s-tipo').value = item.tipo || 'Saida';
+            document.getElementById('s-foto').checked = item.check_foto;
+            document.getElementById('s-fixacao').checked = item.check_fixacao;
+            document.getElementById('s-visivel').checked = item.check_visivel;
+            document.getElementById('s-legivel').checked = item.check_legivel;
+            document.getElementById('s-obs').value = item.obs || '';
+            window.toggleSinalizacaoFields();
         }
 
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
@@ -407,25 +456,55 @@ function renderList() {
     const listEl = document.getElementById('lista-itens');
     document.getElementById('count').innerText = items.length;
     listEl.innerHTML = "";
-    if (items.length === 0) { listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia.</div>'; return; }
-    items.slice().reverse().forEach(item => {
-        let icon = item.type === 'hidrante' ? 'droplets' : (item.type === 'extintor' ? 'fire-extinguisher' : (item.type === 'luz' ? 'lightbulb' : 'activity'));
-        let color = item.type === 'hidrante' ? 'blue' : (item.type === 'extintor' ? 'red' : (item.type === 'luz' ? 'amber' : 'purple'));
-        const photoBadge = (item.imageFiles && item.imageFiles.length > 0) ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1">📷 ${item.imageFiles.length}</span>` : '';
 
-        const html = `
-        <div class="bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in">
+    if (items.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia.</div>';
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    items.slice().reverse().forEach(item => {
+        let icon = item.type === 'hidrante' ? 'droplets' :
+            (item.type === 'extintor' ? 'fire-extinguisher' :
+                (item.type === 'luz' ? 'lightbulb' :
+                    (item.type === 'bomba' ? 'activity' : 'signpost')));
+
+        let color = item.type === 'hidrante' ? 'blue' :
+            (item.type === 'extintor' ? 'red' :
+                (item.type === 'luz' ? 'amber' :
+                    (item.type === 'bomba' ? 'purple' : 'teal')));
+
+        const div = document.createElement('div');
+        div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in`;
+
+        div.innerHTML = `
             <div class="flex items-center gap-3 overflow-hidden">
-                <div class="p-2 bg-gray-50 rounded-full text-gray-600 flex-shrink-0"><i data-lucide="${icon}" class="w-5 h-5"></i></div>
-                <div class="min-w-0"><div class="font-bold text-gray-800 text-sm truncate">${item.id} <span class="font-normal text-gray-400">|</span> ${item.andar}</div><div class="text-xs text-gray-500 truncate">${item.type.toUpperCase()} ${photoBadge}</div></div>
+                <div class="p-2 bg-gray-50 rounded-full text-gray-600 flex-shrink-0">
+                    <i data-lucide="${icon}" class="w-5 h-5"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="font-bold text-gray-800 text-sm truncate" id="item-title-${item.uid}"></div>
+                    <div class="text-xs text-gray-500 truncate">
+                        ${item.type.toUpperCase()} 
+                        ${(item.imageFiles && item.imageFiles.length > 0) ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1">📷 ${item.imageFiles.length}</span>` : ''}
+                    </div>
+                </div>
             </div>
-            <div class="flex items-center">
-                <button onclick="window.editItem(${item.uid})" class="text-blue-400 hover:text-blue-600 p-2 transition-colors" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                <button onclick="window.removeItem(${item.uid})" class="text-red-300 hover:text-red-600 p-2 transition-colors" title="Excluir"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <div class="flex items-center gap-2">
+                <button class="btn-edit text-blue-400 hover:text-blue-600 p-2"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                <button class="btn-del text-red-300 hover:text-red-600 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
-        </div>`;
-        listEl.innerHTML += html;
+        `;
+
+        div.querySelector(`#item-title-${item.uid}`).textContent = `${item.id} | ${item.andar}`;
+        div.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
+        div.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
+
+        fragment.appendChild(div);
     });
+
+    listEl.appendChild(fragment);
     lucide.createIcons();
 }
 
@@ -434,17 +513,13 @@ const readFileAsDataURL = (file) => { return new Promise((resolve, reject) => { 
 async function generatePDF(mode = 'save') {
     if (items.length === 0 && mode === 'save') return alert("Lista vazia!");
 
-    // Configuração de feedback visual apenas se for download
+    // Configuração de feedback visual
     const btn = document.getElementById('btn-pdf');
     let oldText = "";
     if (mode === 'save') {
         oldText = btn.innerHTML;
         btn.innerHTML = "Gerando...";
         btn.disabled = true;
-    } else {
-        // Se for preview, mostra um loading no iframe se quiser, ou apenas espera
-        const frame = document.getElementById('pdf-frame');
-        // Opcional: frame.src = "about:blank"; 
     }
 
     try {
@@ -456,7 +531,8 @@ async function generatePDF(mode = 'save') {
         const dataRaw = document.getElementById('data-relatorio').value;
         const data = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
 
-        doc.setFillColor(30, 41, 59);
+        // Cabeçalho do Relatório
+        doc.setFillColor(30, 41, 59); // Slate 800
         doc.rect(0, 0, 210, 28, 'F');
         doc.setTextColor(255);
         doc.setFontSize(16);
@@ -470,13 +546,17 @@ async function generatePDF(mode = 'save') {
         // --- HIDRANTES ---
         const hid = items.filter(i => i.type === 'hidrante');
         if (hid.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(37, 99, 235); doc.text("Hidrantes", 14, yPos); yPos += 2;
+            doc.setFontSize(12); doc.setTextColor(37, 99, 235); // Blue
+            doc.text("Hidrantes", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
                 head: [['Local', 'ID', 'Mangueira', 'Vencimento', 'Selo', 'Comp. Faltantes', 'Observações']],
                 body: hid.map(i => {
                     let faltantes = [];
-                    if (!i.check_registro) faltantes.push('Reg'); if (!i.check_adaptador) faltantes.push('Adap'); if (!i.check_chave) faltantes.push('Chv'); if (!i.check_esguicho) faltantes.push('Esg');
+                    if (!i.check_registro) faltantes.push('Reg');
+                    if (!i.check_adaptador) faltantes.push('Adap');
+                    if (!i.check_chave) faltantes.push('Chv');
+                    if (!i.check_esguicho) faltantes.push('Esg');
                     const statusComp = faltantes.length === 0 ? 'OK' : faltantes.join(', ');
                     const mangueiraInfo = i.tem_mangueira ? `${i.lances}x ${i.metragem}` : 'AUSENTE';
                     return [i.andar, i.id, mangueiraInfo, i.tem_mangueira ? i.validade : '-', i.tem_mangueira ? i.selo : '-', statusComp, i.obs || '-'];
@@ -488,7 +568,8 @@ async function generatePDF(mode = 'save') {
         // --- EXTINTORES ---
         const ext = items.filter(i => i.type === 'extintor');
         if (ext.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(220, 38, 38); doc.text("Extintores", 14, yPos); yPos += 2;
+            doc.setFontSize(12); doc.setTextColor(220, 38, 38); // Red
+            doc.text("Extintores", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
                 head: [['Local', 'ID', 'Tipo', 'Peso', 'Recarga', 'Lacre/Manom', 'Obs']],
@@ -500,7 +581,8 @@ async function generatePDF(mode = 'save') {
         // --- ILUMINAÇÃO ---
         const luzes = items.filter(i => i.type === 'luz');
         if (luzes.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(217, 119, 6); doc.text("Iluminação de Emergência", 14, yPos); yPos += 2;
+            doc.setFontSize(12); doc.setTextColor(217, 119, 6); // Amber
+            doc.text("Iluminação de Emergência", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos,
                 head: [['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Obs']],
@@ -512,11 +594,42 @@ async function generatePDF(mode = 'save') {
         // --- BOMBAS ---
         const bombas = items.filter(i => i.type === 'bomba');
         if (bombas.length > 0) {
-            doc.setFontSize(12); doc.setTextColor(124, 58, 237); doc.text("Sistema de Pressurização (Bombas)", 14, yPos); yPos += 2;
+            doc.setFontSize(12); doc.setTextColor(124, 58, 237); // Purple
+            doc.text("Sistema de Pressurização (Bombas)", 14, yPos); yPos += 2;
             doc.autoTable({
                 startY: yPos, head: [['Local', 'ID', 'Operação', 'Teste Pressão', 'Manutenção', 'Obs']],
                 body: bombas.map(i => [i.andar, i.id, i.operacao ? 'Normal' : 'FALHA', i.teste_pressao ? 'Realizado' : 'Não Feito', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-']),
                 theme: 'grid', headStyles: { fillColor: [124, 58, 237] }
+            }); yPos = doc.lastAutoTable.finalY + 10;
+        }
+
+        // --- SINALIZAÇÃO ---
+        const sinalizacao = items.filter(i => i.type === 'sinalizacao');
+        if (sinalizacao.length > 0) {
+            doc.setFontSize(12); doc.setTextColor(13, 148, 136); // Teal
+            doc.text("Sinalização de Emergência", 14, yPos); yPos += 2;
+
+            doc.autoTable({
+                startY: yPos,
+                head: [['Local', 'ID', 'Existente', 'Tipo', 'Estado/Conformidade', 'Obs']],
+                body: sinalizacao.map(i => {
+                    let status = '-';
+                    let tipoTexto = '-';
+
+                    if (i.existente === 'Sim') {
+                        tipoTexto = i.tipo || 'Saida';
+                        let falhas = [];
+                        if (!i.check_foto) falhas.push('S/ Foto');
+                        if (!i.check_fixacao) falhas.push('Solta');
+                        if (!i.check_visivel) falhas.push('Obstruída');
+                        if (!i.check_legivel) falhas.push('Ilegível');
+
+                        status = falhas.length === 0 ? 'OK' : falhas.join(', ');
+                    }
+
+                    return [i.andar, i.id, i.existente, tipoTexto, status, i.obs || '-'];
+                }),
+                theme: 'grid', headStyles: { fillColor: [13, 148, 136] }
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
@@ -549,7 +662,7 @@ async function generatePDF(mode = 'save') {
         if (mode === 'save') {
             doc.save(`Relatorio_${cliente}.pdf`);
         } else {
-            // Modo Preview: Gera URL Blob e define no iframe
+            // Modo Preview
             const blob = doc.output('bloburl');
             document.getElementById('pdf-frame').src = blob;
         }

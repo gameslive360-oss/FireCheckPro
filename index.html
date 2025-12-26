@@ -73,6 +73,9 @@
             <button id="tab-bomba" class="tab-btn tab-inactive" onclick="window.switchTab('bomba')">
                 <i data-lucide="activity" class="w-5 h-5"></i> <span>Bombas</span>
             </button>
+            <button id="tab-sinalizacao" class="tab-btn tab-inactive" onclick="window.switchTab('sinalizacao')">
+                <i data-lucide="signpost" class="w-5 h-5"></i> <span>Sinalização</span>
+            </button>
         </div>
 
         <section class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
@@ -294,6 +297,67 @@
                     </div>
                     <textarea id="b-obs" class="input-std save-state" rows="2"
                         placeholder="Descreva anomalias ou pressão aferida..."></textarea>
+                </div>
+            </div>
+            <!-- Fim Botão Bomba  -->
+
+            <!-- Inicio Botão Sinalização  -->
+            <div id="form-sinalizacao" class="form-section hidden">
+                <h4 class="section-title text-teal-800 border-teal-100">Sinalização de Emergência</h4>
+
+                <div class="mb-4 border-b border-gray-100 pb-4">
+                    <label class="label-std text-teal-900">Sinalização Existente?</label>
+                    <select id="s-existente" class="input-std save-state font-bold"
+                        onchange="window.toggleSinalizacaoFields()">
+                        <option value="Sim">Sim</option>
+                        <option value="Nao">Não</option>
+                    </select>
+                </div>
+
+                <div id="s-detalhes-container" class="transition-opacity duration-200">
+                    <div class="mb-4">
+                        <label class="label-std">Tipo de Sinalização</label>
+                        <select id="s-tipo" class="input-std save-state">
+                            <option value="Saida">Indicação de Saída</option>
+                            <option value="Extintor">Indicação de Extintor</option>
+                            <option value="Hidrante">Indicação de Hidrante</option>
+                            <option value="Alerta">Alerta / Perigo</option>
+                            <option value="Proibicao">Proibição</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <label class="label-std mb-2">Estado de Conservação</label>
+                    <div class="checklist-grid mb-4">
+                        <label class="check-group">
+                            <input type="checkbox" id="s-foto" class="save-state" checked>
+                            <span>Fotoluminescência OK</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="s-fixacao" class="save-state" checked>
+                            <span>Fixação Firme</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="s-visivel" class="save-state" checked>
+                            <span>Totalmente Visível</span>
+                        </label>
+                        <label class="check-group">
+                            <input type="checkbox" id="s-legivel" class="save-state" checked>
+                            <span>Limpa/Legível</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observações</label>
+                        <button onclick="window.phrases.open('s-obs', 'sinalizacao')"
+                            class="text-xs text-teal-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
+                        </button>
+                    </div>
+                    <textarea id="s-obs" class="input-std save-state" rows="2"
+                        placeholder="Ex: Placa caída, placa apagada..."></textarea>
                 </div>
             </div>
             <!-- Fim Botão Bomba  -->

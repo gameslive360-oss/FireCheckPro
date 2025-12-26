@@ -6,7 +6,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { PhraseManager } from "./phrases.js";
 
 // --- Configuração ---
-const TABS = ['hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro'];
+const TABS = ['hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral'];
 
 // --- Inicialização Firebase ---
 let db, storage, auth, user = null;
@@ -198,7 +198,9 @@ function clearFormState(keepHeader = true) {
         'e-peso', 'e-recarga', 'e-teste', 'e-obs',
         'l-autonomia', 'l-obs',
         'b-obs',
-        's-obs', 's-tipo', 'el-tipo', 'el-botoeiras', 'el-manutencao', 'el-obs'
+        's-obs', 's-tipo',
+        'el-tipo', 'el-botoeiras', 'el-manutencao', 'el-obs',
+        'g-obs' // Limpar campo geral
     ];
 
     idsToClear.forEach(id => {
@@ -211,32 +213,24 @@ function clearFormState(keepHeader = true) {
 
     // Reset dos Checkboxes
     document.querySelectorAll('input[type="checkbox"]').forEach(el => {
-        // Checkboxes de Sinalização: Padrão é TRUE (Marcado = OK)
         if (['s-foto', 's-fixacao', 's-visivel', 's-legivel'].includes(el.id)) {
             el.checked = true;
-        }
-        // Checkbox Mangueira: Padrão é TRUE (Tem mangueira)
-        else if (el.id === 'h-tem-mangueira') {
+        } else if (el.id === 'h-tem-mangueira') {
             el.checked = true;
-        }
-        else if (['el-painel', 'el-piloto', 'el-ruido', 'el-fixacao'].includes(el.id)) {
+        } else if (['el-painel', 'el-piloto', 'el-ruido', 'el-fixacao'].includes(el.id)) {
             el.checked = true;
-        }
-        // Outros checkboxes (anomalias): Padrão é FALSE (Desmarcado)
-        else {
+        } else {
             el.checked = false;
         }
-
         localStorage.removeItem(el.id);
     });
 
-    // Reset dos Selects (volta para a primeira opção)
+    // Reset dos Selects
     document.querySelectorAll('select.save-state').forEach(el => {
         el.selectedIndex = 0;
         localStorage.removeItem(el.id);
     });
 
-    // Atualiza a interface visual (bloqueios)
     if (window.toggleMangueiraFields) window.toggleMangueiraFields();
     if (window.toggleSinalizacaoFields) window.toggleSinalizacaoFields();
 
@@ -383,16 +377,22 @@ function addItem() {
             check_fixacao: document.getElementById('el-fixacao').checked,
             obs: document.getElementById('el-obs').value
         };
-
-        // Alerta simples se marcar manutenção sem observação
         if (specifics.precisa_manutencao === 'Sim' && !specifics.obs.trim()) {
             alert("⚠️ Por favor, descreva o motivo da manutenção na observação.");
             document.getElementById('el-obs').focus();
             return;
         }
+    } else if (currentType === 'geral') {
+        specifics = {
+            obs: document.getElementById('g-obs').value
+        };
+        if (!specifics.obs.trim()) {
+            alert("⚠️ Digite alguma observação antes de adicionar.");
+            document.getElementById('g-obs').focus();
+            return;
+        }
     }
 
-    // Salva o item na lista global (Agora dentro da função addItem corretamente)
     items.push({ ...baseItem, ...specifics });
     renderList();
     clearFormState();
@@ -465,6 +465,8 @@ window.editItem = function (uid) {
             document.getElementById('el-ruido').checked = item.check_ruido;
             document.getElementById('el-fixacao').checked = item.check_fixacao;
             document.getElementById('el-obs').value = item.obs || '';
+        } else if (item.type === 'geral') {
+            document.getElementById('g-obs').value = item.obs || '';
         }
 
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
@@ -486,8 +488,6 @@ window.removeItem = function (uid) {
 function renderList() {
     const listEl = document.getElementById('lista-itens');
     document.getElementById('count').innerText = items.length;
-
-    // Limpa a lista visualmente
     listEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -495,32 +495,29 @@ function renderList() {
         return;
     }
 
-    // Cria um fragmento de memória (Melhor performance)
     const fragment = document.createDocumentFragment();
 
     items.slice().reverse().forEach(item => {
-        // 1. Definição de Ícones
         let icon = item.type === 'hidrante' ? 'droplets' :
             (item.type === 'extintor' ? 'fire-extinguisher' :
                 (item.type === 'luz' ? 'lightbulb' :
                     (item.type === 'bomba' ? 'activity' :
                         (item.type === 'sinalizacao' ? 'signpost' :
-                            (item.type === 'eletro' ? 'zap' : 'circle'))))); // 'zap' para Eletro
+                            (item.type === 'eletro' ? 'zap' :
+                                (item.type === 'geral' ? 'clipboard-list' : 'circle'))))));
 
-        // 2. Definição de Cores
         let color = item.type === 'hidrante' ? 'blue' :
             (item.type === 'extintor' ? 'red' :
                 (item.type === 'luz' ? 'amber' :
                     (item.type === 'bomba' ? 'purple' :
                         (item.type === 'sinalizacao' ? 'teal' :
-                            (item.type === 'eletro' ? 'indigo' : 'gray'))))); // 'indigo' para Eletro
+                            (item.type === 'eletro' ? 'indigo' :
+                                (item.type === 'geral' ? 'slate' : 'gray'))))));
 
-        // 3. Badge de Foto
         const photoBadge = (item.imageFiles && item.imageFiles.length > 0)
             ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1 flex items-center gap-1"><i data-lucide="camera" class="w-3 h-3"></i> ${item.imageFiles.length}</span>`
             : '';
 
-        // 4. Construção do Elemento HTML
         const div = document.createElement('div');
         div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in group hover:shadow-md transition-all`;
 
@@ -549,7 +546,6 @@ function renderList() {
         div.querySelector(`#item-title-${item.uid}`).textContent = `${item.id} | ${item.andar}`;
         div.querySelector('.btn-edit').addEventListener('click', () => window.editItem(item.uid));
         div.querySelector('.btn-del').addEventListener('click', () => window.removeItem(item.uid));
-
         fragment.appendChild(div);
     });
 
@@ -562,7 +558,6 @@ const readFileAsDataURL = (file) => { return new Promise((resolve, reject) => { 
 async function generatePDF(mode = 'save') {
     if (items.length === 0 && mode === 'save') return alert("Lista vazia!");
 
-    // Configuração de feedback visual
     const btn = document.getElementById('btn-pdf');
     let oldText = "";
     if (mode === 'save') {
@@ -575,42 +570,32 @@ async function generatePDF(mode = 'save') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // Captura dos dados novos
         const cliente = document.getElementById('cliente').value || "Não Informado";
         const local = document.getElementById('local').value || "Não Informado";
         const tecnico = document.getElementById('resp-tecnico').value || "Não Informado";
         const classificacao = document.getElementById('classificacao').value || "-";
 
-        // Formatação das datas
         const dataRaw = document.getElementById('data-relatorio').value;
         const dataRelatorio = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
-
         const avcbRaw = document.getElementById('validade-avcb').value;
         const dataAvcb = avcbRaw ? avcbRaw.split('-').reverse().join('/') : "Não Informado";
 
-        // --- DESIGN DO CABEÇALHO ---
         doc.setFillColor(30, 41, 59);
         doc.rect(0, 0, 210, 40, 'F');
-
         doc.setTextColor(255);
         doc.setFontSize(18);
         doc.setFont(undefined, 'bold');
         doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 15, { align: 'center' });
-
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(200, 200, 200);
-        doc.text("Projeto Planejamento e Implatação de Sistemas LTDA", 105, 22, { align: 'center' });
-
+        doc.text("Projeto Planejamento e Implantação de Sistemas LTDA", 105, 22, { align: 'center' });
         doc.setFontSize(9);
         doc.setTextColor(255);
-
         doc.text(`Cliente: ${cliente}`, 10, 32);
         doc.text(`Local: ${local}`, 10, 37);
-
         doc.text(`Resp. Técnico: ${tecnico}`, 110, 32, { align: 'center' });
         doc.text(`Classificação: ${classificacao}`, 110, 37, { align: 'center' });
-
         doc.setFontSize(8);
         doc.setTextColor(150, 200, 250);
         doc.text(`Data Vistoria: ${dataRelatorio}`, 200, 32, { align: 'right' });
@@ -618,7 +603,6 @@ async function generatePDF(mode = 'save') {
 
         let yPos = 50;
 
-        // --- HIDRANTES ---
         const hid = items.filter(i => i.type === 'hidrante');
         if (hid.length > 0) {
             doc.setFontSize(12); doc.setTextColor(37, 99, 235);
@@ -640,7 +624,6 @@ async function generatePDF(mode = 'save') {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // --- EXTINTORES ---
         const ext = items.filter(i => i.type === 'extintor');
         if (ext.length > 0) {
             doc.setFontSize(12); doc.setTextColor(220, 38, 38);
@@ -653,7 +636,6 @@ async function generatePDF(mode = 'save') {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // --- ILUMINAÇÃO ---
         const luzes = items.filter(i => i.type === 'luz');
         if (luzes.length > 0) {
             doc.setFontSize(12); doc.setTextColor(217, 119, 6);
@@ -666,7 +648,6 @@ async function generatePDF(mode = 'save') {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // --- BOMBAS ---
         const bombas = items.filter(i => i.type === 'bomba');
         if (bombas.length > 0) {
             doc.setFontSize(12); doc.setTextColor(124, 58, 237);
@@ -678,7 +659,6 @@ async function generatePDF(mode = 'save') {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // --- SINALIZAÇÃO ---
         const sinalizacao = items.filter(i => i.type === 'sinalizacao');
         if (sinalizacao.length > 0) {
             doc.setFontSize(12); doc.setTextColor(13, 148, 136);
@@ -704,7 +684,6 @@ async function generatePDF(mode = 'save') {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // --- ELETROMECANIZAÇÃO ---
         const eletros = items.filter(i => i.type === 'eletro');
         if (eletros.length > 0) {
             doc.setFontSize(12); doc.setTextColor(79, 70, 229);
@@ -726,7 +705,18 @@ async function generatePDF(mode = 'save') {
             }); yPos = doc.lastAutoTable.finalY + 10;
         }
 
-        // --- FOTOS ---
+        const geral = items.filter(i => i.type === 'geral');
+        if (geral.length > 0) {
+            doc.setFontSize(12); doc.setTextColor(71, 85, 105);
+            doc.text("Observações Gerais / Diversos", 14, yPos); yPos += 2;
+            doc.autoTable({
+                startY: yPos,
+                head: [['Local', 'ID', 'Descrição da Ocorrência']],
+                body: geral.map(i => [i.andar, i.id, i.obs || '-']),
+                theme: 'grid', headStyles: { fillColor: [71, 85, 105] }
+            }); yPos = doc.lastAutoTable.finalY + 10;
+        }
+
         const itemsWithPhotos = items.filter(i => i.imageFiles && i.imageFiles.length > 0);
         if (itemsWithPhotos.length > 0) {
             doc.addPage(); doc.setTextColor(0); doc.setFontSize(14); doc.text("Relatório Fotográfico", 14, 20);
@@ -754,6 +744,7 @@ async function generatePDF(mode = 'save') {
             const blob = doc.output('bloburl');
             document.getElementById('pdf-frame').src = blob;
         }
+
     } catch (e) {
         console.error(e);
         if (mode === 'save') alert("Erro PDF: " + e.message);
@@ -767,8 +758,7 @@ async function generatePDF(mode = 'save') {
 
 async function saveToFirebase() {
     if (!db || !user) return alert("Faça login para salvar!");
-    const btn = document.getElementById('btn-save');
-    const oldText = btn.innerHTML;
+    const btn = document.getElementById('btn-save'); const oldText = btn.innerHTML;
     btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Salvando...`;
     lucide.createIcons();
     btn.disabled = true;

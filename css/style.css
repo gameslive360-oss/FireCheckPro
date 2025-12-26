@@ -130,6 +130,12 @@
     color: white;
 }
 
+.tab-active-geral {
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
+    color: white;
+}
+
 /* ---------------------------------------- */
 
 .section-title {

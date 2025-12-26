@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0f172a">
     <title>FireCheck Pro</title>
 
@@ -16,77 +16,68 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body class="bg-gray-100 pb-10">
+<body class="bg-gray-50 text-slate-800">
 
-    <div id="menu-overlay" class="fixed inset-0 bg-black/50 z-40 hidden backdrop-blur-sm"
-        onclick="toggleRightSidebar()"></div>
+    <div id="backdrop" onclick="closeAllSidebars()"
+        class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity duration-300 backdrop-blur-sm">
+    </div>
 
     <aside id="left-sidebar"
-        class="fixed top-0 left-0 h-full bg-slate-900 text-white z-30 transition-all duration-300 w-16 hover:w-64 flex flex-col shadow-2xl group overflow-hidden">
+        class="fixed top-0 left-0 h-full bg-slate-900 text-white z-50 transition-all duration-300 w-16 shadow-2xl flex flex-col overflow-hidden">
 
-        <div class="p-4 flex items-center justify-center border-b border-slate-700 h-16 shrink-0 cursor-pointer"
-            onclick="toggleLeftExpand()">
-            <i data-lucide="shield-check" class="w-8 h-8 text-blue-400 shrink-0"></i>
-            <span
-                class="ml-3 font-bold text-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">FireCheck</span>
+        <div onclick="toggleLeftSidebar()"
+            class="h-16 flex items-center cursor-pointer hover:bg-slate-800 transition-colors border-b border-slate-700 shrink-0 overflow-hidden group">
+
+            <div class="w-16 h-16 flex items-center justify-center shrink-0">
+                <i data-lucide="shield-check"
+                    class="w-8 h-8 text-blue-400 group-hover:text-blue-300 transition-colors"></i>
+            </div>
+
+            <span class="sidebar-text font-bold text-lg whitespace-nowrap opacity-0 transition-opacity duration-200">
+                FireCheck Pro
+            </span>
         </div>
 
-        <nav class="flex-1 flex flex-col gap-2 p-2 mt-4">
+        <nav class="flex-1 flex flex-col gap-1 p-2 mt-2 overflow-y-auto no-scrollbar">
 
-            <button id="tab-sumario" onclick="window.switchTab('sumario')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-sumario" onclick="window.switchTab('sumario')" class="nav-item">
                 <i data-lucide="file-check-2" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Sumário</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Sumário</span>
             </button>
 
-            <button id="tab-hidrante" onclick="window.switchTab('hidrante')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-hidrante" onclick="window.switchTab('hidrante')" class="nav-item">
                 <i data-lucide="droplets" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Hidrante</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Hidrante</span>
             </button>
 
-            <button id="tab-extintor" onclick="window.switchTab('extintor')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-extintor" onclick="window.switchTab('extintor')" class="nav-item">
                 <i data-lucide="fire-extinguisher" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Extintor</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Extintor</span>
             </button>
 
-            <button id="tab-luz" onclick="window.switchTab('luz')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-luz" onclick="window.switchTab('luz')" class="nav-item">
                 <i data-lucide="lightbulb" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Iluminação</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Iluminação</span>
             </button>
 
-            <button id="tab-bomba" onclick="window.switchTab('bomba')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-bomba" onclick="window.switchTab('bomba')" class="nav-item">
                 <i data-lucide="activity" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Bombas</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Bombas</span>
             </button>
 
-            <button id="tab-sinalizacao" onclick="window.switchTab('sinalizacao')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-sinalizacao" onclick="window.switchTab('sinalizacao')" class="nav-item">
                 <i data-lucide="signpost" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Sinalização</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Sinalização</span>
             </button>
 
-            <button id="tab-eletro" onclick="window.switchTab('eletro')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-eletro" onclick="window.switchTab('eletro')" class="nav-item">
                 <i data-lucide="zap" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Eletromec.</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Eletromec.</span>
             </button>
 
-            <button id="tab-geral" onclick="window.switchTab('geral')"
-                class="nav-item flex items-center p-3 rounded-lg hover:bg-slate-800 transition-colors text-slate-300 hover:text-white">
+            <button id="tab-geral" onclick="window.switchTab('geral')" class="nav-item">
                 <i data-lucide="clipboard-list" class="w-6 h-6 shrink-0"></i>
-                <span
-                    class="ml-4 font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Geral</span>
+                <span class="sidebar-text ml-3 font-medium whitespace-nowrap opacity-0">Geral</span>
             </button>
         </nav>
     </aside>
@@ -96,220 +87,210 @@
 
         <div class="p-4 bg-slate-900 text-white flex justify-between items-center shadow-md">
             <h2 class="font-bold text-lg flex items-center gap-2"><i data-lucide="menu" class="w-5 h-5"></i> Menu</h2>
-            <button onclick="toggleRightSidebar()" class="hover:bg-slate-700 p-1 rounded"><i data-lucide="x"
-                    class="w-6 h-6"></i></button>
+            <button onclick="toggleRightSidebar()" class="hover:bg-slate-700 p-2 rounded-full transition-colors"><i
+                    data-lucide="x" class="w-6 h-6"></i></button>
         </div>
 
-        <div class="flex-1 overflow-y-auto">
-            <div class="p-6 border-b border-gray-100 bg-gray-50 text-center">
+        <div class="flex-1 overflow-y-auto p-4">
+            <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 text-center mb-6">
                 <div id="user-info" class="hidden flex-col items-center gap-3">
                     <div
-                        class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl font-bold border-2 border-blue-200">
-                        <i data-lucide="user"></i>
+                        class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center border-2 border-blue-200 shadow-sm">
+                        <i data-lucide="user" class="w-8 h-8"></i>
                     </div>
                     <div>
-                        <p class="font-bold text-gray-800 text-lg" id="user-name">Usuário</p>
-                        <p class="text-xs text-gray-500">Logado via Google</p>
+                        <p class="font-bold text-slate-800 text-lg" id="user-name">Usuário</p>
+                        <p class="text-xs text-slate-500">Conectado via Google</p>
                     </div>
                     <button id="btn-logout-side"
-                        class="mt-2 text-red-500 text-sm font-semibold hover:underline flex items-center gap-1">
-                        <i data-lucide="log-out" class="w-3 h-3"></i> Sair da Conta
+                        class="mt-2 text-red-500 text-sm font-semibold hover:bg-red-50 px-4 py-1 rounded-full transition-colors flex items-center gap-2">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> Sair
                     </button>
                 </div>
+
                 <div id="login-container" class="flex flex-col items-center">
-                    <p class="text-gray-500 text-sm mb-3">Acesse para salvar vistorias</p>
+                    <p class="text-slate-500 text-sm mb-4">Faça login para salvar na nuvem</p>
                     <button id="btn-login"
-                        class="bg-blue-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2">
+                        class="bg-blue-600 text-white px-6 py-2.5 rounded-full font-bold shadow-lg hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-2 w-full justify-center">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Entrar com Google
                     </button>
                 </div>
             </div>
 
-            <div class="p-4 space-y-2">
+            <div class="space-y-3">
                 <button
-                    class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors">
+                    class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors border border-transparent hover:border-slate-200">
                     <div class="p-2 bg-purple-100 text-purple-600 rounded-lg"><i data-lucide="settings"
                             class="w-5 h-5"></i></div>
                     <span class="font-medium">Configurações</span>
                 </button>
                 <button
-                    class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 transition-colors">
+                    class="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 text-slate-700 transition-colors border border-transparent hover:border-slate-200">
                     <div class="p-2 bg-green-100 text-green-600 rounded-lg"><i data-lucide="life-buoy"
                             class="w-5 h-5"></i></div>
                     <span class="font-medium">Suporte</span>
                 </button>
             </div>
 
-            <div class="p-4 border-t border-gray-100">
-                <h3 class="font-bold text-gray-500 text-xs uppercase mb-3 px-2">Histórico Recente</h3>
+            <div class="mt-8 pt-4 border-t border-slate-100">
+                <h3 class="font-bold text-slate-400 text-xs uppercase mb-4 tracking-wider">Histórico Recente</h3>
                 <div id="history-list" class="space-y-2">
-                    <p class="text-sm text-gray-400 text-center py-4 italic">Faça login para ver.</p>
+                    <p class="text-sm text-slate-400 text-center py-4 italic">Nenhuma vistoria recente.</p>
                 </div>
             </div>
         </div>
     </aside>
 
-    <nav class="bg-white p-3 shadow-sm sticky top-0 z-20 ml-16 border-b border-gray-200">
-        <div class="container mx-auto max-w-4xl flex justify-between items-center px-4">
-            <h1 class="text-lg font-bold text-slate-800">Vistoria Técnica</h1>
-            <button onclick="toggleRightSidebar()"
-                class="p-2 hover:bg-gray-100 rounded-full text-slate-600 transition-colors">
-                <i data-lucide="align-right" class="w-6 h-6"></i>
-            </button>
-        </div>
+    <nav
+        class="bg-white p-3 shadow-sm sticky top-0 z-30 ml-16 border-b border-slate-200 flex justify-between items-center px-4 md:px-8 h-16">
+        <h1 class="text-lg md:text-xl font-bold text-slate-800 flex items-center gap-2">
+            Vistoria Técnica
+        </h1>
+        <button onclick="toggleRightSidebar()"
+            class="p-2 hover:bg-slate-100 rounded-full text-slate-600 transition-colors">
+            <i data-lucide="align-right" class="w-6 h-6"></i>
+        </button>
     </nav>
 
-    <main class="container mx-auto p-4 max-w-4xl ml-16 transition-all duration-300">
+    <main class="container mx-auto p-4 md:p-6 ml-16 w-auto transition-all duration-300 pb-32">
 
-        <div class="bg-white p-6 rounded-xl shadow-sm mb-6 border border-gray-100">
-            <div class="flex items-center gap-2 mb-4 pb-2 border-b border-gray-50">
+        <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm mb-6 border border-slate-200">
+            <div class="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
                 <i data-lucide="building-2" class="text-slate-400 w-5 h-5"></i>
-                <h3 class="font-bold text-slate-700 text-sm uppercase">Dados da Edificação</h3>
+                <h3 class="font-bold text-slate-700 text-sm uppercase">Dados da Obra</h3>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div class="md:col-span-2 lg:col-span-1">
-                    <label class="label-std">Cliente / Empresa</label>
+                    <label class="label-std">Cliente</label>
                     <input type="text" id="cliente" class="input-std save-state" placeholder="Nome do Cliente">
                 </div>
                 <div class="md:col-span-2 lg:col-span-2">
-                    <label class="label-std">Local / Endereço</label>
+                    <label class="label-std">Endereço</label>
                     <input type="text" id="local" class="input-std save-state" placeholder="Endereço Completo">
                 </div>
                 <div>
                     <label class="label-std">Responsável Técnico</label>
-                    <input type="text" id="resp-tecnico" class="input-std save-state" placeholder="Seu Nome / Empresa">
+                    <input type="text" id="resp-tecnico" class="input-std save-state" placeholder="Seu Nome">
                 </div>
                 <div>
-                    <label class="label-std">Classificação/Ocupação</label>
-                    <input type="text" id="classificacao" class="input-std save-state"
-                        placeholder="Ex: Comercial, Industrial">
+                    <label class="label-std">Classificação</label>
+                    <input type="text" id="classificacao" class="input-std save-state" placeholder="Ex: Comercial">
                 </div>
                 <div>
-                    <label class="label-std">Data do Relatório</label>
+                    <label class="label-std">Data</label>
                     <input type="date" id="data-relatorio" class="input-std save-state">
                 </div>
             </div>
         </div>
 
-        <section class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 relative overflow-hidden">
-            <div id="card-status-bar" class="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>
+        <section class="bg-white p-5 md:p-6 rounded-xl shadow-lg border border-slate-200 relative overflow-hidden">
+            <div id="card-status-bar"
+                class="absolute top-0 left-0 w-full h-1.5 bg-blue-600 transition-colors duration-300"></div>
 
-            <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                     <label class="label-std">Local/Andar</label>
-                    <input type="text" id="andar" class="input-std save-state" placeholder="Ex: Térreo">
+                    <input type="text" id="andar" class="input-std save-state" placeholder="Ex: Térreo, 1º Andar">
                 </div>
                 <div>
-                    <label class="label-std">ID do Item</label>
-                    <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01">
+                    <label class="label-std">ID do Equipamento</label>
+                    <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01, EXT-05">
                 </div>
             </div>
 
             <div id="form-sumario" class="form-section hidden">
-                <h4 class="section-title text-slate-800 border-slate-400">Dados do Relatório</h4>
-                <div class="mb-4 bg-slate-50 p-3 rounded border border-slate-200">
-                    <label class="label-std text-slate-900 text-sm font-bold mb-2">Sumário Executivo (Início do
-                        PDF)</label>
-                    <label class="label-std">Parecer Técnico</label>
-                    <select id="sum-parecer" class="input-std save-state font-bold h-10 mb-3">
-                        <option value="Aprovado">✅ SISTEMA APROVADO / OPERANTE</option>
-                        <option value="Aprovado com Restrições">⚠️ APROVADO COM RESTRIÇÕES</option>
-                        <option value="Reprovado">❌ REPROVADO / INOPERANTE</option>
+                <h4 class="section-title text-slate-800 border-slate-300">Resumo Gerencial</h4>
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                    <label class="label-std">Parecer Final</label>
+                    <select id="sum-parecer" class="input-std save-state font-bold h-12 mb-4">
+                        <option value="Aprovado">✅ SISTEMA APROVADO</option>
+                        <option value="Aprovado com Restrições">⚠️ APROVADO C/ RESTRIÇÕES</option>
+                        <option value="Reprovado">❌ REPROVADO</option>
                     </select>
+
                     <label class="label-std">Resumo das Instalações</label>
-                    <textarea id="sum-resumo" class="input-std save-state mb-3" rows="3"
-                        placeholder="Visão geral do sistema..."></textarea>
-                    <label class="label-std text-red-700">Principais Riscos / Não Conformidades</label>
-                    <textarea id="sum-riscos" class="input-std save-state border-red-200 bg-red-50" rows="3"
-                        placeholder="Pontos críticos..."></textarea>
+                    <textarea id="sum-resumo" class="input-std save-state mb-4" rows="3"></textarea>
+
+                    <label class="label-std text-red-600">Riscos Críticos</label>
+                    <textarea id="sum-riscos" class="input-std save-state border-red-200 bg-red-50/50"
+                        rows="3"></textarea>
                 </div>
-                <div class="mt-6 border-t pt-4 border-slate-200">
-                    <label class="label-std text-slate-900 text-sm font-bold mb-2">Fechamento (Final do PDF)</label>
-                    <label class="label-std">Conclusões e Recomendações Finais</label>
-                    <div class="flex justify-end mb-1">
-                        <button onclick="window.phrases.open('sum-conclusao', 'sumario')"
-                            class="text-xs text-slate-600 hover:underline flex items-center gap-1"><i
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex justify-between items-end mb-2">
+                        <label class="label-std">Conclusão Final</label>
+                        <button onclick="window.phrases.open('sum-conclusao', 'sumario')" class="btn-frases"><i
                                 data-lucide="message-square" class="w-3 h-3"></i> Frases</button>
                     </div>
-                    <textarea id="sum-conclusao" class="input-std save-state" rows="4"
-                        placeholder="Recomendações finais..."></textarea>
+                    <textarea id="sum-conclusao" class="input-std save-state" rows="4"></textarea>
                 </div>
             </div>
 
             <div id="form-hidrante" class="form-section">
-                <h4 class="section-title text-blue-800 border-blue-100">NBR 12779 - Hidrantes</h4>
-                <div class="mb-4">
-                    <label class="label-std mb-2 text-blue-900">Componentes Presentes</label>
-                    <div class="checklist-grid">
-                        <label class="check-group"><input type="checkbox" id="h-registro" class="save-state">
-                            <span>Registro Globo</span></label>
-                        <label class="check-group"><input type="checkbox" id="h-adaptador" class="save-state">
-                            <span>Adaptador Engate Rápido</span></label>
-                        <label class="check-group"><input type="checkbox" id="h-chave" class="save-state"> <span>Chave
-                                de Mangueira</span></label>
-                        <label class="check-group"><input type="checkbox" id="h-esguicho" class="save-state">
-                            <span>Esguicho</span></label>
-                    </div>
+                <h4 class="section-title text-blue-800 border-blue-100">Hidrantes</h4>
+                <div class="checklist-grid mb-4">
+                    <label class="check-group"><input type="checkbox" id="h-registro"
+                            class="save-state"><span>Registro</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-adaptador"
+                            class="save-state"><span>Adaptador</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-chave"
+                            class="save-state"><span>Chave</span></label>
+                    <label class="check-group"><input type="checkbox" id="h-esguicho"
+                            class="save-state"><span>Esguicho</span></label>
                 </div>
-                <div class="border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="label-std text-blue-900 mb-0">Detalhes da Mangueira</label>
-                        <label
-                            class="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-1 rounded border border-blue-100">
-                            <input type="checkbox" id="h-tem-mangueira" class="save-state" checked
-                                onchange="toggleMangueiraFields()">
-                            <span class="text-sm font-bold text-blue-800">Possui Mangueira?</span>
-                        </label>
+
+                <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-bold text-blue-900 uppercase">Mangueira</span>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="h-tem-mangueira" class="w-5 h-5 accent-blue-600 save-state"
+                                checked onchange="toggleMangueiraFields()">
+                            <span class="text-sm text-blue-700 font-semibold">Possui?</span>
+                        </div>
                     </div>
-                    <div id="h-detalhes-container" class="transition-opacity duration-200">
+                    <div id="h-detalhes-container" class="transition-all duration-300">
                         <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div><label class="label-std">Selo de Teste</label><select id="h-selo"
-                                    class="input-std save-state">
+                            <div><label class="label-std">Selo</label><select id="h-selo" class="input-std save-state">
                                     <option value="Sim">Sim</option>
                                     <option value="Nao">Não</option>
                                 </select></div>
-                            <div><label class="label-std">Vencimento</label><input type="month" id="h-validade"
+                            <div><label class="label-std">Validade</label><input type="month" id="h-validade"
                                     class="input-std save-state"></div>
-                            <div><label class="label-std">Nº Lances</label><input type="number" id="h-lances"
-                                    class="input-std save-state" placeholder="Qtd" value="1"></div>
+                            <div><label class="label-std">Lances</label><input type="number" id="h-lances"
+                                    class="input-std save-state" value="1"></div>
                             <div><label class="label-std">Metragem</label><select id="h-metragem"
                                     class="input-std save-state">
-                                    <option value="15m">15 metros</option>
-                                    <option value="20m">20 metros</option>
-                                    <option value="25m">25 metros</option>
-                                    <option value="30m">30 metros</option>
+                                    <option value="15m">15m</option>
+                                    <option value="20m">20m</option>
+                                    <option value="25m">25m</option>
+                                    <option value="30m">30m</option>
                                 </select></div>
                         </div>
-                        <div>
-                            <div class="flex justify-between items-end mb-1"><label
-                                    class="label-std">Observações</label><button
-                                    onclick="window.phrases.open('h-obs', 'hidrante')"
-                                    class="text-xs text-blue-600 hover:underline flex items-center gap-1"><i
-                                        data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
-                            <textarea id="h-obs" class="input-std save-state" rows="2"
-                                placeholder="Descreva anomalias..."></textarea>
-                        </div>
+                        <div class="flex justify-between items-end mb-1"><label
+                                class="label-std">Observações</label><button
+                                onclick="window.phrases.open('h-obs', 'hidrante')" class="btn-frases"><i
+                                    data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
+                        <textarea id="h-obs" class="input-std save-state" rows="2"></textarea>
                     </div>
                 </div>
             </div>
 
-            <div id="form-extintor" class="form-section hidden">
-                <h4 class="section-title text-red-800 border-red-100">NBR 12962 - Extintores</h4>
+            <div id="form-extintor" class="form-section hidden ">
+                <h4 class="section-title text-red-800 border-red-100">Extintores</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div><label class="label-std">Tipo</label><select id="e-tipo" class="input-std save-state">
-                            <option value="AP">Água (AP)</option>
+                            <option value="AP">Água</option>
                             <option value="PQS">Pó Químico</option>
                             <option value="CO2">CO2</option>
                         </select></div>
-                    <div><label class="label-std">Peso (Kg)</label><input type="number" id="e-peso"
+                    <div><label class="label-std">Peso (kg)</label><input type="number" id="e-peso"
                             class="input-std save-state"></div>
                     <div><label class="label-std">Recarga</label><input type="month" id="e-recarga"
                             class="input-std save-state"></div>
-                    <div><label class="label-std">Teste Hidro</label><input type="month" id="e-teste"
+                    <div><label class="label-std">Teste</label><input type="month" id="e-teste"
                             class="input-std save-state"></div>
                 </div>
-                <div class="checklist-grid">
+                <div class="checklist-grid mb-4">
                     <label class="check-group"><input type="checkbox" id="e-lacre"
                             class="save-state"><span>Lacre</span></label>
                     <label class="check-group"><input type="checkbox" id="e-manometro"
@@ -319,36 +300,32 @@
                     <label class="check-group"><input type="checkbox" id="e-mangueira"
                             class="save-state"><span>Mangueira</span></label>
                 </div>
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
-                            onclick="window.phrases.open('e-obs', 'extintor')"
-                            class="text-xs text-red-600 hover:underline flex items-center gap-1"><i
-                                data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
-                    <textarea id="e-obs" class="input-std save-state" rows="2"
-                        placeholder="Descreva anomalias..."></textarea>
-                </div>
+                <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                        onclick="window.phrases.open('e-obs', 'extintor')" class="btn-frases text-red-600"><i
+                            data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
+                <textarea id="e-obs" class="input-std save-state" rows="2"></textarea>
             </div>
 
             <div id="form-luz" class="form-section hidden">
-                <h4 class="section-title text-amber-700 border-amber-100">NBR 10898 - Iluminação</h4>
+                <h4 class="section-title text-amber-700 border-amber-100">Iluminação</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div><label class="label-std">Tipo</label><select id="l-tipo" class="input-std save-state">
                             <option value="Balizamento">Balizamento</option>
                             <option value="Aclaramento">Aclaramento</option>
                         </select></div>
                     <div><label class="label-std">Estado</label><select id="l-estado" class="input-std save-state">
-                            <option value="OK">Operacional</option>
+                            <option value="OK">OK</option>
                             <option value="Queimada">Queimada</option>
                             <option value="Bateria Fraca">Bateria Fraca</option>
                         </select></div>
                     <div class="col-span-2"><label class="label-std">Autonomia</label><select id="l-autonomia"
                             class="input-std save-state">
-                            <option value="Nao Testado">Autonomia Não Testada</option>
+                            <option value="Nao Testado">Não Testada</option>
                             <option value="Aprovado 1h">Aprovado (>1h)</option>
-                            <option value="Reprovado">Reprovado (<1h)< /option>
+                            <option value="Reprovado">Reprovado</option>
                         </select></div>
                 </div>
-                <div class="checklist-grid">
+                <div class="checklist-grid mb-4">
                     <label class="check-group"><input type="checkbox" id="l-acendimento"
                             class="save-state"><span>Acendimento</span></label>
                     <label class="check-group"><input type="checkbox" id="l-led" class="save-state"><span>LED
@@ -358,40 +335,32 @@
                     <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"><span>Lux
                             OK</span></label>
                 </div>
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
-                            onclick="window.phrases.open('l-obs', 'luz')"
-                            class="text-xs text-amber-600 hover:underline flex items-center gap-1"><i
-                                data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
-                    <textarea id="l-obs" class="input-std save-state" rows="2"
-                        placeholder="Descreva anomalias..."></textarea>
-                </div>
+                <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                        onclick="window.phrases.open('l-obs', 'luz')" class="btn-frases text-amber-600"><i
+                            data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
+                <textarea id="l-obs" class="input-std save-state" rows="2"></textarea>
             </div>
 
             <div id="form-bomba" class="form-section hidden">
-                <h4 class="section-title text-purple-800 border-purple-100">Sistema de Pressurização (Bombas)</h4>
-                <div class="checklist-grid">
+                <h4 class="section-title text-purple-800 border-purple-100">Bombas</h4>
+                <div class="flex flex-col gap-2 mb-4">
                     <label class="check-group"><input type="checkbox" id="b-operacao" class="save-state"><span>Operação
-                            Normal</span></label>
+                            Automática</span></label>
                     <label class="check-group"><input type="checkbox" id="b-teste" class="save-state"><span>Teste
-                            Pressão</span></label>
-                    <label class="check-group"><input type="checkbox" id="b-manutencao"
-                            class="save-state"><span>Necessita Manutenção</span></label>
+                            Pressão Realizado</span></label>
+                    <label class="check-group bg-purple-50 border-purple-200"><input type="checkbox" id="b-manutencao"
+                            class="save-state text-red-500"><span>Necessita Manutenção</span></label>
                 </div>
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observação da
-                            Bomba</label><button onclick="window.phrases.open('b-obs', 'bomba')"
-                            class="text-xs text-purple-600 hover:underline flex items-center gap-1"><i
-                                data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
-                    <textarea id="b-obs" class="input-std save-state" rows="2"
-                        placeholder="Descreva anomalias..."></textarea>
-                </div>
+                <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                        onclick="window.phrases.open('b-obs', 'bomba')" class="btn-frases text-purple-600"><i
+                            data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
+                <textarea id="b-obs" class="input-std save-state" rows="2"></textarea>
             </div>
 
             <div id="form-sinalizacao" class="form-section hidden">
-                <h4 class="section-title text-teal-800 border-teal-100">Sinalização de Emergência</h4>
-                <div class="mb-4 border-b border-gray-100 pb-4">
-                    <label class="label-std text-teal-900">Sinalização Existente?</label>
+                <h4 class="section-title text-teal-800 border-teal-100">Sinalização</h4>
+                <div class="mb-4">
+                    <label class="label-std">Existente?</label>
                     <select id="s-existente" class="input-std save-state font-bold"
                         onchange="window.toggleSinalizacaoFields()">
                         <option value="Sim">Sim</option>
@@ -399,216 +368,191 @@
                     </select>
                 </div>
                 <div id="s-detalhes-container" class="transition-opacity duration-200">
-                    <div class="mb-4"><label class="label-std">Tipo</label><select id="s-tipo"
+                    <div class="mb-3"><label class="label-std">Tipo</label><select id="s-tipo"
                             class="input-std save-state">
-                            <option value="Saida">Indicação de Saída</option>
-                            <option value="Extintor">Indicação de Extintor</option>
-                            <option value="Hidrante">Indicação de Hidrante</option>
-                            <option value="Alerta">Alerta / Perigo</option>
+                            <option value="Saida">Saída</option>
+                            <option value="Extintor">Extintor</option>
+                            <option value="Hidrante">Hidrante</option>
+                            <option value="Alerta">Alerta</option>
                         </select></div>
                     <div class="checklist-grid mb-4">
                         <label class="check-group"><input type="checkbox" id="s-foto" class="save-state"
-                                checked><span>Fotoluminescência OK</span></label>
+                                checked><span>Fotoluminesc.</span></label>
                         <label class="check-group"><input type="checkbox" id="s-fixacao" class="save-state"
-                                checked><span>Fixação Firme</span></label>
+                                checked><span>Fixação</span></label>
                         <label class="check-group"><input type="checkbox" id="s-visivel" class="save-state"
-                                checked><span>Totalmente Visível</span></label>
+                                checked><span>Visível</span></label>
                         <label class="check-group"><input type="checkbox" id="s-legivel" class="save-state"
-                                checked><span>Limpa/Legível</span></label>
+                                checked><span>Legível</span></label>
                     </div>
                 </div>
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
-                            onclick="window.phrases.open('s-obs', 'sinalizacao')"
-                            class="text-xs text-teal-600 hover:underline flex items-center gap-1"><i
-                                data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
-                    <textarea id="s-obs" class="input-std save-state" rows="2"
-                        placeholder="Ex: Placa caída..."></textarea>
-                </div>
+                <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                        onclick="window.phrases.open('s-obs', 'sinalizacao')" class="btn-frases text-teal-600"><i
+                            data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
+                <textarea id="s-obs" class="input-std save-state" rows="2"></textarea>
             </div>
 
             <div id="form-eletro" class="form-section hidden">
-                <h4 class="section-title text-indigo-800 border-indigo-100">Sistemas Eletromecânicos</h4>
-                <div class="mb-4"><label class="label-std">Tipo de Sistema</label><select id="el-tipo"
+                <h4 class="section-title text-indigo-800 border-indigo-100">Eletromecânicos</h4>
+                <div class="mb-3"><label class="label-std">Sistema</label><select id="el-tipo"
                         class="input-std save-state">
-                        <option value="Pressurizacao">Pressurização de Escada</option>
-                        <option value="Gerador">Grupo Gerador</option>
+                        <option value="Pressurizacao">Pressurização</option>
+                        <option value="Gerador">Gerador</option>
                         <option value="Dampers">Dampers</option>
                         <option value="Exaustao">Exaustão</option>
                     </select></div>
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div><label class="label-std">Botoeiras Operantes?</label><select id="el-botoeiras"
-                            class="input-std save-state font-bold">
+                    <div><label class="label-std">Botoeiras</label><select id="el-botoeiras"
+                            class="input-std save-state">
                             <option value="Sim">Sim</option>
                             <option value="Nao">Não</option>
                             <option value="N/A">N/A</option>
                         </select></div>
-                    <div><label class="label-std">Necessita Manutenção?</label><select id="el-manutencao"
-                            class="input-std save-state text-red-700 font-bold">
+                    <div><label class="label-std">Manutenção</label><select id="el-manutencao"
+                            class="input-std save-state text-red-600 font-bold">
                             <option value="Nao">Não</option>
                             <option value="Sim">Sim</option>
                         </select></div>
                 </div>
-                <div class="checklist-grid border-t pt-3">
+                <div class="checklist-grid mb-4 pt-3 border-t">
                     <label class="check-group"><input type="checkbox" id="el-painel" class="save-state"
-                            checked><span>Painel Automático</span></label>
+                            checked><span>Painel Auto</span></label>
                     <label class="check-group"><input type="checkbox" id="el-piloto" class="save-state"
-                            checked><span>Luzes Piloto OK</span></label>
-                    <label class="check-group"><input type="checkbox" id="el-ruido" class="save-state" checked><span>S/
-                            Ruído Anormal</span></label>
+                            checked><span>Luzes Piloto</span></label>
+                    <label class="check-group"><input type="checkbox" id="el-ruido" class="save-state" checked><span>Sem
+                            Ruído</span></label>
                     <label class="check-group"><input type="checkbox" id="el-fixacao" class="save-state"
                             checked><span>Fixação OK</span></label>
                 </div>
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
-                            onclick="window.phrases.open('el-obs', 'eletro')"
-                            class="text-xs text-indigo-600 hover:underline flex items-center gap-1"><i
-                                data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
-                    <textarea id="el-obs" class="input-std save-state" rows="2"
-                        placeholder="Descreva falhas..."></textarea>
-                </div>
+                <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                        onclick="window.phrases.open('el-obs', 'eletro')" class="btn-frases text-indigo-600"><i
+                            data-lucide="message-square" class="w-3 h-3"></i> Frases</button></div>
+                <textarea id="el-obs" class="input-std save-state" rows="2"></textarea>
             </div>
 
             <div id="form-geral" class="form-section hidden">
-                <h4 class="section-title text-slate-700 border-slate-200">Observações Gerais / Diversos</h4>
+                <h4 class="section-title text-slate-700 border-slate-200">Geral / Diversos</h4>
                 <div class="mt-2">
-                    <label class="label-std">Descrição da Ocorrência</label>
+                    <label class="label-std">Descrição</label>
                     <textarea id="g-obs" class="input-std save-state" rows="4"
-                        placeholder="Anomalias estruturais, limpeza, etc..."></textarea>
+                        placeholder="Anomalias estruturais, portaria..."></textarea>
                 </div>
                 <div class="mt-2 text-right">
-                    <button onclick="window.phrases.open('g-obs', 'geral')"
-                        class="text-xs text-slate-600 hover:underline inline-flex items-center gap-1"><i
+                    <button onclick="window.phrases.open('g-obs', 'geral')" class="btn-frases"><i
                             data-lucide="message-square" class="w-3 h-3"></i> Frases</button>
                 </div>
             </div>
 
-            <div class="mt-6 pt-4 border-t border-gray-100">
-                <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3"></div>
-                <div class="flex gap-2 mb-3">
-                    <label class="btn-secondary flex-1 cursor-pointer relative hover:bg-slate-100 transition-colors">
-                        <i data-lucide="camera" class="w-4 h-4 text-blue-500"></i> Câmera
+            <div class="mt-6 pt-4 border-t border-slate-100">
+                <div id="preview-gallery" class="hidden flex-wrap gap-3 mb-4"></div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <label
+                        class="btn-secondary flex-1 cursor-pointer bg-slate-50 hover:bg-slate-100 border-slate-200 relative">
+                        <i data-lucide="camera" class="w-5 h-5 text-blue-500"></i> <span
+                            class="text-sm font-bold">Câmera</span>
                         <input type="file" id="camera-input" accept="image/*" capture="environment" multiple
                             class="hidden">
                     </label>
-                    <label class="btn-secondary flex-1 cursor-pointer relative hover:bg-slate-100 transition-colors">
-                        <i data-lucide="image" class="w-4 h-4 text-green-500"></i> Galeria
+                    <label
+                        class="btn-secondary flex-1 cursor-pointer bg-slate-50 hover:bg-slate-100 border-slate-200 relative">
+                        <i data-lucide="image" class="w-5 h-5 text-green-500"></i> <span
+                            class="text-sm font-bold">Galeria</span>
                         <input type="file" id="upload-input" accept="image/*" multiple class="hidden">
                     </label>
                 </div>
+
                 <button id="btn-add-item"
-                    class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-lg shadow-md flex justify-center items-center gap-2 active:scale-95 transition-transform">
-                    <i data-lucide="plus-circle"></i> Adicionar Item à Lista
+                    class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-lg shadow-lg flex justify-center items-center gap-2 active:scale-[0.98] transition-all">
+                    <i data-lucide="plus-circle" class="w-5 h-5"></i> ADICIONAR ITEM À LISTA
                 </button>
             </div>
         </section>
 
         <section class="mt-8">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-sm font-bold text-gray-500 uppercase flex items-center gap-2">
-                    Itens Inspecionados
-                    <span id="count" class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-xs">0</span>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    Itens na Lista
+                    <span id="count" class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-[10px]">0</span>
                 </h3>
-                <div class="bg-gray-200 p-1 rounded-lg flex text-xs font-bold">
+                <div class="bg-slate-200 p-1 rounded-lg flex text-[10px] font-bold">
                     <button id="view-btn-list" onclick="window.togglePreviewMode('list')"
-                        class="px-3 py-1 rounded bg-white text-slate-800 shadow-sm transition-all">Lista</button>
+                        class="px-3 py-1.5 rounded bg-white text-slate-900 shadow-sm">Lista</button>
                     <button id="view-btn-pdf" onclick="window.togglePreviewMode('pdf')"
-                        class="px-3 py-1 rounded text-gray-500 hover:text-slate-800 transition-all">Prévia PDF</button>
+                        class="px-3 py-1.5 rounded text-slate-500 hover:text-slate-900">Prévia PDF</button>
                 </div>
             </div>
 
-            <div id="lista-itens" class="space-y-3 pb-10 min-h-[100px]">
+            <div id="lista-itens" class="space-y-3 pb-4">
                 <div
-                    class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm flex flex-col items-center gap-2">
-                    <i data-lucide="clipboard-x" class="w-8 h-8 text-gray-300"></i>
-                    Sua lista está vazia.
+                    class="text-center py-8 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 text-sm flex flex-col items-center gap-2">
+                    <i data-lucide="clipboard-x" class="w-8 h-8 opacity-50"></i>
+                    Lista vazia.
                 </div>
             </div>
 
-            <div id="pdf-preview-container" class="hidden pb-10">
-                <div class="bg-slate-800 p-2 rounded-t-lg flex justify-between items-center text-white text-xs">
-                    <span>Visualização do Relatório</span>
-                    <span class="text-gray-400">Atualize a lista para ver mudanças</span>
+            <div id="pdf-preview-container" class="hidden">
+                <div class="bg-slate-800 p-3 rounded-t-xl flex justify-between items-center text-white text-xs">
+                    <span class="font-bold">Visualização do Relatório</span>
+                    <span class="opacity-70">Gerado automaticamente</span>
                 </div>
                 <iframe id="pdf-frame"
-                    class="w-full h-[500px] border-2 border-slate-300 rounded-b-lg bg-gray-50"></iframe>
+                    class="w-full h-[500px] border-2 border-slate-300 rounded-b-xl bg-slate-50"></iframe>
             </div>
         </section>
     </main>
 
-    <div
-        class="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-200 p-3 shadow-lg flex gap-3 z-20 pl-20">
+    <div class="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex gap-3 z-40 pl-[4.5rem] transition-all duration-300"
+        id="bottom-bar">
         <button id="btn-pdf"
-            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
-            <i data-lucide="file-text" class="w-4 h-4"></i> Gerar PDF
+            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 shadow-sm text-sm active:scale-95 transition-transform">
+            <i data-lucide="file-text" class="w-4 h-4"></i> GERAR PDF
         </button>
         <button id="btn-save"
-            class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
-            <i data-lucide="cloud-upload" class="w-4 h-4"></i> Salvar Nuvem
+            class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 shadow-sm text-sm active:scale-95 transition-transform">
+            <i data-lucide="cloud-upload" class="w-4 h-4"></i> SALVAR NUVEM
         </button>
     </div>
 
     <div id="modal-phrases"
-        class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
-            <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-lg">
-                <h3 class="font-bold text-slate-700">Frases Rápidas</h3>
-                <button onclick="window.phrases.close()" class="text-gray-400 hover:text-red-500"><i
-                        data-lucide="x"></i></button>
+        class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[80vh] overflow-hidden animate-fade-in">
+            <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Frases Rápidas</h3>
+                <button onclick="window.phrases.close()" class="p-1 hover:bg-slate-200 rounded-full"><i data-lucide="x"
+                        class="w-5 h-5 text-slate-500"></i></button>
             </div>
-            <div id="phrases-list" class="p-4 overflow-y-auto space-y-2 flex-1"></div>
-            <div class="p-3 border-t bg-slate-50 rounded-b-lg flex gap-2">
-                <input type="text" id="new-phrase-input" class="input-std flex-1"
-                    placeholder="Nova frase personalizada...">
+            <div id="phrases-list" class="p-2 overflow-y-auto space-y-1 flex-1 bg-white"></div>
+            <div class="p-3 border-t bg-slate-50 flex gap-2">
+                <input type="text" id="new-phrase-input" class="input-std flex-1" placeholder="Nova frase...">
                 <button onclick="window.phrases.addCustom()"
-                    class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"><i
-                        data-lucide="plus"></i></button>
+                    class="bg-green-600 text-white px-3 rounded-lg hover:bg-green-700"><i data-lucide="plus"
+                        class="w-5 h-5"></i></button>
             </div>
         </div>
     </div>
 
     <div id="modal-confirm"
-        class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6">
-            <div class="flex items-center gap-3 mb-4 text-slate-800">
-                <div class="p-2 bg-blue-100 text-blue-600 rounded-full"><i data-lucide="alert-circle"
-                        class="w-6 h-6"></i></div>
-                <h3 id="modal-confirm-title" class="font-bold text-lg">Confirmação</h3>
+        class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center animate-scale-in">
+            <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
             </div>
-            <p id="modal-confirm-msg" class="text-slate-600 mb-6 leading-relaxed">Tem certeza?</p>
-            <div class="flex justify-end gap-3">
+            <h3 id="modal-confirm-title" class="font-bold text-lg text-slate-800 mb-2">Confirmação</h3>
+            <p id="modal-confirm-msg" class="text-slate-500 mb-6 text-sm">Tem certeza?</p>
+            <div class="flex justify-center gap-3">
                 <button onclick="window.closeConfirmModal()"
-                    class="px-4 py-2 text-slate-500 hover:bg-slate-100 font-semibold rounded-lg transition-colors">Cancelar</button>
+                    class="px-5 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 font-semibold rounded-lg transition-colors text-sm">Cancelar</button>
                 <button id="btn-confirm-action"
-                    class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2">Confirmar</button>
+                    class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2 text-sm">Confirmar</button>
             </div>
         </div>
     </div>
 
     <script type="module" src="js/app.js"></script>
-    <script>
-        // Scripts de UI para Sidebars
-        function toggleRightSidebar() {
-            const sidebar = document.getElementById('right-sidebar');
-            const overlay = document.getElementById('menu-overlay');
-            if (sidebar.classList.contains('translate-x-full')) {
-                sidebar.classList.remove('translate-x-full');
-                overlay.classList.remove('hidden');
-                if (window.loadHistory) window.loadHistory(); // Carrega histórico ao abrir
-            } else {
-                sidebar.classList.add('translate-x-full');
-                overlay.classList.add('hidden');
-            }
-        }
-        window.toggleRightSidebar = toggleRightSidebar;
 
-        function toggleLeftExpand() {
-            const leftSidebar = document.getElementById('left-sidebar');
-            // A classe 'hover:w-64' faz o trabalho no hover, 
-            // mas podemos forçar a expansão se quisermos (opcional em mobile)
-            // No desktop, o CSS hover já resolve. 
-        }
-    </script>
+    <script src="js/ui.js"></script>
 </body>
 
 </html>

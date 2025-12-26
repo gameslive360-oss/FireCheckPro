@@ -526,22 +526,55 @@ async function generatePDF(mode = 'save') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        const cliente = document.getElementById('cliente').value || "Cliente";
-        const local = document.getElementById('local').value || "Local";
+        // Captura dos dados novos
+        const cliente = document.getElementById('cliente').value || "Não Informado";
+        const local = document.getElementById('local').value || "Não Informado";
+        const tecnico = document.getElementById('resp-tecnico').value || "Não Informado";
+        const classificacao = document.getElementById('classificacao').value || "-";
+
+        // Formatação das datas
         const dataRaw = document.getElementById('data-relatorio').value;
-        const data = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
+        const dataRelatorio = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
 
-        // Cabeçalho do Relatório
-        doc.setFillColor(30, 41, 59); // Slate 800
-        doc.rect(0, 0, 210, 28, 'F');
+        const avcbRaw = document.getElementById('validade-avcb').value;
+        const dataAvcb = avcbRaw ? avcbRaw.split('-').reverse().join('/') : "Não Informado";
+
+        // --- DESIGN DO CABEÇALHO (Atualizado) ---
+        // Fundo Azul Escuro
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 40, 'F');
+
+        // Título Principal
         doc.setTextColor(255);
-        doc.setFontSize(16);
-        doc.text("Relatório Técnico de Segurança", 14, 12);
-        doc.setFontSize(10);
-        doc.setTextColor(200);
-        doc.text(`Cliente: ${cliente} | Local: ${local} | Data: ${data}`, 14, 22);
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 15, { align: 'center' });
 
-        let yPos = 40;
+        // Subtítulo / Norma
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(200, 200, 200);
+        doc.text("Projeto Planejamento e Implatação de Sistemas LTDA", 105, 22, { align: 'center' });
+
+        // Dados do Cabeçalho (Desenhados em caixas brancas virtuais para organização)
+        doc.setFontSize(9);
+        doc.setTextColor(255);
+
+        // Coluna Esquerda
+        doc.text(`Cliente: ${cliente}`, 10, 32);
+        doc.text(`Local: ${local}`, 10, 37);
+
+        // Coluna Direita (Alinhada)
+        doc.text(`Resp. Técnico: ${tecnico}`, 110, 32, { align: 'center' });
+        doc.text(`Classificação: ${classificacao}`, 110, 37, { align: 'center' });
+
+        // Datas (Canto Direito Superior ou na linha)
+        doc.setFontSize(8);
+        doc.setTextColor(150, 200, 250); // Azul claro
+        doc.text(`Data Vistoria: ${dataRelatorio}`, 200, 32, { align: 'right' });
+        doc.text(`Valid. AVCB: ${dataAvcb}`, 200, 37, { align: 'right' });
+
+        let yPos = 50;
 
         // --- HIDRANTES ---
         const hid = items.filter(i => i.type === 'hidrante');
@@ -680,19 +713,71 @@ async function generatePDF(mode = 'save') {
 
 async function saveToFirebase() {
     if (!db || !user) return alert("Faça login para salvar!");
-    const btn = document.getElementById('btn-save'); const oldText = btn.innerHTML; btn.innerHTML = "Salvando..."; btn.disabled = true;
+
+    // Feedback visual no botão
+    const btn = document.getElementById('btn-save');
+    const oldText = btn.innerHTML;
+    btn.innerHTML = "Salvando...";
+    btn.disabled = true;
+
     try {
-        const vistoriaRef = await addDoc(collection(db, "vistorias"), { userId: user.uid, cliente: document.getElementById('cliente').value, local: document.getElementById('local').value, data: document.getElementById('data-relatorio').value, timestamp: new Date(), totalItens: items.length });
+        // Criação do objeto com os dados do cabeçalho, incluindo os novos campos técnicos
+        const headerData = {
+            userId: user.uid,
+            cliente: document.getElementById('cliente').value || "Não Informado",
+            local: document.getElementById('local').value || "Não Informado",
+
+            // Novos Campos adicionados conforme NBR/Padrão de Mercado
+            respTecnico: document.getElementById('resp-tecnico').value || "Não Informado",
+            classificacao: document.getElementById('classificacao').value || "-",
+            validadeAvcb: document.getElementById('validade-avcb').value || null,
+
+            data: document.getElementById('data-relatorio').value,
+            timestamp: new Date(), // Data/Hora do salvamento real
+            totalItens: items.length
+        };
+
+        // 1. Salva o documento principal da vistoria
+        const vistoriaRef = await addDoc(collection(db, "vistorias"), headerData);
+
+        // 2. Processa cada item e suas fotos para salvar na subcoleção
         const promises = items.map(async (item) => {
             let urls = [];
+
+            // Upload de imagens (se houver)
             if (item.imageFiles && item.imageFiles.length > 0) {
                 const uploadPromises = item.imageFiles.map(async (file, index) => {
-                    const imgRef = ref(storage, `fotos/${user.uid}/${vistoriaRef.id}/${item.id}_${index}_${Date.now()}`); await uploadBytes(imgRef, file); return await getDownloadURL(imgRef);
-                }); urls = await Promise.all(uploadPromises);
+                    // Cria uma referência única para a imagem no Storage
+                    const imgRef = ref(storage, `fotos/${user.uid}/${vistoriaRef.id}/${item.id}_${index}_${Date.now()}`);
+                    await uploadBytes(imgRef, file);
+                    return await getDownloadURL(imgRef);
+                });
+                urls = await Promise.all(uploadPromises);
             }
+
+            // Remove o array de arquivos brutos (imageFiles) antes de salvar no banco
+            // pois o Firestore não aceita objetos File, apenas as URLs geradas acima
             const { imageFiles, ...itemData } = item;
-            return addDoc(collection(db, `vistorias/${vistoriaRef.id}/itens`), { ...itemData, fotoUrls: urls });
+
+            // Salva o item na subcoleção 'itens'
+            return addDoc(collection(db, `vistorias/${vistoriaRef.id}/itens`), {
+                ...itemData,
+                fotoUrls: urls
+            });
         });
-        await Promise.all(promises); alert("Vistoria salva com sucesso!"); loadHistory();
-    } catch (e) { console.error(e); alert("Erro ao salvar: " + e.message); } finally { btn.innerHTML = oldText; btn.disabled = false; }
+
+        // Aguarda todos os itens serem salvos
+        await Promise.all(promises);
+
+        alert("Vistoria salva com sucesso!");
+        loadHistory(); // Atualiza a barra lateral
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao salvar: " + e.message);
+    } finally {
+        // Restaura o botão
+        btn.innerHTML = oldText;
+        btn.disabled = false;
+    }
 }

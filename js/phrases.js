@@ -61,6 +61,19 @@ export class PhraseManager {
                 "Sistema de pressurização não partiu no teste manual.",
                 "Luzes piloto do painel queimadas.",
                 "Dampers atuando corretamente."
+            ],
+            sumario: [
+                "Sistema aprovado. Equipamentos operantes conforme normas vigentes.",
+                "Edificação apta para renovação do AVCB.",
+                "Necessária adequação dos itens apontados em até 30 dias.",
+                "URGENTE: Sistema de bombas inoperante. Risco iminente.",
+                "Recomendamos contrato de manutenção mensal para o gerador.",
+                "Solicitar recarga imediata dos extintores vencidos.",
+                "Rotas de fuga obstruídas. Necessária desobstrução imediata.",
+                "Sinalização de emergência incompleta, providenciar instalação conforme NBR 13434.",
+                "Sistema de iluminação apresentou falha de autonomia nas baterias.",
+                "Providenciar ART de manutenção dos sistemas.",
+                "Realizar teste hidrostático nas mangueiras (vencidas há mais de 5 anos)."
             ]
         };
     }

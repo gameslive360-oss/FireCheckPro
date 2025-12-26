@@ -114,6 +114,9 @@
             <button id="tab-geral" class="tab-btn tab-inactive" onclick="window.switchTab('geral')">
                 <i data-lucide="clipboard-list" class="w-5 h-5"></i> <span>Geral</span>
             </button>
+            <button id="tab-sumario" class="tab-btn tab-inactive" onclick="window.switchTab('sumario')">
+                <i data-lucide="file-check-2" class="w-5 h-5"></i> <span>Sumário</span>
+            </button>
         </div>
 
         <section class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
@@ -127,6 +130,47 @@
                     <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01">
                 </div>
             </div>
+
+            <!-- Sumário -->
+            <div id="form-sumario" class="form-section hidden">
+                <h4 class="section-title text-slate-800 border-slate-400">Dados do Relatório</h4>
+
+                <div class="mb-4 bg-slate-50 p-3 rounded border border-slate-200">
+                    <label class="label-std text-slate-900 text-sm font-bold mb-2">Sumário Executivo (Início do
+                        PDF)</label>
+
+                    <label class="label-std">Parecer Técnico</label>
+                    <select id="sum-parecer" class="input-std save-state font-bold h-10 mb-3">
+                        <option value="Aprovado">✅ SISTEMA APROVADO / OPERANTE</option>
+                        <option value="Aprovado com Restrições">⚠️ APROVADO COM RESTRIÇÕES</option>
+                        <option value="Reprovado">❌ REPROVADO / INOPERANTE</option>
+                    </select>
+
+                    <label class="label-std">Resumo das Instalações</label>
+                    <textarea id="sum-resumo" class="input-std save-state mb-3" rows="3"
+                        placeholder="Visão geral do sistema..."></textarea>
+
+                    <label class="label-std text-red-700">Principais Riscos / Não Conformidades</label>
+                    <textarea id="sum-riscos" class="input-std save-state border-red-200 bg-red-50" rows="3"
+                        placeholder="Pontos críticos..."></textarea>
+                </div>
+
+                <div class="mt-6 border-t pt-4 border-slate-200">
+                    <label class="label-std text-slate-900 text-sm font-bold mb-2">Fechamento (Final do PDF)</label>
+
+                    <label class="label-std">Conclusões e Recomendações Finais</label>
+                    <div class="flex justify-end mb-1">
+                        <button onclick="window.phrases.open('sum-conclusao', 'sumario')"
+                            class="text-xs text-slate-600 hover:underline flex items-center gap-1">
+                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases
+                        </button>
+                    </div>
+                    <textarea id="sum-conclusao" class="input-std save-state" rows="4"
+                        placeholder="Recomendações finais para o cliente, prazos para adequação, etc..."></textarea>
+                </div>
+            </div>
+            <!-- Sumário -->
+
             <!-- Inicio Botão Hidrante  -->
             <div id="form-hidrante" class="form-section">
                 <h4 class="section-title text-blue-800 border-blue-100">NBR 12779 - Hidrantes</h4>

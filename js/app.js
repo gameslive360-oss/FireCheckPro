@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!document.getElementById('data-relatorio').value) document.getElementById('data-relatorio').valueAsDate = new Date();
     if (document.getElementById('s-existente')) window.toggleSinalizacaoFields();
 
-    // Listeners
+    // Listeners atualizados
     document.getElementById('btn-login').addEventListener('click', handleLogin);
     document.getElementById('btn-logout-side').addEventListener('click', handleLogout);
     document.getElementById('btn-add-item').addEventListener('click', addItem);
@@ -58,12 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
         window.closeConfirmModal();
     });
 
-    // Auto-Save
     document.querySelectorAll('.save-state').forEach(input => {
         input.addEventListener('input', () => {
             localStorage.setItem(input.id, input.type === 'checkbox' ? input.checked : input.value);
         });
     });
+
+    // Inicia na aba hidrante ou a última salva
+    window.switchTab('hidrante');
 });
 
 // --- Visualização (Lista vs PDF) ---
@@ -94,9 +96,26 @@ window.togglePreviewMode = function (mode) {
 const phrasesManager = new PhraseManager();
 window.phrases = phrasesManager;
 
-// --- Lógica de Abas ---
+// --- Lógica de Abas Atualizada para Sidebar ---
 window.switchTab = function (type) {
     currentType = type;
+
+    // Define cor da barra superior do card baseada no tipo
+    const colorMap = {
+        'sumario': 'bg-slate-800',
+        'hidrante': 'bg-blue-600',
+        'extintor': 'bg-red-600',
+        'luz': 'bg-amber-500',
+        'bomba': 'bg-purple-600',
+        'sinalizacao': 'bg-teal-600',
+        'eletro': 'bg-indigo-600',
+        'geral': 'bg-gray-500'
+    };
+
+    const statusBar = document.getElementById('card-status-bar');
+    if (statusBar) {
+        statusBar.className = `absolute top-0 left-0 w-full h-1 ${colorMap[type] || 'bg-blue-500'}`;
+    }
 
     // Esconder Local/ID para abas Gerais/Sumário
     const inputAndar = document.getElementById('andar');
@@ -110,23 +129,17 @@ window.switchTab = function (type) {
         }
     }
 
+    // Alternar visibilidade dos formulários e estilo dos botões da sidebar
     TABS.forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
         const form = document.getElementById(`form-${t}`);
-        const activeClass = `tab-active-${t}`;
 
         if (t === type) {
             if (form) form.classList.remove('hidden');
-            if (btn) {
-                btn.classList.remove('tab-inactive');
-                btn.classList.add(activeClass);
-            }
+            if (btn) btn.classList.add('active');
         } else {
             if (form) form.classList.add('hidden');
-            if (btn) {
-                btn.classList.remove(activeClass);
-                btn.classList.add('tab-inactive');
-            }
+            if (btn) btn.classList.remove('active');
         }
     });
 };
@@ -248,24 +261,28 @@ async function handleLogin() {
     if (!auth) return alert("Firebase não configurado");
     try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert("Erro login: " + e.message); }
 }
-function handleLogout() { if (auth) signOut(auth); window.toggleMenu(); }
+function handleLogout() { if (auth) signOut(auth); window.toggleRightSidebar(); } // Fecha sidebar ao sair
 function updateUserUI() {
-    const loginBtn = document.getElementById('btn-login');
+    const loginBtnContainer = document.getElementById('login-container');
     const userInfo = document.getElementById('user-info');
     const nameSpan = document.getElementById('user-name');
-    const logoutSide = document.getElementById('btn-logout-side');
+
     if (user) {
-        loginBtn.classList.add('hidden'); userInfo.classList.remove('hidden'); userInfo.classList.add('flex');
-        nameSpan.textContent = user.displayName.split(' ')[0]; logoutSide.classList.remove('hidden');
+        loginBtnContainer.classList.add('hidden');
+        userInfo.classList.remove('hidden');
+        userInfo.classList.add('flex');
+        nameSpan.textContent = user.displayName;
     } else {
-        loginBtn.classList.remove('hidden'); userInfo.classList.add('hidden'); userInfo.classList.remove('flex');
-        logoutSide.classList.add('hidden'); document.getElementById('history-list').innerHTML = '<p class="text-sm text-gray-500 text-center">Faça login para ver.</p>';
+        loginBtnContainer.classList.remove('hidden');
+        userInfo.classList.add('hidden');
+        userInfo.classList.remove('flex');
+        document.getElementById('history-list').innerHTML = '<p class="text-sm text-gray-400 text-center py-4 italic">Faça login para ver.</p>';
     }
 }
 window.loadHistory = async function () {
     if (!user || !db) return;
     const listEl = document.getElementById('history-list');
-    listEl.innerHTML = '<p class="text-center text-xs">Atualizando...</p>';
+    listEl.innerHTML = '<p class="text-center text-xs text-gray-400">Atualizando...</p>';
     try {
         const q = query(collection(db, "vistorias"), where("userId", "==", user.uid), orderBy("timestamp", "desc"), limit(10));
         const querySnapshot = await getDocs(q);
@@ -275,8 +292,8 @@ window.loadHistory = async function () {
             const data = doc.data();
             const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'Data N/A';
             const item = document.createElement('div');
-            item.className = "bg-gray-100 p-3 rounded border border-gray-200 text-sm";
-            item.innerHTML = `<div class="font-bold text-slate-700">${data.cliente || 'Sem Nome'}</div><div class="text-xs text-gray-500">${data.local} • ${date}</div><div class="text-xs text-green-600 mt-1">Salvo na nuvem</div>`;
+            item.className = "bg-white p-3 rounded-lg border border-gray-100 text-sm shadow-sm hover:shadow-md transition-shadow cursor-pointer";
+            item.innerHTML = `<div class="font-bold text-slate-700 truncate">${data.cliente || 'Sem Nome'}</div><div class="text-xs text-gray-500 flex justify-between mt-1"><span>${date}</span> <span>${data.totalItens || 0} itens</span></div>`;
             listEl.appendChild(item);
         });
     } catch (e) { listEl.innerHTML = '<p class="text-red-500 text-xs text-center">Erro ao carregar</p>'; }
@@ -517,7 +534,7 @@ function renderList() {
     listEl.innerHTML = "";
 
     if (items.length === 0) {
-        listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia.</div>';
+        listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm flex flex-col items-center gap-2"><i data-lucide="clipboard-x" class="w-8 h-8 text-gray-300"></i>Sua lista está vazia.</div>';
         return;
     }
 
@@ -592,7 +609,8 @@ async function generatePDF(mode = 'save') {
     let oldText = "";
     if (mode === 'save') {
         oldText = btn.innerHTML;
-        btn.innerHTML = "Processando...";
+        btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Processando...`;
+        lucide.createIcons();
         btn.disabled = true;
     }
 
@@ -600,6 +618,7 @@ async function generatePDF(mode = 'save') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
+        // --- 1. CABEÇALHO ---
         const cliente = document.getElementById('cliente').value || "Não Informado";
         const local = document.getElementById('local').value || "Não Informado";
         const tecnico = document.getElementById('resp-tecnico').value || "Não Informado";
@@ -608,7 +627,7 @@ async function generatePDF(mode = 'save') {
         const dataRaw = document.getElementById('data-relatorio').value;
         const dataRelatorio = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
 
-        doc.setFillColor(30, 41, 59);
+        doc.setFillColor(30, 41, 59); // Slate 800
         doc.rect(0, 0, 210, 45, 'F');
 
         doc.setTextColor(255);
@@ -620,6 +639,7 @@ async function generatePDF(mode = 'save') {
         doc.setFont(undefined, 'normal');
         doc.text("Sistemas de Prevenção e Combate a Incêndio", 105, 22, { align: 'center' });
 
+        // Grid de Dados
         doc.setFontSize(9);
         doc.text(`Cliente: ${cliente}`, 14, 32);
         doc.text(`Local: ${local}`, 14, 37);
@@ -627,11 +647,12 @@ async function generatePDF(mode = 'save') {
         doc.text(`Classificação: ${classificacao}`, 110, 37);
 
         doc.setFont(undefined, 'bold');
-        doc.setTextColor(147, 197, 253);
+        doc.setTextColor(147, 197, 253); // Azul claro
         doc.text(`Data: ${dataRelatorio}`, 195, 32, { align: 'right' });
 
         let yPos = 55;
 
+        // --- 2. SUMÁRIO EXECUTIVO ---
         const parecer = document.getElementById('sum-parecer') ? document.getElementById('sum-parecer').value : '';
         const resumo = document.getElementById('sum-resumo') ? document.getElementById('sum-resumo').value : '';
         const riscos = document.getElementById('sum-riscos') ? document.getElementById('sum-riscos').value : '';
@@ -643,9 +664,9 @@ async function generatePDF(mode = 'save') {
             doc.text("1. Sumário Executivo", 14, yPos);
             yPos += 5;
 
-            let corParecer = [220, 252, 231];
-            if (parecer.includes("Restrições")) corParecer = [254, 249, 195];
-            if (parecer.includes("Reprovado")) corParecer = [254, 226, 226];
+            let corParecer = [220, 252, 231]; // Verde claro
+            if (parecer.includes("Restrições")) corParecer = [254, 249, 195]; // Amarelo
+            if (parecer.includes("Reprovado")) corParecer = [254, 226, 226]; // Vermelho
 
             doc.setFillColor(...corParecer);
             doc.roundedRect(14, yPos, 182, 10, 1, 1, 'F');
@@ -667,7 +688,7 @@ async function generatePDF(mode = 'save') {
 
             if (riscos) {
                 doc.setFont(undefined, 'bold');
-                doc.setTextColor(185, 28, 28);
+                doc.setTextColor(185, 28, 28); // Vermelho escuro
                 doc.text("Principais Não Conformidades:", 14, yPos);
                 yPos += 5;
                 doc.setFont(undefined, 'normal');
@@ -677,17 +698,20 @@ async function generatePDF(mode = 'save') {
                 yPos += splitRiscos.length * 5 + 5;
             }
 
+            // Linha separadora
             doc.setDrawColor(200);
             doc.line(14, yPos, 196, yPos);
             yPos += 10;
         }
 
+        // --- 3. SEÇÕES TÉCNICAS (ITENS VISTORIADOS) ---
         doc.setFontSize(12);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(0);
         doc.text("2. Detalhamento Técnico", 14, yPos);
         yPos += 5;
 
+        // Função auxiliar para gerar tabelas
         const generateTable = (title, data, headers, color) => {
             if (data.length === 0) return;
             if (yPos > 250) { doc.addPage(); yPos = 20; }
@@ -761,6 +785,7 @@ async function generatePDF(mode = 'save') {
             i.obs || '-'
         ]), ['Descrição'], [71, 85, 105]);
 
+        // --- 4. CONCLUSÕES E RECOMENDAÇÕES ---
         if (yPos > 230) { doc.addPage(); yPos = 20; }
 
         const conclusao = document.getElementById('sum-conclusao') ? document.getElementById('sum-conclusao').value : '';
@@ -781,6 +806,7 @@ async function generatePDF(mode = 'save') {
             yPos += 15;
         }
 
+        // --- 5. ASSINATURAS ---
         if (yPos > 240) { doc.addPage(); yPos = 40; }
 
         const sigY = yPos + 10;
@@ -801,6 +827,7 @@ async function generatePDF(mode = 'save') {
         doc.setFont(undefined, 'normal');
         doc.text(cliente, 155, sigY + 10, { align: 'center' });
 
+        // --- 6. ANEXOS ---
         const itemsWithPhotos = items.filter(i => i.imageFiles && i.imageFiles.length > 0);
         if (itemsWithPhotos.length > 0) {
             doc.addPage();
@@ -878,6 +905,7 @@ async function generatePDF(mode = 'save') {
         if (mode === 'save') {
             btn.innerHTML = oldText;
             btn.disabled = false;
+            lucide.createIcons();
         }
     }
 }

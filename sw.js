@@ -10,10 +10,11 @@ const urlsToCache = [
   './js/phrases.js', // Incluímos o novo arquivo de frases
   './js/firebase-config.js',
   './js/pdf-generator.js',
+  './js/image-compressor.js',
   './manifest.json',
-  'https://unpkg.com/lucide@latest',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js'
+  './js/vendor/jspdf.umd.min.js',
+  './js/vendor/jspdf.plugin.autotable.min.js',
+  './js/vendor/lucide.min.js'
 ];
 
 // 1. INSTALAÇÃO

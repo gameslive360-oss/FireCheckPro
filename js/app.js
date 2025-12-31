@@ -5,6 +5,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { firebaseConfig } from "./firebase-config.js";
 import { PhraseManager } from "./phrases.js";
 import { generatePDF } from "./pdf-generator.js";
+import { compressImage } from "./image-compressor.js";
 
 // --- Configuração ---
 const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral'];
@@ -292,11 +293,38 @@ window.loadHistory = async function () {
 };
 
 // --- Arquivos ---
-function handleFileSelect(event) {
-    if (event.target.files && event.target.files.length > 0) {
-        currentFiles = [...currentFiles, ...Array.from(event.target.files)];
-        updateImagePreview();
-        event.target.value = "";
+async function handleFileSelect(event) {
+    const input = event.target;
+    if (input.files && input.files.length > 0) {
+        const btnText = document.getElementById('btn-add-item');
+        const originalText = btnText.innerHTML;
+
+        // Feedback visual simples
+        btnText.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Comprimindo fotos...`;
+        if (window.lucide) window.lucide.createIcons();
+
+        try {
+            // Converte FileList para Array
+            const filesArray = Array.from(input.files);
+
+            // Processa todas as imagens em paralelo
+            const compressedFiles = await Promise.all(
+                filesArray.map(file => compressImage(file))
+            );
+
+            // Adiciona ao array global
+            currentFiles = [...currentFiles, ...compressedFiles];
+            updateImagePreview();
+
+        } catch (error) {
+            console.error("Erro ao processar imagens:", error);
+            alert("Erro ao processar algumas imagens.");
+        } finally {
+            // Restaura o botão e limpa o input
+            btnText.innerHTML = originalText;
+            if (window.lucide) window.lucide.createIcons();
+            input.value = "";
+        }
     }
 }
 function removeFile(index) { currentFiles.splice(index, 1); updateImagePreview(); }

@@ -111,20 +111,23 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         // Linha 1
         doc.setFont('helvetica', 'bold');
-        doc.text("CLIENTE:", 17, 38);
+        doc.text("CLIENTE:", 18, 38);
         doc.setFont('helvetica', 'normal');
-        doc.text(cliente.substring(0, 45), 33, 38);
+        doc.text(cliente.substring(0, 35), 34, 38);
+
+        doc.setFont('helvetica', 'normal');
+        doc.text(dataRelatorio, 192, 38, { align: 'right' });
+
+        const wData = doc.getTextWidth(dataRelatorio);
 
         doc.setFont('helvetica', 'bold');
-        doc.text("DATA:", 160, 38);
-        doc.setFont('helvetica', 'normal');
-        doc.text(dataRelatorio, 172, 38);
+        doc.text("DATA:", 192 - wData - 3, 38, { align: 'right' });
 
         // Linha 2
         doc.setFont('helvetica', 'bold');
-        doc.text("LOCAL:", 17, 43);
+        doc.text("LOCAL:", 18, 43);
         doc.setFont('helvetica', 'normal');
-        doc.text(local.substring(0, 50), 33, 43);
+        doc.text(local.substring(0, 60), 34, 43);
 
 
         // --- PÁGINA 1: SUMÁRIO EXECUTIVO ---

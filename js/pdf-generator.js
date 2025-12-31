@@ -1,7 +1,7 @@
 // js/pdf-generator.js
 
 /**
- * Converte arquivo para Base64 (necessário para imagens no PDF)
+ * Converte arquivo para Base64
  */
 const readFileAsDataURL = (file) => {
     return new Promise((resolve, reject) => {
@@ -13,18 +13,52 @@ const readFileAsDataURL = (file) => {
 };
 
 /**
- * Função principal de geração do Relatório
+ * --- FUNÇÕES AUXILIARES DE DESIGN ---
+ */
+
+// Desenha um título de seção com fundo estilizado
+const drawSectionHeader = (doc, title, y) => {
+    // Fundo Cinza Claro
+    doc.setFillColor(241, 245, 249); // Slate-100
+    doc.rect(14, y, 182, 8, 'F');
+
+    // Barra Lateral Azul Escuro (Accent)
+    doc.setFillColor(15, 23, 42); // Slate-900
+    doc.rect(14, y, 1.5, 8, 'F');
+
+    // Texto
+    doc.setTextColor(30, 41, 59); // Slate-800
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(title.toUpperCase(), 19, y + 5.5); // Texto alinhado verticalmente
+
+    return y + 14; // Retorna nova posição Y com margem
+};
+
+// Adiciona numeração de página no final
+const addPageNumbers = (doc) => {
+    const pageCount = doc.internal.getNumberOfPages();
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.text(`Página ${i} de ${pageCount}`, 196, 285, { align: 'right' });
+        doc.text("FireCheck Pro - Relatório Digital", 14, 285, { align: 'left' });
+    }
+};
+
+/**
+ * Função principal de geração
  */
 export async function generatePDF(items, mode = 'save') {
-    // Permite gerar PDF vazio se o usuário quiser ver apenas a estrutura
-    // if (items.length === 0 && mode === 'save') return alert("Lista vazia..."); 
-
     const btn = document.getElementById('btn-pdf');
     let oldText = "";
 
     if (mode === 'save') {
         oldText = btn.innerHTML;
-        btn.innerHTML = "Processando...";
+        btn.innerHTML = "Gerando Design...";
         btn.disabled = true;
     }
 
@@ -32,10 +66,10 @@ export async function generatePDF(items, mode = 'save') {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // --- DADOS DO CABEÇALHO ---
-        const cliente = document.getElementById('cliente').value || "Não Informado";
-        const local = document.getElementById('local').value || "Não Informado";
-        const tecnico = document.getElementById('resp-tecnico').value || "Não Informado";
+        // --- DADOS ---
+        const cliente = document.getElementById('cliente').value || "CLIENTE NÃO INFORMADO";
+        const local = document.getElementById('local').value || "";
+        const tecnico = document.getElementById('resp-tecnico').value || "";
         const classificacao = document.getElementById('classificacao').value || "-";
 
         const dataRaw = document.getElementById('data-relatorio').value;
@@ -43,106 +77,131 @@ export async function generatePDF(items, mode = 'save') {
         const avcbRaw = document.getElementById('validade-avcb').value;
         const dataAvcb = avcbRaw ? avcbRaw.split('-').reverse().join('/') : "-";
 
-        // Função auxiliar para desenhar o Cabeçalho (pode ser repetido se quiser, aqui desenhamos só na capa)
-        const drawHeader = () => {
-            doc.setFillColor(30, 41, 59); // Slate 800
-            doc.rect(0, 0, 210, 45, 'F');
-            doc.setTextColor(255);
-            doc.setFontSize(16);
-            doc.setFont(undefined, 'bold');
-            doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            doc.text("Sistemas de Prevenção e Combate a Incêndio", 105, 22, { align: 'center' });
+        // --- CABEÇALHO PRINCIPAL (CAPA) ---
+        // Fundo Azul Escuro Profundo
+        doc.setFillColor(15, 23, 42); // Slate-900
+        doc.rect(0, 0, 210, 50, 'F');
 
-            doc.setFontSize(9);
-            doc.text(`Cliente: ${cliente}`, 14, 32);
-            doc.text(`Local: ${local}`, 14, 37);
-            doc.text(`Resp. Técnico: ${tecnico}`, 110, 32);
-            doc.text(`Classificação: ${classificacao}`, 110, 37);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(147, 197, 253);
-            doc.text(`Data: ${dataRelatorio}`, 175, 32);
-            doc.text(`AVCB: ${dataAvcb}`, 175, 37);
-        };
+        // Título Principal
+        doc.setTextColor(255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 18, { align: 'center' });
 
-        // --- PÁGINA 1: CAPA E SUMÁRIO ---
-        drawHeader();
-        let yPos = 55;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(148, 163, 184); // Slate-400
+        doc.text("SISTEMAS DE PREVENÇÃO E COMBATE A INCÊNDIO", 105, 25, { align: 'center' });
+
+        // Box de Informações do Cliente (Dentro do cabeçalho escuro)
+        doc.setDrawColor(51, 65, 85); // Slate-700
+        doc.setFillColor(30, 41, 59); // Slate-800
+        doc.roundedRect(14, 32, 182, 14, 1, 1, 'FD');
+
+        doc.setFontSize(9);
+        doc.setTextColor(226, 232, 240); // Texto Claro
+
+        // Linha 1
+        doc.setFont('helvetica', 'bold');
+        doc.text("CLIENTE:", 17, 38);
+        doc.setFont('helvetica', 'normal');
+        doc.text(cliente.substring(0, 45), 33, 38);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text("DATA:", 160, 38);
+        doc.setFont('helvetica', 'normal');
+        doc.text(dataRelatorio, 172, 38);
+
+        // Linha 2
+        doc.setFont('helvetica', 'bold');
+        doc.text("LOCAL:", 17, 43);
+        doc.setFont('helvetica', 'normal');
+        doc.text(local.substring(0, 50), 33, 43);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text("AVCB:", 160, 43);
+        doc.setFont('helvetica', 'normal');
+        doc.text(dataAvcb, 172, 43);
+
+
+        // --- PÁGINA 1: SUMÁRIO EXECUTIVO ---
+        let yPos = 65; // Começa após o cabeçalho
+
+        yPos = drawSectionHeader(doc, "1. Sumário Executivo", yPos);
 
         const parecer = document.getElementById('sum-parecer') ? document.getElementById('sum-parecer').value : '';
         const resumo = document.getElementById('sum-resumo') ? document.getElementById('sum-resumo').value : '';
         const riscos = document.getElementById('sum-riscos') ? document.getElementById('sum-riscos').value : '';
 
-        doc.setTextColor(0);
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text("1. Sumário Executivo", 14, yPos);
-        yPos += 10;
+        // Box de Parecer (Status)
+        let fillColor = [220, 252, 231]; // Verde
+        let textColor = [22, 101, 52];
+        let statusText = "SISTEMA APROVADO";
 
-        // Parecer (Sempre desenha, mesmo se vazio mostra status padrão)
-        let corParecer = [220, 252, 231];
-        if (parecer && parecer.includes("Restrições")) corParecer = [254, 249, 195];
-        if (parecer && parecer.includes("Reprovado")) corParecer = [254, 226, 226];
+        if (parecer && parecer.includes("Restrições")) {
+            fillColor = [254, 249, 195]; // Amarelo
+            textColor = [133, 77, 14];
+            statusText = "APROVADO COM RESTRIÇÕES";
+        }
+        if (parecer && parecer.includes("Reprovado")) {
+            fillColor = [254, 226, 226]; // Vermelho
+            textColor = [153, 27, 27];
+            statusText = "SISTEMA REPROVADO / INOPERANTE";
+        }
 
-        doc.setFillColor(...corParecer);
-        doc.roundedRect(14, yPos, 182, 10, 1, 1, 'F');
+        doc.setFillColor(...fillColor);
+        doc.setDrawColor(...textColor); // Borda da mesma cor do texto
+        doc.roundedRect(14, yPos, 182, 12, 1, 1, 'FD');
+
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        doc.setTextColor(30);
-        doc.text(`Situação: ${(parecer || "NÃO AVALIADO").toUpperCase()}`, 105, yPos + 6.5, { align: 'center' });
+        doc.setTextColor(...textColor);
+        doc.text(statusText, 105, yPos + 7.5, { align: 'center' });
         yPos += 20;
 
-        // Resumo e Riscos (Textos)
-        doc.setTextColor(0);
+        // Textos descritivos
+        doc.setTextColor(30, 41, 59); // Slate-800
+
         if (resumo) {
-            doc.setFont(undefined, 'bold');
-            doc.text("Resumo das Instalações:", 14, yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text("Resumo das Instalações", 14, yPos);
             yPos += 5;
-            doc.setFont(undefined, 'normal');
-            const splitResumo = doc.splitTextToSize(resumo, 180);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            const splitResumo = doc.splitTextToSize(resumo, 182);
             doc.text(splitResumo, 14, yPos);
             yPos += splitResumo.length * 5 + 10;
-        } else {
-            doc.setFont(undefined, 'italic');
-            doc.setTextColor(150);
-            doc.text("(Sem resumo informado)", 14, yPos);
-            yPos += 15;
         }
 
         if (riscos) {
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(185, 28, 28);
-            doc.text("Principais Não Conformidades:", 14, yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(185, 28, 28); // Vermelho
+            doc.text("Principais Não Conformidades / Riscos", 14, yPos);
             yPos += 5;
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(0);
-            const splitRiscos = doc.splitTextToSize(riscos, 180);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(30, 41, 59);
+            const splitRiscos = doc.splitTextToSize(riscos, 182);
             doc.text(splitRiscos, 14, yPos);
-        } else {
-            // Deixa espaço vazio se não tiver riscos
         }
 
-
         // --- PÁGINA 2: TABELAS TÉCNICAS ---
-        doc.addPage(); // <--- FORÇA PÁGINA NOVA
-        yPos = 20; // Reseta topo
+        doc.addPage();
+        yPos = 20;
 
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text("2. Detalhamento Técnico (Tabelas)", 14, yPos);
-        yPos += 10;
+        yPos = drawSectionHeader(doc, "2. Detalhamento Técnico (Checklists)", yPos);
 
-        // Helper de Tabela
-        const generateTable = (title, data, headers, color) => {
+        // Função de tabela aprimorada
+        const generateTable = (title, data, headers, headColor) => {
             if (!data || data.length === 0) return;
 
-            // Verifica espaço na página atual
-            if (yPos > 260) { doc.addPage(); yPos = 20; }
+            if (yPos > 240) { doc.addPage(); yPos = 20; }
 
-            doc.setFontSize(11);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(...color);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105); // Slate-600
             doc.text(title, 14, yPos);
             yPos += 2;
 
@@ -150,214 +209,196 @@ export async function generatePDF(items, mode = 'save') {
                 startY: yPos,
                 head: [headers],
                 body: data,
-                theme: 'grid',
-                headStyles: { fillColor: color },
-                styles: { fontSize: 8 },
+                theme: 'striped', // Tema listrado é mais profissional que grid simples
+                headStyles: {
+                    fillColor: headColor,
+                    fontSize: 8,
+                    fontStyle: 'bold',
+                    halign: 'center'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    textColor: 50
+                },
+                columnStyles: {
+                    0: { cellWidth: 25, halign: 'center' }, // Local
+                    1: { cellWidth: 20, halign: 'center' }, // ID
+                },
                 margin: { left: 14, right: 14 }
             });
-            yPos = doc.lastAutoTable.finalY + 10;
+            yPos = doc.lastAutoTable.finalY + 12;
         };
 
-        // Gerar tabelas apenas dos itens técnicos (excluindo Geral)
+        // Geração das tabelas (Mesma lógica, estilo novo)
         const hid = items.filter(i => i.type === 'hidrante');
-        generateTable("Hidrantes", hid.map(i => {
+        generateTable("SISTEMA DE HIDRANTES", hid.map(i => {
             let faltantes = [];
             if (!i.check_registro) faltantes.push('Reg');
             if (!i.check_adaptador) faltantes.push('Adap');
             if (!i.check_chave) faltantes.push('Chv');
             if (!i.check_esguicho) faltantes.push('Esg');
-            const statusComp = faltantes.length === 0 ? 'OK' : faltantes.join(', ');
-            const mangueiraInfo = i.tem_mangueira ? `${i.lances}x ${i.metragem}` : 'AUSENTE';
-            return [i.andar, i.id, mangueiraInfo, i.tem_mangueira ? i.validade : '-', statusComp, i.obs || '-'];
-        }), ['Local', 'ID', 'Mangueira', 'Validade', 'Acessórios', 'Obs'], [37, 99, 235]);
+            const statusComp = faltantes.length === 0 ? 'Completo' : 'Falta: ' + faltantes.join(',');
+            return [i.andar, i.id, i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira', i.tem_mangueira ? i.validade : '-', statusComp, i.obs || '-'];
+        }), ['Local', 'ID', 'Mangueira', 'Validade', 'Abrigo', 'Observações'], [51, 65, 85]);
 
         const ext = items.filter(i => i.type === 'extintor');
-        generateTable("Extintores", ext.map(i => [
-            i.andar, i.id, i.tipo, i.peso, i.recarga,
-            (i.check_lacre && i.check_manometro) ? 'OK' : 'Verificar', i.obs || '-'
-        ]), ['Local', 'ID', 'Tipo', 'Peso', 'Recarga', 'Status', 'Obs'], [220, 38, 38]);
+        generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [
+            i.andar, i.id, i.tipo, `${i.peso} kg`, i.recarga,
+            (i.check_lacre && i.check_manometro) ? 'OK' : 'Irregular', i.obs || '-'
+        ]), ['Local', 'ID', 'Tipo', 'Capac.', 'Recarga', 'Visual', 'Observações'], [51, 65, 85]);
 
         const luz = items.filter(i => i.type === 'luz');
-        generateTable("Iluminação de Emergência", luz.map(i => [
+        generateTable("ILUMINAÇÃO DE EMERGÊNCIA", luz.map(i => [
             i.andar, i.id, i.tipo, i.estado, i.autonomia, i.obs || '-'
-        ]), ['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Obs'], [217, 119, 6]);
+        ]), ['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Observações'], [51, 65, 85]);
 
         const sin = items.filter(i => i.type === 'sinalizacao');
-        generateTable("Sinalização", sin.map(i => {
-            let status = 'OK';
-            if (i.existente === 'Sim') {
-                let falhas = [];
-                if (!i.check_foto) falhas.push('Fotom.');
-                if (!i.check_fixacao) falhas.push('Fixação');
-                if (!i.check_visivel) falhas.push('Visib.');
-                status = falhas.length === 0 ? 'Conforme' : falhas.join(', ');
-            } else { status = 'Inexistente'; }
+        generateTable("SINALIZAÇÃO DE EMERGÊNCIA", sin.map(i => {
+            let status = i.existente === 'Sim' ? 'Presente' : 'Ausente';
             return [i.andar, i.id, i.tipo || '-', status, i.obs || '-'];
-        }), ['Local', 'ID', 'Tipo', 'Conformidade', 'Obs'], [13, 148, 136]);
+        }), ['Local', 'ID', 'Tipo', 'Status', 'Observações'], [51, 65, 85]);
 
         const eletro = items.filter(i => i.type === 'eletro');
-        generateTable("Sistemas Eletromecânicos", eletro.map(i => {
+        generateTable("ELETROMECÂNICA / ALARME", eletro.map(i => {
             const manut = i.precisa_manutencao === 'Sim' ? 'SIM' : 'Não';
             return [i.andar, i.tipo_sistema, i.botoeiras, manut, i.obs || '-'];
-        }), ['Local', 'Sistema', 'Botoeira', 'Manutenção', 'Obs'], [79, 70, 229]);
+        }), ['Local', 'Sistema', 'Acionador', 'Manut.', 'Observações'], [51, 65, 85]);
 
         const bombas = items.filter(i => i.type === 'bomba');
-        generateTable("Bombas de Incêndio", bombas.map(i => [
-            i.andar, i.id, i.operacao ? 'Auto' : 'Manual/Off', i.teste_pressao ? 'Sim' : 'Não', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
-        ]), ['Local', 'ID', 'Modo', 'Teste', 'Manut.', 'Obs'], [124, 58, 237]);
+        generateTable("CONJUNTO DE BOMBAS", bombas.map(i => [
+            i.andar, i.id, i.operacao ? 'Automático' : 'Manual/Off', i.teste_pressao ? 'OK' : 'Pend.', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
+        ]), ['Local', 'ID', 'Painel', 'Pressão', 'Manut.', 'Observações'], [51, 65, 85]);
 
 
         // --- PÁGINA 3: OBSERVAÇÕES GERAIS ---
-        doc.addPage(); // <--- FORÇA PÁGINA NOVA
+        doc.addPage();
         yPos = 20;
-
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text("3. Observações Gerais", 14, yPos);
-        yPos += 10;
+        yPos = drawSectionHeader(doc, "3. Observações Gerais", yPos);
 
         const geral = items.filter(i => i.type === 'geral');
-
         if (geral.length > 0) {
-            // Se tiver observações, cria a tabela
-            generateTable("", geral.map(i => [i.obs || '-']), ['Descrição da Ocorrência'], [71, 85, 105]);
+            doc.autoTable({
+                startY: yPos,
+                head: [['Descrição da Ocorrência']],
+                body: geral.map(i => [i.obs]),
+                theme: 'striped',
+                headStyles: { fillColor: [71, 85, 105] },
+                margin: { left: 14, right: 14 }
+            });
         } else {
-            // Se NÃO tiver, escreve mensagem placeholder
-            doc.setFontSize(11);
-            doc.setFont(undefined, 'italic');
+            doc.setFont('helvetica', 'italic');
             doc.setTextColor(150);
-            doc.text("Nenhuma observação geral registrada para esta vistoria.", 14, yPos);
+            doc.text("Nenhuma ocorrência geral registrada.", 14, yPos + 10);
         }
 
-
-        // --- PÁGINA 4: CONCLUSÕES ---
-        doc.addPage(); // <--- FORÇA PÁGINA NOVA
+        // --- PÁGINA 4: CONCLUSÃO ---
+        doc.addPage();
         yPos = 20;
-
-        doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text("4. Conclusões e Recomendações Finais", 14, yPos);
-        yPos += 15;
+        yPos = drawSectionHeader(doc, "4. Parecer Técnico Final", yPos);
 
         const conclusao = document.getElementById('sum-conclusao') ? document.getElementById('sum-conclusao').value : '';
 
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'normal');
-
         if (conclusao) {
-            const splitConclusao = doc.splitTextToSize(conclusao, 180);
-            doc.text(splitConclusao, 14, yPos);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(30, 41, 59);
+            const splitConclusao = doc.splitTextToSize(conclusao, 182);
+            doc.text(splitConclusao, 14, yPos + 5);
         } else {
-            doc.setFont(undefined, 'italic');
+            doc.setFont('helvetica', 'italic');
             doc.setTextColor(150);
-            doc.text("Campo de conclusões não preenchido.", 14, yPos);
+            doc.text("Sem considerações finais.", 14, yPos + 5);
         }
 
-
         // --- PÁGINA 5: ASSINATURAS ---
-        doc.addPage(); // <--- FORÇA PÁGINA NOVA
-        yPos = 60; // Desce um pouco para centralizar na folha
+        doc.addPage();
+        yPos = 60;
 
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(0);
-        doc.text("Assinaturas", 105, 40, { align: 'center' });
+        doc.setTextColor(30, 41, 59);
+        doc.text("Validação do Relatório", 105, 40, { align: 'center' });
 
-        const sigY = yPos + 30;
+        const sigY = yPos + 40;
         doc.setLineWidth(0.5);
-        doc.setDrawColor(0);
+        doc.setDrawColor(148, 163, 184); // Linha cinza
 
-        // Assinatura 1 (Técnico)
+        // Assinatura 1
         doc.line(30, sigY, 90, sigY);
         doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text("Responsável Técnico", 60, sigY + 5, { align: 'center' });
-        doc.setFont(undefined, 'normal');
-        doc.text(tecnico, 60, sigY + 10, { align: 'center' });
+        doc.text("RESPONSÁVEL TÉCNICO", 60, sigY + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(tecnico.toUpperCase(), 60, sigY + 10, { align: 'center' });
 
-        // Assinatura 2 (Cliente)
+        // Assinatura 2
         doc.line(120, sigY, 180, sigY);
-        doc.setFont(undefined, 'bold');
-        doc.text("Recebido por (Cliente)", 150, sigY + 5, { align: 'center' });
-        doc.setFont(undefined, 'normal');
-        doc.text(cliente, 150, sigY + 10, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text("CLIENTE / RESPONSÁVEL", 150, sigY + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(cliente.toUpperCase(), 150, sigY + 10, { align: 'center' });
 
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`Documento gerado em: ${new Date().toLocaleString()}`, 105, 280, { align: 'center' });
-
-
-        // --- PÁGINA 6+: ANEXOS / FOTOS ---
+        // --- PÁGINA 6: FOTOS ---
         const itemsWithPhotos = items.filter(i => i.imageFiles && i.imageFiles.length > 0);
         if (itemsWithPhotos.length > 0) {
-            doc.addPage(); // <--- FORÇA PÁGINA NOVA
-            doc.setTextColor(0);
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text("Anexo: Relatório Fotográfico", 14, 20);
+            doc.addPage();
+            yPos = 20;
+            yPos = drawSectionHeader(doc, "Anexo: Relatório Fotográfico", yPos);
 
             let x = 14;
-            let y = 30;
+            let y = yPos + 5;
             const imgWidth = 85;
             const imgHeight = 85;
-            const gap = 10;
+            const gap = 12;
 
             for (const item of itemsWithPhotos) {
-                // Título do item (Mini cabeçalho antes da foto)
-                if (y + 10 > 280) { doc.addPage(); y = 20; }
+                // Se não couber título + foto, nova página
+                if (y + imgHeight + 20 > 280) { doc.addPage(); y = 20; }
 
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'bold');
-                doc.setFillColor(240);
-                doc.rect(14, y - 4, 182, 6, 'F');
+                // Faixa cinza para o item da foto
+                doc.setFillColor(241, 245, 249);
+                doc.rect(14, y, 182, 6, 'F');
 
-                const itemTitle = (item.type === 'geral')
-                    ? `Item: Observação Geral`
-                    : `Item: ${item.id} - ${item.andar} (${item.type.toUpperCase()})`;
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8);
+                doc.setTextColor(71, 85, 105);
+                const label = item.type === 'geral' ? "OBSERVAÇÃO GERAL" : `${item.type.toUpperCase()} - ${item.id} (${item.andar})`;
+                doc.text(label, 16, y + 4);
 
-                doc.text(itemTitle, 16, y);
-                y += 5;
+                y += 8;
 
                 for (let i = 0; i < item.imageFiles.length; i++) {
                     try {
                         const imgData = await readFileAsDataURL(item.imageFiles[i]);
 
-                        // Verifica se a foto cabe na página, senão cria nova
-                        if (y + imgHeight > 285) {
-                            doc.addPage();
-                            y = 20;
-                            doc.text(`${itemTitle} (Continuação)`, 14, y - 5);
-                        }
+                        if (y + imgHeight > 280) { doc.addPage(); y = 20; }
 
                         doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
-                        doc.setDrawColor(200);
+                        // Borda fina na foto
+                        doc.setDrawColor(203, 213, 225);
                         doc.rect(x, y, imgWidth, imgHeight);
-                        doc.setFont(undefined, 'normal');
-                        doc.setFontSize(8);
-                        doc.text(`Foto ${i + 1}`, x, y + imgHeight + 4);
 
-                        // Lógica de 2 colunas
+                        // Grid 2 colunas
                         if (x === 14) {
                             x = 14 + imgWidth + gap;
                         } else {
                             x = 14;
-                            y += imgHeight + 12;
+                            y += imgHeight + 10;
                         }
+                    } catch (err) { console.error(err); }
+                }
 
-                    } catch (err) { console.error("Erro img PDF", err); }
-                }
-                // Reseta X para esquerda e desce o cursor se a linha ficou incompleta
-                if (x > 14) {
-                    x = 14;
-                    y += imgHeight + 12;
-                }
-                y += 5;
+                // Reset de linha
+                if (x > 14) { x = 14; y += imgHeight + 10; }
+                y += 5; // Espaço extra entre itens
             }
         }
 
         // --- FINALIZAÇÃO ---
+        addPageNumbers(doc); // Numera todas as páginas no final
+
         if (mode === 'save') {
             doc.save(`Relatorio_${cliente.replace(/\s+/g, '_')}.pdf`);
         } else {

@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -15,6 +15,14 @@ try {
     if (firebaseConfig.apiKey) {
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
+        enableIndexedDbPersistence(db)
+            .catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn("Persistência falhou: Múltiplas abas abertas.");
+                } else if (err.code == 'unimplemented') {
+                    console.warn("Persistência falhou: Navegador não suporta.");
+                }
+            });
         storage = getStorage(app);
         auth = getAuth(app);
 

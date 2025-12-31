@@ -9,6 +9,7 @@ const urlsToCache = [
   './js/app.js', // O navegador vai baixar este arquivo novamente
   './js/phrases.js', // Incluímos o novo arquivo de frases
   './js/firebase-config.js',
+  './js/pdf-generator.js',
   './manifest.json',
   'https://unpkg.com/lucide@latest',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',

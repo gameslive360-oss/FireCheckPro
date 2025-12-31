@@ -53,7 +53,17 @@ document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     restoreFormState();
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
-    if (!document.getElementById('data-relatorio').value) document.getElementById('data-relatorio').valueAsDate = new Date();
+    if (!document.getElementById('data-relatorio').value) {
+        const now = new Date();
+        // Formata para YYYY-MM-DDTHH:MM (Padrão do input datetime-local)
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
+        document.getElementById('data-relatorio').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
     if (document.getElementById('s-existente')) window.toggleSinalizacaoFields();
     // Listeners
     document.getElementById('btn-login').addEventListener('click', handleLogin);
@@ -660,8 +670,6 @@ async function saveToFirebase() {
             local: document.getElementById('local').value || "Não Informado",
             respTecnico: document.getElementById('resp-tecnico').value || "Não Informado",
             classificacao: document.getElementById('classificacao').value || "-",
-            validadeAvcb: document.getElementById('validade-avcb').value || null,
-
             // Novos campos do Sumário
             parecerTecnico: document.getElementById('sum-parecer').value,
             resumoInstalacoes: document.getElementById('sum-resumo').value,

@@ -71,12 +71,20 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         const local = document.getElementById('local').value || "";
         const tecnico = document.getElementById('resp-tecnico').value || "";
         const classificacao = document.getElementById('classificacao').value || "-";
-
         const dataRaw = document.getElementById('data-relatorio').value;
-        const dataRelatorio = dataRaw ? dataRaw.split('-').reverse().join('/') : new Date().toLocaleDateString();
-        const avcbRaw = document.getElementById('validade-avcb').value;
-        const dataAvcb = avcbRaw ? avcbRaw.split('-').reverse().join('/') : "-";
+        let dataRelatorio = new Date().toLocaleString('pt-BR'); // Fallback padrão
 
+        if (dataRaw) {
+            // Verifica se é o formato novo com hora (YYYY-MM-DDTHH:MM)
+            if (dataRaw.includes('T')) {
+                const [datePart, timePart] = dataRaw.split('T');
+                const [ano, mes, dia] = datePart.split('-');
+                dataRelatorio = `${dia}/${mes}/${ano} às ${timePart}`;
+            } else {
+                // Caso seja formato antigo só data
+                dataRelatorio = dataRaw.split('-').reverse().join('/');
+            }
+        }
         // --- CABEÇALHO PRINCIPAL (CAPA) ---
         // Fundo Azul Escuro Profundo
         doc.setFillColor(15, 23, 42); // Slate-900
@@ -117,11 +125,6 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         doc.text("LOCAL:", 17, 43);
         doc.setFont('helvetica', 'normal');
         doc.text(local.substring(0, 50), 33, 43);
-
-        doc.setFont('helvetica', 'bold');
-        doc.text("AVCB:", 160, 43);
-        doc.setFont('helvetica', 'normal');
-        doc.text(dataAvcb, 172, 43);
 
 
         // --- PÁGINA 1: SUMÁRIO EXECUTIVO ---

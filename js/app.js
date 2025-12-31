@@ -6,12 +6,15 @@ import { firebaseConfig } from "./firebase-config.js";
 import { PhraseManager } from "./phrases.js";
 import { generatePDF } from "./pdf-generator.js";
 import { compressImage } from "./image-compressor.js";
+import { SignaturePad } from "./signature-pad.js";
 
 // --- Configuração ---
-const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral'];
+const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral', 'assinatura'];
 
 // --- Inicialização Firebase ---
 let db, storage, auth, user = null;
+let sigTecnico = null;
+let sigCliente = null;
 
 try {
     if (firebaseConfig.apiKey) {
@@ -49,11 +52,9 @@ let pendingAction = null;
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     restoreFormState();
-
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
     if (!document.getElementById('data-relatorio').value) document.getElementById('data-relatorio').valueAsDate = new Date();
     if (document.getElementById('s-existente')) window.toggleSinalizacaoFields();
-
     // Listeners
     document.getElementById('btn-login').addEventListener('click', handleLogin);
     document.getElementById('btn-logout-side').addEventListener('click', handleLogout);
@@ -61,8 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
     document.getElementById('upload-input').addEventListener('change', handleFileSelect);
-    document.getElementById('btn-pdf').addEventListener('click', () => generatePDF(items, 'save'));
-
+    document.getElementById('btn-pdf').addEventListener('click', () => {
+        const currentSignatures = {
+            tecnico: sigTecnico ? sigTecnico.getImageData() : null,
+            cliente: sigCliente ? sigCliente.getImageData() : null
+        };
+        generatePDF(items, 'save', currentSignatures);
+    });
     document.getElementById('btn-confirm-action').addEventListener('click', () => {
         if (pendingAction) pendingAction();
         window.closeConfirmModal();
@@ -73,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(input.id, input.type === 'checkbox' ? input.checked : input.value);
         });
     });
+    sigTecnico = new SignaturePad('sig-tecnico', 'btn-clear-tecnico');
+    sigCliente = new SignaturePad('sig-cliente', 'btn-clear-cliente');
 });
 
 // --- Visualização (Lista vs PDF) ---

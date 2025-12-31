@@ -52,7 +52,7 @@ const addPageNumbers = (doc) => {
 /**
  * Função principal de geração
  */
-export async function generatePDF(items, mode = 'save') {
+export async function generatePDF(items, mode = 'save', signatures = {}) {
     const btn = document.getElementById('btn-pdf');
     let oldText = "";
 
@@ -321,18 +321,30 @@ export async function generatePDF(items, mode = 'save') {
 
         const sigY = yPos + 40;
         doc.setLineWidth(0.5);
-        doc.setDrawColor(148, 163, 184); // Linha cinza
+        doc.setDrawColor(148, 163, 184);
 
-        // Assinatura 1
-        doc.line(30, sigY, 90, sigY);
+        // --- Assinatura 1: TÉCNICO ---
+        // Se tiver imagem digital, insere ela
+        if (signatures.tecnico) {
+            // Ajusta posição da imagem para ficar sobre a linha
+            doc.addImage(signatures.tecnico, 'PNG', 40, sigY - 25, 40, 25);
+        }
+
+        doc.line(30, sigY, 90, sigY); // Linha
         doc.setFontSize(10);
         doc.text("RESPONSÁVEL TÉCNICO", 60, sigY + 5, { align: 'center' });
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.text(tecnico.toUpperCase(), 60, sigY + 10, { align: 'center' });
 
-        // Assinatura 2
-        doc.line(120, sigY, 180, sigY);
+        // --- Assinatura 2: CLIENTE ---
+        // Se tiver imagem digital, insere ela
+        if (signatures.cliente) {
+            // Ajusta posição da imagem para ficar sobre a linha
+            doc.addImage(signatures.cliente, 'PNG', 130, sigY - 25, 40, 25);
+        }
+
+        doc.line(120, sigY, 180, sigY); // Linha
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.text("CLIENTE / RESPONSÁVEL", 150, sigY + 5, { align: 'center' });
@@ -415,4 +427,5 @@ export async function generatePDF(items, mode = 'save') {
             btn.disabled = false;
         }
     }
+
 }

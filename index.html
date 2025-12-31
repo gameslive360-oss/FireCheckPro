@@ -91,6 +91,9 @@
         </div>
         <!-- Div dos botões -->
         <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+            <button id="tab-sumario" class="tab-btn tab-inactive" onclick="window.switchTab('sumario')">
+                <i data-lucide="file-check-2" class="w-5 h-5"></i> <span>Sumário</span>
+            </button>
             <button id="tab-hidrante" class="tab-btn tab-active-hidrante" onclick="window.switchTab('hidrante')">
                 <i data-lucide="droplets" class="w-5 h-5"></i> <span>Hidrante</span>
             </button>
@@ -112,8 +115,8 @@
             <button id="tab-geral" class="tab-btn tab-inactive" onclick="window.switchTab('geral')">
                 <i data-lucide="clipboard-list" class="w-5 h-5"></i> <span>Geral</span>
             </button>
-            <button id="tab-sumario" class="tab-btn tab-inactive" onclick="window.switchTab('sumario')">
-                <i data-lucide="file-check-2" class="w-5 h-5"></i> <span>Sumário</span>
+            <button id="tab-assinatura" class="tab-btn tab-inactive" onclick="window.switchTab('assinatura')">
+                <i data-lucide="pen-tool" class="w-5 h-5"></i> <span>Assinaturas</span>
             </button>
         </div>
 
@@ -128,8 +131,6 @@
                     <input type="text" id="item-id" class="input-std save-state" placeholder="Ex: H-01">
                 </div>
             </div>
-
-            <!-- Sumário -->
             <div id="form-sumario" class="form-section hidden">
                 <h4 class="section-title text-slate-800 border-slate-400">Dados do Relatório</h4>
 
@@ -167,9 +168,6 @@
                         placeholder="Recomendações finais para o cliente, prazos para adequação, etc..."></textarea>
                 </div>
             </div>
-            <!-- Sumário -->
-
-            <!-- Inicio Botão Hidrante  -->
             <div id="form-hidrante" class="form-section">
                 <h4 class="section-title text-blue-800 border-blue-100">NBR 12779 - Hidrantes</h4>
 
@@ -248,8 +246,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Fim Botão Hidrante  -->
-            <!-- Inicio Botão extintor  -->
             <div id="form-extintor" class="form-section hidden">
                 <h4 class="section-title text-red-800 border-red-100">NBR 12962 - Extintores</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
@@ -297,8 +293,6 @@
                         placeholder="Descreva anomalias no extintor..."></textarea>
                 </div>
             </div>
-            <!-- Fim Botão extintor  -->
-            <!-- Inicio Botão Iluminação  -->
             <div id="form-luz" class="form-section hidden">
                 <h4 class="section-title text-amber-700 border-amber-100">NBR 10898 - Iluminação</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
@@ -348,9 +342,6 @@
                         placeholder="Descreva anomalias na iluminação..."></textarea>
                 </div>
             </div>
-            </div>
-            <!-- Fim Botão Iluminação  -->
-            <!-- Inicio Botão Bomba  -->
             <div id="form-bomba" class="form-section hidden">
                 <h4 class="section-title text-purple-800 border-purple-100">Sistema de Pressurização (Bombas)</h4>
                 <div class="checklist-grid">
@@ -379,9 +370,6 @@
                         placeholder="Descreva anomalias ou pressão aferida..."></textarea>
                 </div>
             </div>
-            <!-- Fim Botão Bomba  -->
-
-            <!-- Inicio Botão Sinalização  -->
             <div id="form-sinalizacao" class="form-section hidden">
                 <h4 class="section-title text-teal-800 border-teal-100">Sinalização de Emergência</h4>
 
@@ -440,8 +428,6 @@
                         placeholder="Ex: Placa caída, placa apagada..."></textarea>
                 </div>
             </div>
-            <!-- Fim Botão Bomba  -->
-            <!-- Inicio Eletromecanização  -->
             <div id="form-eletro" class="form-section hidden">
                 <h4 class="section-title text-indigo-800 border-indigo-100">Sistemas Eletromecânicos</h4>
 
@@ -507,8 +493,6 @@
                         placeholder="Descreva falhas nas botoeiras, ruídos ou detalhes da manutenção..."></textarea>
                 </div>
             </div>
-            <!-- Fim Eletromecanização -->
-            <!-- Inicio Obs Gerais  -->
             <div id="form-geral" class="form-section hidden">
                 <h4 class="section-title text-slate-700 border-slate-200">Observações Gerais / Diversos</h4>
 
@@ -525,73 +509,51 @@
                     </button>
                 </div>
             </div>
-            <!-- fim obs gerais  -->
+            <div id="form-assinatura" class="form-section hidden">
+                <h4 class="section-title text-slate-700 border-slate-200">Assinaturas Digitais</h4>
 
-            <div id="form-eletro" class="form-section hidden">
-                <h4 class="section-title text-indigo-800 border-indigo-100">Sistemas Eletromecânicos</h4>
-
-                <div class="mb-4">
-                    <label class="label-std">Tipo de Sistema</label>
-                    <select id="el-tipo" class="input-std save-state">
-                        <option value="Pressurizacao">Pressurização de Escada</option>
-                        <option value="Gerador">Grupo Gerador</option>
-                        <option value="Dampers">Dampers Corta-Fogo</option>
-                        <option value="Exaustao">Exaustão de Fumaça</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="space-y-6">
                     <div>
-                        <label class="label-std">Botoeiras Operantes?</label>
-                        <select id="el-botoeiras" class="input-std save-state font-bold">
-                            <option value="Sim">Sim</option>
-                            <option value="Nao">Não</option>
-                            <option value="N/A">N/A</option>
-                        </select>
+                        <label class="label-std text-slate-900">Assinatura do Técnico</label>
+                        <div class="border-2 border-dashed border-slate-300 rounded bg-slate-50 relative">
+                            <canvas id="sig-tecnico" class="w-full h-[200px] cursor-crosshair"></canvas>
+                            <div class="absolute top-2 right-2">
+                                <button id="btn-clear-tecnico"
+                                    class="text-xs text-red-500 bg-white border border-red-200 px-2 py-1 rounded hover:bg-red-50">
+                                    Limpar
+                                </button>
+                            </div>
+                            <div
+                                class="absolute bottom-2 left-2 pointer-events-none text-slate-300 text-xs select-none">
+                                Assine aqui
+                            </div>
+                        </div>
                     </div>
+
                     <div>
-                        <label class="label-std">Necessita Manutenção?</label>
-                        <select id="el-manutencao" class="input-std save-state text-red-700 font-bold">
-                            <option value="Nao">Não</option>
-                            <option value="Sim">Sim</option>
-                        </select>
+                        <label class="label-std text-slate-900">Assinatura do Cliente</label>
+                        <div class="border-2 border-dashed border-slate-300 rounded bg-slate-50 relative">
+                            <canvas id="sig-cliente" class="w-full h-[200px] cursor-crosshair"></canvas>
+                            <div class="absolute top-2 right-2">
+                                <button id="btn-clear-cliente"
+                                    class="text-xs text-red-500 bg-white border border-red-200 px-2 py-1 rounded hover:bg-red-50">
+                                    Limpar
+                                </button>
+                            </div>
+                            <div
+                                class="absolute bottom-2 left-2 pointer-events-none text-slate-300 text-xs select-none">
+                                Assine aqui
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="border-t border-gray-100 pt-3 mb-3">
-                    <label class="label-std text-indigo-900 mb-2">Checklist Técnico (NBR)</label>
-                    <div class="checklist-grid">
-                        <label class="check-group">
-                            <input type="checkbox" id="el-painel" class="save-state" checked>
-                            <span>Painel em Automático</span>
-                        </label>
-                        <label class="check-group">
-                            <input type="checkbox" id="el-piloto" class="save-state" checked>
-                            <span>Luzes Piloto/Sinaliz. OK</span>
-                        </label>
-                        <label class="check-group">
-                            <input type="checkbox" id="el-ruido" class="save-state" checked>
-                            <span>Sem Ruído/Vibração Anormal</span>
-                        </label>
-                        <label class="check-group">
-                            <input type="checkbox" id="el-fixacao" class="save-state" checked>
-                            <span>Fixação/Trilhos OK</span>
-                        </label>
+                    <div class="bg-blue-50 p-3 rounded text-xs text-blue-800 border border-blue-200">
+                        <i data-lucide="info" class="inline w-3 h-3 mr-1"></i>
+                        As assinaturas desenhadas acima serão inseridas automaticamente no final do PDF.
                     </div>
-                </div>
-
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1">
-                        <label class="label-std">Observações</label>
-                        <button onclick="window.phrases.open('el-obs', 'eletro')"
-                            class="text-xs text-indigo-600 hover:underline flex items-center gap-1">
-                            <i data-lucide="message-square" class="w-3 h-3"></i> Frases Prontas
-                        </button>
-                    </div>
-                    <textarea id="el-obs" class="input-std save-state" rows="2"
-                        placeholder="Descreva falhas nas botoeiras, ruídos ou detalhes da manutenção..."></textarea>
                 </div>
             </div>
+            
             <div class="mt-4 pt-4 border-t border-gray-100">
                 <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3">
                 </div>

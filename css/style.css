@@ -197,3 +197,9 @@
     cursor: pointer;
     border: 2px solid white;
 }
+
+.tab-active-assinatura {
+    background-color: var(--tab-active-bg);
+    border-color: var(--tab-active-border);
+    color: white;
+}

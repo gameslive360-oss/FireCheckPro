@@ -14,7 +14,8 @@ const urlsToCache = [
   './manifest.json',
   './js/vendor/jspdf.umd.min.js',
   './js/vendor/jspdf.plugin.autotable.min.js',
-  './js/vendor/lucide.min.js'
+  './js/vendor/lucide.min.js',
+  './js/signature-pad.js',
 ];
 
 // 1. INSTALAÇÃO

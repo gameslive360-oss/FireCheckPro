@@ -1,0 +1,15 @@
+{
+  "name": "firecheckpro",
+  "version": "1.0.0",
+  "description": "**FireCheck Pro** é um **Progressive Web App (PWA)** desenvolvido para facilitar a inspeção mensal e anual de equipamentos de segurança contra incêndio.   Permite **coleta de dados offline**, **registro fotográfico** e **geração automática de relatórios técnicos em PDF**, seguindo rigorosamente as **normas brasileiras (ABNT NBR)**.",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

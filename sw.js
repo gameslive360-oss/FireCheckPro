@@ -1,15 +1,15 @@
 // MUDE AQUI: Suba a versão para forçar a atualização
-const CACHE_NAME = 'firecheck-v9'; // Mudei para v5
+const CACHE_NAME = 'firecheck-v10'; // Mudei para v5
 
 const urlsToCache = [
   './',
   './index.html',
   './css/style.css',
+  './css/tailwind.css',
   './js/app.js', // O navegador vai baixar este arquivo novamente
   './js/phrases.js', // Incluímos o novo arquivo de frases
   './js/firebase-config.js',
   './manifest.json',
-  'https://cdn.tailwindcss.com',
   'https://unpkg.com/lucide@latest',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js'

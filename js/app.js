@@ -104,7 +104,13 @@ window.togglePreviewMode = function (mode) {
         btnList.classList.add('text-gray-500');
         divPdf.classList.remove('hidden');
         divList.classList.add('hidden');
-        generatePDF(items, 'preview');
+
+        // --- NOVO: Captura as assinaturas também na prévia ---
+        const currentSignatures = {
+            tecnico: sigTecnico ? sigTecnico.getImageData() : null,
+            cliente: sigCliente ? sigCliente.getImageData() : null
+        };
+        generatePDF(items, 'preview', currentSignatures);
     }
 };
 
@@ -115,13 +121,11 @@ window.phrases = phrasesManager;
 window.switchTab = function (type) {
     currentType = type;
 
-    // Lógica para esconder os campos de Local/ID nas abas Geral e Sumário
     const inputAndar = document.getElementById('andar');
-    // Navega até o container pai (div.grid) para esconder a linha inteira
     const idContainer = inputAndar ? inputAndar.closest('.grid') : null;
 
     if (idContainer) {
-        if (type === 'geral' || type === 'sumario') {
+        if (type === 'geral' || type === 'sumario' || type === 'assinatura') { // Adicionei assinatura aqui para esconder ID/Andar
             idContainer.classList.add('hidden');
         } else {
             idContainer.classList.remove('hidden');
@@ -137,8 +141,17 @@ window.switchTab = function (type) {
             if (form) form.classList.remove('hidden');
             if (btn) {
                 btn.classList.remove('tab-inactive');
-                btn.classList.add(activeClass);
+                btn.classList.add(activeClass); // Note: Para assinatura, certifique-se que o CSS existe ou use um genérico
             }
+
+            // --- NOVO: Redimensiona o Canvas ao abrir a aba ---
+            if (type === 'assinatura') {
+                setTimeout(() => {
+                    if (sigTecnico) sigTecnico.resizeCanvas();
+                    if (sigCliente) sigCliente.resizeCanvas();
+                }, 50); // Pequeno delay para garantir que o elemento está visível
+            }
+
         } else {
             if (form) form.classList.add('hidden');
             if (btn) {

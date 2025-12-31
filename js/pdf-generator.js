@@ -326,8 +326,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         // --- Assinatura 1: TÉCNICO ---
         // Se tiver imagem digital, insere ela
         if (signatures.tecnico) {
-            // Ajusta posição da imagem para ficar sobre a linha
-            doc.addImage(signatures.tecnico, 'PNG', 40, sigY - 25, 40, 25);
+            doc.addImage(signatures.tecnico, 'PNG', 40, sigY - 20, 40, 20);
         }
 
         doc.line(30, sigY, 90, sigY); // Linha
@@ -340,8 +339,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         // --- Assinatura 2: CLIENTE ---
         // Se tiver imagem digital, insere ela
         if (signatures.cliente) {
-            // Ajusta posição da imagem para ficar sobre a linha
-            doc.addImage(signatures.cliente, 'PNG', 130, sigY - 25, 40, 25);
+            doc.addImage(signatures.cliente, 'PNG', 130, sigY - 20, 40, 20);
         }
 
         doc.line(120, sigY, 180, sigY); // Linha

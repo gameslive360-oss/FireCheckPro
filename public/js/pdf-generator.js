@@ -413,23 +413,54 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         }
 
         // --- FINALIZAÇÃO ---
-        addPageNumbers(doc); // Numera todas as páginas no final
+        addPageNumbers(doc);
 
         if (mode === 'save') {
+            // Modo Salvar: Baixa direto
             doc.save(`Relatorio_${cliente.replace(/\s+/g, '_')}.pdf`);
         } else {
-            const blob = doc.output('bloburl');
-            document.getElementById('pdf-frame').src = blob;
+            // Modo Preview: Lógica inteligente para Mobile vs PC
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 1024;
+
+            if (isMobile) {
+                // NO CELULAR: Não tenta usar iframe. Abre direto ou baixa.
+
+                // Opção A: Tenta abrir em nova aba (Funciona na maioria)
+                const blob = doc.output('blob');
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+
+                // Feedback na tela do app (para não ficar branco)
+                const iframe = document.getElementById('pdf-frame');
+                if (iframe) {
+                    iframe.srcdoc = `
+                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;font-family:sans-serif;text-align:center;color:#475569;padding:20px;">
+                            <h3 style="margin-bottom:10px;font-weight:bold;">Visualização Externa</h3>
+                            <p>Em celulares, o PDF é aberto em uma nova aba ou baixado automaticamente.</p>
+                            <p style="font-size:12px;margin-top:10px;color:#94a3b8;">Verifique suas notificações ou a aba ao lado.</p>
+                        </div>
+                    `;
+                }
+
+                // Fallback: Se o popup falhar, forçamos o download após 1 segundo
+                setTimeout(() => {
+                    doc.save(`Relatorio_${cliente.replace(/\s+/g, '_')}_PREVIA.pdf`);
+                }, 1000);
+
+            } else {
+                // NO COMPUTADOR: Usa o iframe normalmente
+                const blob = doc.output('bloburl');
+                document.getElementById('pdf-frame').src = blob;
+            }
         }
 
     } catch (e) {
         console.error(e);
-        if (mode === 'save') alert("Erro ao gerar PDF: " + e.message);
+        if (mode === 'save') alert("Erro: " + e.message);
     } finally {
         if (mode === 'save') {
             btn.innerHTML = oldText;
             btn.disabled = false;
         }
     }
-
 }

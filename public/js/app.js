@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedCliente) {
         window.toggleHeader();
     }
-    
+
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
     if (!document.getElementById('data-relatorio').value) {
         const now = new Date();
@@ -517,6 +517,7 @@ function addItem() {
     renderList();
     clearFormState();
     clearFiles();
+    
 
     // Foca no ID apenas se não for aba Geral (pois o campo está oculto)
     if (currentType !== 'geral') {
@@ -742,4 +743,45 @@ async function saveToFirebase() {
         btn.disabled = false;
         lucide.createIcons();
     }
+
+    // --- Sistema de Notificações (Toast) ---
+    window.showToast = function (message, type = 'success') {
+        const container = document.getElementById('toast-container');
+
+        // Configuração de cores e ícones baseada no tipo
+        const styles = {
+            success: { bg: 'bg-emerald-600', icon: 'check-circle-2' },
+            error: { bg: 'bg-red-600', icon: 'alert-circle' },
+            info: { bg: 'bg-blue-600', icon: 'info' }
+        };
+
+        const style = styles[type] || styles.success;
+
+        // Cria o elemento da notificação
+        const toast = document.createElement('div');
+        toast.className = `${style.bg} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 transform transition-all duration-300 translate-x-10 opacity-0 min-w-[300px] pointer-events-auto`;
+
+        toast.innerHTML = `
+        <i data-lucide="${style.icon}" class="w-6 h-6 flex-shrink-0"></i>
+        <span class="font-bold text-sm">${message}</span>
+    `;
+
+        // Adiciona ao container
+        container.appendChild(toast);
+
+        // Renderiza o ícone
+        if (window.lucide) window.lucide.createIcons();
+
+        // Animação de Entrada (pequeno delay para o navegador renderizar)
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-10', 'opacity-0');
+        });
+
+        // Remove automaticamente após 3 segundos
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-10'); // Animação de saída
+            setTimeout(() => toast.remove(), 300); // Remove do DOM após a animação
+        }, 3000);
+    };
+
 }

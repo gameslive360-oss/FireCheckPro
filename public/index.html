@@ -65,7 +65,8 @@
                     class="text-slate-400 w-5 h-5 transition-transform duration-300 rotate-180"></i>
             </button>
 
-            <div id="header-content" class="p-4 border-t border-gray-200 transition-all duration-300 block">
+            <div id="header-content"
+                class="p-4 border-t border-gray-200 transition-all duration-500 ease-in-out overflow-hidden max-h-[1000px] opacity-100">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div class="md:col-span-2 lg:col-span-1">
                         <label class="label-std">Cliente / Empresa</label>
@@ -97,33 +98,41 @@
             </div>
         </div>
         <!-- Div dos botões -->
-        <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
-            <button id="tab-sumario" class="tab-btn tab-inactive" onclick="window.switchTab('sumario')">
-                <i data-lucide="file-check-2" class="w-5 h-5"></i> <span>Sumário</span>
-            </button>
-            <button id="tab-hidrante" class="tab-btn tab-active-hidrante" onclick="window.switchTab('hidrante')">
+        <div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide px-1">
+
+            <button id="tab-hidrante" class="tab-btn tab-active-hidrante shrink-0"
+                onclick="window.switchTab('hidrante')">
                 <i data-lucide="droplets" class="w-5 h-5"></i> <span>Hidrante</span>
             </button>
-            <button id="tab-extintor" class="tab-btn tab-inactive hidden" onclick="window.switchTab('extintor')">
-                <i data-lucide="fire-extinguisher" class="w-5 h-5"></i> <span>Extintor</span>
+
+            <button id="tab-luz" class="tab-btn tab-inactive shrink-0" onclick="window.switchTab('luz')">
+                <i data-lucide="lightbulb" class="w-5 h-5 text-amber-500"></i> <span>Iluminação</span>
             </button>
-            <button id="tab-luz" class="tab-btn tab-inactive" onclick="window.switchTab('luz')">
-                <i data-lucide="lightbulb" class="w-5 h-5"></i> <span>Iluminação</span>
+
+            <button id="tab-sinalizacao" class="tab-btn tab-inactive shrink-0"
+                onclick="window.switchTab('sinalizacao')">
+                <i data-lucide="signpost" class="w-5 h-5 text-teal-500"></i> <span>Sinalização</span>
             </button>
-            <button id="tab-bomba" class="tab-btn tab-inactive" onclick="window.switchTab('bomba')">
-                <i data-lucide="activity" class="w-5 h-5"></i> <span>Bombas</span>
+
+            <button id="tab-bomba" class="tab-btn tab-inactive shrink-0" onclick="window.switchTab('bomba')">
+                <i data-lucide="activity" class="w-5 h-5 text-purple-500"></i> <span>Bombas</span>
             </button>
-            <button id="tab-sinalizacao" class="tab-btn tab-inactive" onclick="window.switchTab('sinalizacao')">
-                <i data-lucide="signpost" class="w-5 h-5"></i> <span>Sinalização</span>
+
+            <button id="tab-eletro" class="tab-btn tab-inactive shrink-0" onclick="window.switchTab('eletro')">
+                <i data-lucide="zap" class="w-5 h-5 text-indigo-500"></i> <span>Eletromec.</span>
             </button>
-            <button id="tab-eletro" class="tab-btn tab-inactive" onclick="window.switchTab('eletro')">
-                <i data-lucide="zap" class="w-5 h-5"></i> <span>Eletromec.</span>
+
+            <div class="w-px bg-gray-300 mx-1 h-8 self-center shrink-0"></div> <button id="tab-geral"
+                class="tab-btn tab-inactive shrink-0" onclick="window.switchTab('geral')">
+                <i data-lucide="clipboard-list" class="w-5 h-5 text-slate-500"></i> <span>Geral</span>
             </button>
-            <button id="tab-geral" class="tab-btn tab-inactive" onclick="window.switchTab('geral')">
-                <i data-lucide="clipboard-list" class="w-5 h-5"></i> <span>Geral</span>
+
+            <button id="tab-sumario" class="tab-btn tab-inactive shrink-0" onclick="window.switchTab('sumario')">
+                <i data-lucide="file-check-2" class="w-5 h-5 text-slate-700"></i> <span>Sumário</span>
             </button>
-            <button id="tab-assinatura" class="tab-btn tab-inactive" onclick="window.switchTab('assinatura')">
-                <i data-lucide="pen-tool" class="w-5 h-5"></i> <span>Assinaturas</span>
+
+            <button id="tab-assinatura" class="tab-btn tab-inactive shrink-0" onclick="window.switchTab('assinatura')">
+                <i data-lucide="pen-tool" class="w-5 h-5 text-slate-900"></i> <span>Assinaturas</span>
             </button>
         </div>
 
@@ -698,6 +707,7 @@
         }
         window.toggleMenu = toggleMenu;
     </script>
+    <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 </body>
 
 </html>

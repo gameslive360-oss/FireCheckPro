@@ -52,6 +52,11 @@ let pendingAction = null;
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     restoreFormState();
+    const savedCliente = localStorage.getItem('cliente');
+    if (savedCliente) {
+        window.toggleHeader();
+    }
+    
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
     if (!document.getElementById('data-relatorio').value) {
         const now = new Date();
@@ -170,6 +175,34 @@ window.switchTab = function (type) {
             }
         }
     });
+};
+
+// --- Lógica do Acordeão (Dados da Edificação) ---
+window.toggleHeader = function () {
+    const content = document.getElementById('header-content');
+    const chevron = document.getElementById('header-chevron');
+    const summary = document.getElementById('header-summary');
+    const clienteVal = document.getElementById('cliente').value;
+
+    if (content.classList.contains('hidden')) {
+        // ABRIR
+        content.classList.remove('hidden');
+        chevron.classList.add('rotate-180'); // Seta aponta para cima
+        summary.classList.add('hidden');
+    } else {
+        // FECHAR
+        content.classList.add('hidden');
+        chevron.classList.remove('rotate-180'); // Seta aponta para baixo
+
+        // UX: Mostra o nome do cliente no resumo quando fecha
+        if (clienteVal) {
+            summary.innerText = clienteVal;
+            summary.classList.remove('hidden');
+        } else {
+            summary.innerText = "Clique para editar dados";
+            summary.classList.remove('hidden');
+        }
+    }
 };
 
 // --- Modal ---

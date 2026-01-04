@@ -56,6 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedCliente) {
         window.toggleHeader();
     }
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">Hidrantes</span>`;
 
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
     if (!document.getElementById('data-relatorio').value) {
@@ -323,6 +325,20 @@ async function handleLogin() {
     try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert("Erro login: " + e.message); }
 }
 function handleLogout() { if (auth) signOut(auth); window.toggleMenu(); }
+// Função para navegar pelo Menu Lateral
+window.switchTabAndClose = function (type, titleFriendly) {
+    // 1. Muda a aba normalmente
+    window.switchTab(type);
+
+    // 2. Atualiza o título no topo da página (UX Essencial já que não temos abas visíveis)
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) {
+        titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">${titleFriendly}</span>`;
+    }
+
+    // 3. Fecha o menu lateral
+    window.toggleMenu();
+};
 function updateUserUI() {
     const loginBtn = document.getElementById('btn-login');
     const userInfo = document.getElementById('user-info');
@@ -517,7 +533,7 @@ function addItem() {
     renderList();
     clearFormState();
     clearFiles();
-    
+
 
     // Foca no ID apenas se não for aba Geral (pois o campo está oculto)
     if (currentType !== 'geral') {

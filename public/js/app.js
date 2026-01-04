@@ -140,12 +140,26 @@ window.switchTab = function (type) {
 
     const inputAndar = document.getElementById('andar');
     const idContainer = inputAndar ? inputAndar.closest('.grid') : null;
-
     if (idContainer) {
         if (type === 'geral' || type === 'sumario' || type === 'assinatura') { // Adicionei assinatura aqui para esconder ID/Andar
             idContainer.classList.add('hidden');
         } else {
             idContainer.classList.remove('hidden');
+        }
+    }
+
+    const mediaControls = document.getElementById('media-controls');
+    const btnAddItem = document.getElementById('btn-add-item');
+    if (mediaControls && btnAddItem) {
+        if (type === 'assinatura' || type === 'sumario') {
+            // Se for assinatura ou sumário, esconde botões de foto e o botão "Adicionar Item"
+            // (Pois não se adiciona itens nessas telas, apenas se preenche dados)
+            mediaControls.classList.add('hidden');
+            btnAddItem.classList.add('hidden');
+        } else {
+            // Nas outras abas, mostra tudo
+            mediaControls.classList.remove('hidden');
+            btnAddItem.classList.remove('hidden');
         }
     }
 
@@ -799,5 +813,6 @@ async function saveToFirebase() {
             setTimeout(() => toast.remove(), 300); // Remove do DOM após a animação
         }, 3000);
     };
+
 
 }

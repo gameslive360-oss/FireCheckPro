@@ -638,27 +638,22 @@
                 </div>
             </div>
 
-            <div class="mt-4 pt-4 border-t border-gray-100">
-                <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3">
-                </div>
-
-                <div class="flex gap-2 mb-3">
-                    <label class="btn-secondary flex-1 cursor-pointer relative">
-                        <i data-lucide="camera" class="w-4 h-4"></i> Câmera
-                        <input type="file" id="camera-input" accept="image/*" capture="environment" multiple
-                            class="hidden">
-                    </label>
-                    <label class="btn-secondary flex-1 cursor-pointer relative">
-                        <i data-lucide="paperclip" class="w-4 h-4"></i> Galeria
-                        <input type="file" id="upload-input" accept="image/*" multiple class="hidden">
-                    </label>
-                </div>
-
-                <button id="btn-add-item"
-                    class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-lg shadow-lg flex justify-center items-center gap-2 active:scale-95 transition-transform">
-                    <i data-lucide="plus-circle"></i> Adicionar Item
-                </button>
+            <div id="preview-gallery" class="hidden flex-wrap gap-2 mb-3">
             </div>
+
+            <div id="media-controls" class="flex gap-2 mb-3">
+                <label class="btn-secondary flex-1 cursor-pointer relative">
+                    <i data-lucide="camera" class="w-4 h-4"></i> Câmera
+                    <input type="file" id="camera-input" accept="image/*" capture="environment" multiple class="hidden">
+                </label>
+                <label class="btn-secondary flex-1 cursor-pointer relative">
+                    <i data-lucide="paperclip" class="w-4 h-4"></i> Galeria
+                    <input type="file" id="upload-input" accept="image/*" multiple class="hidden">
+                </label>
+            </div>
+
+            <button id="btn-add-item" ...>
+                
         </section>
 
         <section class="mt-8">

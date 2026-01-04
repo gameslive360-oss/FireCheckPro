@@ -141,34 +141,28 @@
     border-color: #e5e7eb;
 }
 
-/* --- ABAS ATIVAS UNIFICADAS PELO ROOT --- */
-
 .tab-active-hidrante {
     background-color: var(--tab-active-bg);
     border-color: var(--tab-active-border);
     color: white;
-    /* Box-shadow removido */
 }
 
 .tab-active-extintor {
     background-color: var(--tab-active-bg);
     border-color: var(--tab-active-border);
     color: white;
-    /* Box-shadow removido */
 }
 
 .tab-active-luz {
     background-color: var(--tab-active-bg);
     border-color: var(--tab-active-border);
     color: white;
-    /* Box-shadow removido */
 }
 
 .tab-active-bomba {
     background-color: var(--tab-active-bg);
     border-color: var(--tab-active-border);
     color: white;
-    /* Box-shadow removido */
 }
 
 .tab-active-sinalizacao {
@@ -188,8 +182,6 @@
     border-color: var(--tab-active-border);
     color: white;
 }
-
-/* ---------------------------------------- */
 
 .section-title {
     font-size: 1 rem;
@@ -255,4 +247,36 @@
     background-color: var(--tab-active-bg);
     border-color: var(--tab-active-border);
     color: white;
+}
+
+.signature-fullscreen {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999;
+    background-color: #ffffff;
+    border: none !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+}
+
+.signature-fullscreen canvas {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+}
+
+.signature-fullscreen .controls-normal {
+    display: none;
+}
+
+.signature-fullscreen .btn-close-fullscreen {
+    display: flex !important;
 }

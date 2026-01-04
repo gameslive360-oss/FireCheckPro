@@ -814,5 +814,45 @@ async function saveToFirebase() {
         }, 3000);
     };
 
+    // --- Função de Assinatura Tela Cheia ---
+    window.toggleFullScreenSig = function (type) {
+        const wrapperId = `wrapper-sig-${type}`;
+        const canvasId = `sig-${type}`;
+        const wrapper = document.getElementById(wrapperId);
+        const canvas = document.getElementById(canvasId);
 
+        // Identifica qual instância do SignaturePad estamos usando
+        const padInstance = (type === 'tecnico') ? sigTecnico : sigCliente;
+
+        if (!wrapper || !canvas || !padInstance) return;
+
+        // 1. Salva o desenho atual (antes de mexer no tamanho)
+        // O método toData() retorna os traços vetoriais, o que é perfeito para redimensionar sem perder qualidade
+        const data = padInstance.toData();
+
+        // 2. Alterna a classe de tela cheia
+        wrapper.classList.toggle('signature-fullscreen');
+
+        // 3. Ajusta o Scroll do corpo da página (trava scroll se estiver em fullscreen)
+        if (wrapper.classList.contains('signature-fullscreen')) {
+            document.body.style.overflow = 'hidden'; // Trava scroll
+        } else {
+            document.body.style.overflow = ''; // Destrava scroll
+        }
+
+        // 4. Força o redimensionamento do Canvas
+        // Precisamos de um pequeno delay para o CSS aplicar o tamanho 100vw/100vh antes de redimensionar o buffer
+        setTimeout(() => {
+            padInstance.resizeCanvas(); // Função interna da sua classe SignaturePad que ajusta width/height
+
+            // 5. Restaura o desenho
+            // Se a biblioteca limpar a tela ao redimensionar, isso coloca o desenho de volta
+            if (data && data.length > 0) {
+                padInstance.fromData(data);
+            }
+        }, 50); // 50ms é suficiente
+
+        // Atualiza ícones (se necessário)
+        if (window.lucide) lucide.createIcons();
+    };
 }

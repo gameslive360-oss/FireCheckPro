@@ -1,5 +1,3 @@
-// js/signature-pad.js
-
 export class SignaturePad {
     constructor(canvasId, clearBtnId) {
         this.canvas = document.getElementById(canvasId);

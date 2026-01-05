@@ -7,7 +7,7 @@ import { PhraseManager } from "./phrases.js";
 import { generatePDF } from "./pdf-generator.js";
 import { compressImage } from "./image-compressor.js";
 import { SignaturePad } from "./signature-pad.js";
-
+// correadadad
 // --- Configuração ---
 const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral', 'assinatura'];
 

@@ -52,6 +52,13 @@ let pendingAction = null;
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     restoreFormState();
+    const savedCliente = localStorage.getItem('cliente');
+    if (savedCliente) {
+        window.toggleHeader();
+    }
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">Hidrantes</span>`;
+
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
     if (!document.getElementById('data-relatorio').value) {
         const now = new Date();
@@ -133,12 +140,26 @@ window.switchTab = function (type) {
 
     const inputAndar = document.getElementById('andar');
     const idContainer = inputAndar ? inputAndar.closest('.grid') : null;
-
     if (idContainer) {
         if (type === 'geral' || type === 'sumario' || type === 'assinatura') { // Adicionei assinatura aqui para esconder ID/Andar
             idContainer.classList.add('hidden');
         } else {
             idContainer.classList.remove('hidden');
+        }
+    }
+
+    const mediaControls = document.getElementById('media-controls');
+    const btnAddItem = document.getElementById('btn-add-item');
+    if (mediaControls && btnAddItem) {
+        if (type === 'assinatura' || type === 'sumario') {
+            // Se for assinatura ou sumário, esconde botões de foto e o botão "Adicionar Item"
+            // (Pois não se adiciona itens nessas telas, apenas se preenche dados)
+            mediaControls.classList.add('hidden');
+            btnAddItem.classList.add('hidden');
+        } else {
+            // Nas outras abas, mostra tudo
+            mediaControls.classList.remove('hidden');
+            btnAddItem.classList.remove('hidden');
         }
     }
 
@@ -170,6 +191,34 @@ window.switchTab = function (type) {
             }
         }
     });
+};
+
+// --- Lógica do Acordeão (Dados da Edificação) ---
+window.toggleHeader = function () {
+    const content = document.getElementById('header-content');
+    const chevron = document.getElementById('header-chevron');
+    const summary = document.getElementById('header-summary');
+    const clienteVal = document.getElementById('cliente').value;
+
+    if (content.classList.contains('hidden')) {
+        // ABRIR
+        content.classList.remove('hidden');
+        chevron.classList.add('rotate-180'); // Seta aponta para cima
+        summary.classList.add('hidden');
+    } else {
+        // FECHAR
+        content.classList.add('hidden');
+        chevron.classList.remove('rotate-180'); // Seta aponta para baixo
+
+        // UX: Mostra o nome do cliente no resumo quando fecha
+        if (clienteVal) {
+            summary.innerText = clienteVal;
+            summary.classList.remove('hidden');
+        } else {
+            summary.innerText = "Clique para editar dados";
+            summary.classList.remove('hidden');
+        }
+    }
 };
 
 // --- Modal ---
@@ -290,6 +339,20 @@ async function handleLogin() {
     try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert("Erro login: " + e.message); }
 }
 function handleLogout() { if (auth) signOut(auth); window.toggleMenu(); }
+// Função para navegar pelo Menu Lateral
+window.switchTabAndClose = function (type, titleFriendly) {
+    // 1. Muda a aba normalmente
+    window.switchTab(type);
+
+    // 2. Atualiza o título no topo da página (UX Essencial já que não temos abas visíveis)
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) {
+        titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">${titleFriendly}</span>`;
+    }
+
+    // 3. Fecha o menu lateral
+    window.toggleMenu();
+};
 function updateUserUI() {
     const loginBtn = document.getElementById('btn-login');
     const userInfo = document.getElementById('user-info');
@@ -484,6 +547,7 @@ function addItem() {
     renderList();
     clearFormState();
     clearFiles();
+
 
     // Foca no ID apenas se não for aba Geral (pois o campo está oculto)
     if (currentType !== 'geral') {
@@ -709,4 +773,86 @@ async function saveToFirebase() {
         btn.disabled = false;
         lucide.createIcons();
     }
+
+    // --- Sistema de Notificações (Toast) ---
+    window.showToast = function (message, type = 'success') {
+        const container = document.getElementById('toast-container');
+
+        // Configuração de cores e ícones baseada no tipo
+        const styles = {
+            success: { bg: 'bg-emerald-600', icon: 'check-circle-2' },
+            error: { bg: 'bg-red-600', icon: 'alert-circle' },
+            info: { bg: 'bg-blue-600', icon: 'info' }
+        };
+
+        const style = styles[type] || styles.success;
+
+        // Cria o elemento da notificação
+        const toast = document.createElement('div');
+        toast.className = `${style.bg} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 transform transition-all duration-300 translate-x-10 opacity-0 min-w-[300px] pointer-events-auto`;
+
+        toast.innerHTML = `
+        <i data-lucide="${style.icon}" class="w-6 h-6 flex-shrink-0"></i>
+        <span class="font-bold text-sm">${message}</span>
+    `;
+
+        // Adiciona ao container
+        container.appendChild(toast);
+
+        // Renderiza o ícone
+        if (window.lucide) window.lucide.createIcons();
+
+        // Animação de Entrada (pequeno delay para o navegador renderizar)
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-10', 'opacity-0');
+        });
+
+        // Remove automaticamente após 3 segundos
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-10'); // Animação de saída
+            setTimeout(() => toast.remove(), 300); // Remove do DOM após a animação
+        }, 3000);
+    };
+
+    // --- Função de Assinatura Tela Cheia ---
+    window.toggleFullScreenSig = function (type) {
+        const wrapperId = `wrapper-sig-${type}`;
+        const canvasId = `sig-${type}`;
+        const wrapper = document.getElementById(wrapperId);
+        const canvas = document.getElementById(canvasId);
+
+        // Identifica qual instância do SignaturePad estamos usando
+        const padInstance = (type === 'tecnico') ? sigTecnico : sigCliente;
+
+        if (!wrapper || !canvas || !padInstance) return;
+
+        // 1. Salva o desenho atual (antes de mexer no tamanho)
+        // O método toData() retorna os traços vetoriais, o que é perfeito para redimensionar sem perder qualidade
+        const data = padInstance.toData();
+
+        // 2. Alterna a classe de tela cheia
+        wrapper.classList.toggle('signature-fullscreen');
+
+        // 3. Ajusta o Scroll do corpo da página (trava scroll se estiver em fullscreen)
+        if (wrapper.classList.contains('signature-fullscreen')) {
+            document.body.style.overflow = 'hidden'; // Trava scroll
+        } else {
+            document.body.style.overflow = ''; // Destrava scroll
+        }
+
+        // 4. Força o redimensionamento do Canvas
+        // Precisamos de um pequeno delay para o CSS aplicar o tamanho 100vw/100vh antes de redimensionar o buffer
+        setTimeout(() => {
+            padInstance.resizeCanvas(); // Função interna da sua classe SignaturePad que ajusta width/height
+
+            // 5. Restaura o desenho
+            // Se a biblioteca limpar a tela ao redimensionar, isso coloca o desenho de volta
+            if (data && data.length > 0) {
+                padInstance.fromData(data);
+            }
+        }, 50); // 50ms é suficiente
+
+        // Atualiza ícones (se necessário)
+        if (window.lucide) lucide.createIcons();
+    };
 }

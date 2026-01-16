@@ -237,15 +237,25 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         // Geração das tabelas (Mesma lógica, estilo novo)
         const hid = items.filter(i => i.type === 'hidrante');
+
         generateTable("SISTEMA DE HIDRANTES", hid.map(i => {
-            let faltantes = [];
-            if (!i.check_registro) faltantes.push('Reg');
-            if (!i.check_adaptador) faltantes.push('Adap');
-            if (!i.check_chave) faltantes.push('Chv');
-            if (!i.check_esguicho) faltantes.push('Esg');
-            const statusComp = faltantes.length === 0 ? 'Completo' : 'Falta: ' + faltantes.join(',');
-            return [i.andar, i.id, i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira', i.tem_mangueira ? i.validade : '-', statusComp, i.obs || '-'];
-        }), ['Local', 'ID', 'Mangueira', 'Validade', 'Abrigo', 'Observações'], [51, 65, 85]);
+            // A lógica de calcular "faltantes" foi removida para não duplicar informação.
+
+            return [
+                i.andar,
+                i.id,
+                i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira',
+                i.tem_mangueira ? i.validade : '-',
+                i.check_registro ? 'OK' : 'Falta',
+                i.check_adaptador ? 'OK' : 'Falta',
+                i.check_chave ? 'OK' : 'Falta',
+                i.check_esguicho ? 'OK' : 'Falta',
+                i.obs || '-' // Aqui fica SOMENTE a sua observação manual (ou traço se vazio)
+            ];
+        }),
+            // Cabeçalho (9 colunas no total)
+            ['Local', 'ID', 'Mangueira', 'Validade', 'Registro', 'Adaptador', 'Chave', 'Esguicho', 'Observações'],
+            [51, 65, 85]);
 
         const ext = items.filter(i => i.type === 'extintor');
         generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [

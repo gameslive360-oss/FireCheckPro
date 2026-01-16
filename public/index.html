@@ -96,6 +96,18 @@
                     <i data-lucide="pen-tool" class="w-5 h-5 text-slate-400"></i>
                     <span class="font-medium">Assinaturas</span>
                 </button>
+                <button id="btn-backup-download"
+                    class="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-800 transition-colors text-left text-green-400 hover:text-green-300">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                    <span class="font-medium">Baixar Arquivo</span>
+                </button>
+
+                <label
+                    class="w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-slate-800 transition-colors text-left text-orange-400 hover:text-orange-300 cursor-pointer">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
+                    <span class="font-medium">Restaurar Arquivo</span>
+                    <input type="file" id="btn-backup-upload" accept=".json" class="hidden">
+                </label>
             </nav>
 
             <div

@@ -96,6 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(input.id, input.type === 'checkbox' ? input.checked : input.value);
         });
     });
+    document.getElementById('btn-backup-download').addEventListener('click', exportBackup);
+    document.getElementById('btn-backup-upload').addEventListener('change', importBackup);
     sigTecnico = new SignaturePad('sig-tecnico', 'btn-clear-tecnico');
     sigCliente = new SignaturePad('sig-cliente', 'btn-clear-cliente');
 });
@@ -800,4 +802,113 @@ async function saveToFirebase() {
         }, 3000);
     };
 
+}
+
+// --- FUNÇÕES DE BACKUP (EXPORTAR / IMPORTAR) ---
+
+function exportBackup() {
+    if (items.length === 0) {
+        alert("A lista está vazia. Nada para salvar.");
+        return;
+    }
+
+    // 1. Captura todos os dados do cabeçalho
+    const backupData = {
+        version: "1.0",
+        timestamp: new Date().toISOString(),
+        header: {
+            cliente: document.getElementById('cliente').value,
+            local: document.getElementById('local').value,
+            respTecnico: document.getElementById('resp-tecnico').value,
+            classificacao: document.getElementById('classificacao').value,
+            dataRelatorio: document.getElementById('data-relatorio').value,
+            // Campos do Sumário
+            parecer: document.getElementById('sum-parecer').value,
+            resumo: document.getElementById('sum-resumo').value,
+            riscos: document.getElementById('sum-riscos').value,
+            conclusao: document.getElementById('sum-conclusao').value,
+            // Assinaturas (Se quiser salvar a imagem base64)
+            // Nota: Imagens pesam o arquivo, mas é possível salvar se precisar.
+        },
+        items: items // Sua lista global de itens
+    };
+
+    // 2. Cria o arquivo JSON
+    const dataStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    // 3. Força o download
+    const a = document.createElement('a');
+    a.href = url;
+    // Nome do arquivo: Backup_Cliente_Data.json
+    const safeClient = (backupData.header.cliente || "SemNome").replace(/[^a-z0-9]/gi, '_');
+    a.download = `Backup_${safeClient}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+
+    // Limpeza
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function importBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Confirmação para não perder o que já está na tela
+    if (items.length > 0) {
+        const confirmacao = confirm("ATENÇÃO: Isso irá substituir todos os itens atuais da tela pelos do arquivo.\nDeseja continuar?");
+        if (!confirmacao) {
+            event.target.value = ''; // Limpa o input
+            return;
+        }
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            // 1. Restaura Cabeçalhos
+            if (data.header) {
+                document.getElementById('cliente').value = data.header.cliente || '';
+                document.getElementById('local').value = data.header.local || '';
+                document.getElementById('resp-tecnico').value = data.header.respTecnico || '';
+                document.getElementById('classificacao').value = data.header.classificacao || '';
+                document.getElementById('data-relatorio').value = data.header.dataRelatorio || '';
+
+                // Restaura Sumário
+                if (document.getElementById('sum-parecer')) document.getElementById('sum-parecer').value = data.header.parecer || 'Aprovado';
+                if (document.getElementById('sum-resumo')) document.getElementById('sum-resumo').value = data.header.resumo || '';
+                if (document.getElementById('sum-riscos')) document.getElementById('sum-riscos').value = data.header.riscos || '';
+                if (document.getElementById('sum-conclusao')) document.getElementById('sum-conclusao').value = data.header.conclusao || '';
+
+                // Atualiza o resumo visual (header expansível)
+                const summaryEl = document.getElementById('header-summary');
+                if (summaryEl) summaryEl.innerText = data.header.cliente || "Clique para editar";
+            }
+
+            // 2. Restaura Itens
+            if (Array.isArray(data.items)) {
+                items = data.items;
+                // Importante: Zerar os arquivos de imagem (Blob) pois JSON não salva binário das fotos novas
+                // As URLs do Firebase (se já salvas) estarão lá, mas fotos recém tiradas e não salvas serão perdidas no JSON.
+                items.forEach(i => {
+                    // Se quiser manter compatibilidade, recria o array vazio de arquivos locais
+                    i.imageFiles = [];
+                });
+
+                renderList();
+                alert("Backup restaurado com sucesso! " + items.length + " itens carregados.");
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao ler o arquivo de backup. Verifique se é um JSON válido.");
+        }
+    };
+
+    reader.readAsText(file);
+    event.target.value = ''; // Permite carregar o mesmo arquivo novamente se necessário
 }

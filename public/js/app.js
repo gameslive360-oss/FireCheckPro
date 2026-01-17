@@ -628,23 +628,32 @@ async function handleFileSelect(event) {
 function updateImagePreview() {
     const gallery = document.getElementById('preview-gallery');
     gallery.innerHTML = "";
+
     if (currentFiles.length > 0) {
-        gallery.classList.remove('hidden'); gallery.classList.add('flex');
+        gallery.classList.remove('hidden');
+        gallery.classList.add('flex');
+
         currentFiles.forEach((file, index) => {
             const container = document.createElement('div');
+            // Mantém o container relativo para o botão absoluto funcionar
             container.className = "thumb-container relative w-16 h-16";
+
             container.innerHTML = `
                 <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover rounded border">
-                <button class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+                <button class="btn-remove-thumb" type="button">×</button>
             `;
-            container.querySelector('button').onclick = () => {
+
+            // Adiciona o evento de click na classe específica
+            container.querySelector('.btn-remove-thumb').onclick = () => {
                 currentFiles.splice(index, 1);
-                updateImagePreview();
+                updateImagePreview(); // Recarrega a galeria
             };
+
             gallery.appendChild(container);
         });
     } else {
-        gallery.classList.add('hidden'); gallery.classList.remove('flex');
+        gallery.classList.add('hidden');
+        gallery.classList.remove('flex');
     }
 }
 

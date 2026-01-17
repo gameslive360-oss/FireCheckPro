@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, addDoc, query, where, getDocs, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, doc, query, where, getDocs, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -8,104 +8,187 @@ import { generatePDF } from "./pdf-generator.js";
 import { compressImage } from "./image-compressor.js";
 import { SignaturePad } from "./signature-pad.js";
 
-// --- Configuração ---
+/* ==========================================================================
+   1. CONFIGURAÇÃO E ESTADO GLOBAL
+   ========================================================================== */
 const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral', 'assinatura'];
 
-// --- Inicialização Firebase ---
+// Estado Global
 let db, storage, auth, user = null;
 let sigTecnico = null;
 let sigCliente = null;
+let items = [];
+let currentType = 'hidrante';
+let currentFiles = [];
+let backupItem = null; // Para edição
+let pendingAction = null; // Para modal de confirmação
+let currentReportId = null;
+let deferredPrompt; // PWA
 
+/* ==========================================================================
+   2. INICIALIZAÇÃO DO FIREBASE
+   ========================================================================== */
 try {
     if (firebaseConfig.apiKey) {
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
-        enableIndexedDbPersistence(db)
-            .catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn("Persistência falhou: Múltiplas abas abertas.");
-                } else if (err.code == 'unimplemented') {
-                    console.warn("Persistência falhou: Navegador não suporta.");
-                }
-            });
         storage = getStorage(app);
         auth = getAuth(app);
+
+        // Tenta ativar persistência offline
+        enableIndexedDbPersistence(db).catch((err) => {
+            console.warn("Persistência Offline:", err.code === 'failed-precondition' ? 'Múltiplas abas abertas' : 'Não suportado');
+        });
 
         onAuthStateChanged(auth, (currentUser) => {
             user = currentUser;
             updateUserUI();
             if (user) loadHistory();
         });
-        console.log("Firebase Inicializado");
+        console.log("🔥 Firebase Inicializado");
     }
 } catch (error) {
-    console.error("Erro na inicialização:", error);
+    console.error("Erro crítico no Firebase:", error);
 }
 
-// --- Estado da Aplicação ---
-let items = [];
-let currentType = 'hidrante';
-let currentFiles = [];
-let backupItem = null;
-let pendingAction = null;
-let currentReportId = null;
-
-// --- DOMContentLoaded ---
+/* ==========================================================================
+   3. LISTENERS E DOM READY
+   ========================================================================== */
 document.addEventListener('DOMContentLoaded', () => {
-    lucide.createIcons();
+    refreshIcons();
     restoreFormState();
+    initializeDateInput();
+
+    // Inicialização de Componentes
+    const phrasesManager = new PhraseManager();
+    window.phrases = phrasesManager;
+    sigTecnico = new SignaturePad('sig-tecnico', 'btn-clear-tecnico');
+    sigCliente = new SignaturePad('sig-cliente', 'btn-clear-cliente');
+
+    // Recupera cliente salvo
     const savedCliente = localStorage.getItem('cliente');
-    if (savedCliente) {
-        window.toggleHeader();
-    }
-    const titleEl = document.getElementById('page-title');
-    if (titleEl) titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">Hidrantes</span>`;
+    if (savedCliente) window.toggleHeader();
 
+    // Configura Título Inicial
+    updatePageTitle('Hidrantes');
+
+    // Configura campos condicionais iniciais
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
-    if (!document.getElementById('data-relatorio').value) {
-        const now = new Date();
-        // Formata para YYYY-MM-DDTHH:MM (Padrão do input datetime-local)
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-
-        document.getElementById('data-relatorio').value = `${year}-${month}-${day}T${hours}:${minutes}`;
-    }
     if (document.getElementById('s-existente')) window.toggleSinalizacaoFields();
-    // Listeners
+
+    // --- EVENT LISTENERS ---
+    // Auth
     document.getElementById('btn-login').addEventListener('click', handleLogin);
     document.getElementById('btn-logout-side').addEventListener('click', handleLogout);
+
+    // CRUD & Forms
     document.getElementById('btn-add-item').addEventListener('click', addItem);
-    document.getElementById('btn-save').addEventListener('click', saveToFirebase);
+    document.getElementById('btn-cancelar').addEventListener('click', cancelarEdicao);
+
+    // Arquivos
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
     document.getElementById('upload-input').addEventListener('change', handleFileSelect);
-    document.getElementById('btn-cancelar').addEventListener('click', cancelarEdicao);
+
+    // Persistência
+    document.getElementById('btn-save').addEventListener('click', saveToFirebase);
+
+    // PDF
     document.getElementById('btn-pdf').addEventListener('click', () => {
-        const currentSignatures = {
+        const signatures = {
             tecnico: sigTecnico ? sigTecnico.getImageData() : null,
             cliente: sigCliente ? sigCliente.getImageData() : null
         };
-        generatePDF(items, 'save', currentSignatures);
+        generatePDF(items, 'save', signatures);
     });
+
+    // Modal Confirmação
     document.getElementById('btn-confirm-action').addEventListener('click', () => {
         if (pendingAction) pendingAction();
         window.closeConfirmModal();
     });
 
+    // Auto-Save em Inputs
     document.querySelectorAll('.save-state').forEach(input => {
         input.addEventListener('input', () => {
             localStorage.setItem(input.id, input.type === 'checkbox' ? input.checked : input.value);
         });
     });
-    document.getElementById('btn-backup-download').addEventListener('click', exportBackup);
-    document.getElementById('btn-backup-upload').addEventListener('change', importBackup);
-    sigTecnico = new SignaturePad('sig-tecnico', 'btn-clear-tecnico');
-    sigCliente = new SignaturePad('sig-cliente', 'btn-clear-cliente');
 });
 
-// --- Visualização (Lista vs PDF) ---
+/* ==========================================================================
+   4. UI UX & NAVEGAÇÃO
+   ========================================================================== */
+
+// Alterna entre abas do formulário
+window.switchTab = function (type) {
+    currentType = type;
+
+    // Lógica para esconder inputs globais (ID/Andar) em abas específicas
+    const inputAndar = document.getElementById('andar');
+    const idContainer = inputAndar ? inputAndar.closest('.grid') : null;
+    if (idContainer) {
+        if (['geral', 'sumario', 'assinatura'].includes(type)) {
+            idContainer.classList.add('hidden');
+        } else {
+            idContainer.classList.remove('hidden');
+        }
+    }
+
+    // Ativa/Desativa abas visuais e formulários
+    TABS.forEach(t => {
+        const btn = document.getElementById(`tab-${t}`);
+        const form = document.getElementById(`form-${t}`);
+
+        if (t === type) {
+            if (form) form.classList.remove('hidden');
+            // Redimensiona canvas se for aba de assinatura
+            if (type === 'assinatura') {
+                setTimeout(() => {
+                    if (sigTecnico) sigTecnico.resizeCanvas();
+                    if (sigCliente) sigCliente.resizeCanvas();
+                }, 100);
+            }
+        } else {
+            if (form) form.classList.add('hidden');
+        }
+    });
+};
+
+// Navegação via Menu Lateral
+window.switchTabAndClose = function (type, titleFriendly) {
+    if (typeof window.showFormPage === 'function') window.showFormPage();
+    window.switchTab(type);
+    updatePageTitle(titleFriendly);
+    window.toggleMenu();
+};
+
+function updatePageTitle(title) {
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) {
+        titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">${title}</span>`;
+    }
+}
+
+// Acordeão do Cabeçalho
+window.toggleHeader = function () {
+    const content = document.getElementById('header-content');
+    const chevron = document.getElementById('header-chevron');
+    const summary = document.getElementById('header-summary');
+    const clienteVal = document.getElementById('cliente').value;
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        chevron.classList.add('rotate-180');
+        summary.classList.add('hidden');
+    } else {
+        content.classList.add('hidden');
+        chevron.classList.remove('rotate-180');
+        summary.innerText = clienteVal || "Clique para editar dados";
+        summary.classList.remove('hidden');
+    }
+};
+
+// Alternar entre Lista e Prévia PDF
 window.togglePreviewMode = function (mode) {
     const btnList = document.getElementById('view-btn-list');
     const btnPdf = document.getElementById('view-btn-pdf');
@@ -127,479 +210,255 @@ window.togglePreviewMode = function (mode) {
         divPdf.classList.remove('hidden');
         divList.classList.add('hidden');
 
-        // --- NOVO: Captura as assinaturas também na prévia ---
-        const currentSignatures = {
+        const signatures = {
             tecnico: sigTecnico ? sigTecnico.getImageData() : null,
             cliente: sigCliente ? sigCliente.getImageData() : null
         };
-        generatePDF(items, 'preview', currentSignatures);
+        generatePDF(items, 'preview', signatures);
     }
 };
 
-const phrasesManager = new PhraseManager();
-window.phrases = phrasesManager;
-
-// --- Lógica de Abas ---
-window.switchTab = function (type) {
-    currentType = type;
-
-    const inputAndar = document.getElementById('andar');
-    const idContainer = inputAndar ? inputAndar.closest('.grid') : null;
-
-    if (idContainer) {
-        if (type === 'geral' || type === 'sumario' || type === 'assinatura') { // Adicionei assinatura aqui para esconder ID/Andar
-            idContainer.classList.add('hidden');
-        } else {
-            idContainer.classList.remove('hidden');
-        }
+// Controle de Telas (Edição vs Meus Relatórios)
+window.showReportsPage = function () {
+    toggleMainInterface(false); // Esconde Form
+    const pageReports = document.getElementById('page-reports');
+    if (pageReports) {
+        pageReports.classList.remove('hidden');
+        window.loadCloudReports();
     }
-
-    TABS.forEach(t => {
-        const btn = document.getElementById(`tab-${t}`);
-        const form = document.getElementById(`form-${t}`);
-        const activeClass = `tab-active-${t}`;
-
-        if (t === type) {
-            if (form) form.classList.remove('hidden');
-            if (btn) {
-                btn.classList.remove('tab-inactive');
-                btn.classList.add(activeClass); // Note: Para assinatura, certifique-se que o CSS existe ou use um genérico
-            }
-
-            // --- NOVO: Redimensiona o Canvas ao abrir a aba ---
-            if (type === 'assinatura') {
-                setTimeout(() => {
-                    if (sigTecnico) sigTecnico.resizeCanvas();
-                    if (sigCliente) sigCliente.resizeCanvas();
-                }, 50); // Pequeno delay para garantir que o elemento está visível
-            }
-
-        } else {
-            if (form) form.classList.add('hidden');
-            if (btn) {
-                btn.classList.remove(activeClass);
-                btn.classList.add('tab-inactive');
-            }
-        }
-    });
-};
-
-// --- Lógica do Acordeão (Dados da Edificação) ---
-window.toggleHeader = function () {
-    const content = document.getElementById('header-content');
-    const chevron = document.getElementById('header-chevron');
-    const summary = document.getElementById('header-summary');
-    const clienteVal = document.getElementById('cliente').value;
-
-    if (content.classList.contains('hidden')) {
-        // ABRIR
-        content.classList.remove('hidden');
-        chevron.classList.add('rotate-180'); // Seta aponta para cima
-        summary.classList.add('hidden');
-    } else {
-        // FECHAR
-        content.classList.add('hidden');
-        chevron.classList.remove('rotate-180'); // Seta aponta para baixo
-
-        // UX: Mostra o nome do cliente no resumo quando fecha
-        if (clienteVal) {
-            summary.innerText = clienteVal;
-            summary.classList.remove('hidden');
-        } else {
-            summary.innerText = "Clique para editar dados";
-            summary.classList.remove('hidden');
-        }
-    }
-};
-
-// --- Modal ---
-window.showConfirmModal = function (title, msg, actionCallback, isDestructive = false) {
-    const modal = document.getElementById('modal-confirm');
-    document.getElementById('modal-confirm-title').innerText = title;
-    document.getElementById('modal-confirm-msg').innerText = msg;
-    const btn = document.getElementById('btn-confirm-action');
-
-    pendingAction = actionCallback;
-
-    if (isDestructive) {
-        btn.className = "px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2";
-        btn.innerText = "Sim, Remover";
-    } else {
-        btn.className = "px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2";
-        btn.innerText = "Sim, Editar";
-    }
-    modal.classList.remove('hidden');
-};
-
-window.closeConfirmModal = function () {
-    document.getElementById('modal-confirm').classList.add('hidden');
-    pendingAction = null;
-};
-
-// --- Funções Auxiliares de UI ---
-window.toggleMangueiraFields = function () {
-    const checkbox = document.getElementById('h-tem-mangueira');
-    const container = document.getElementById('h-detalhes-container');
-    if (!checkbox || !container) return;
-    const inputs = container.querySelectorAll('input, select, textarea, button');
-    if (checkbox.checked) {
-        container.classList.remove('opacity-50', 'pointer-events-none');
-        inputs.forEach(el => el.disabled = false);
-    } else {
-        container.classList.add('opacity-50', 'pointer-events-none');
-        inputs.forEach(el => el.disabled = true);
-    }
-};
-
-window.toggleSinalizacaoFields = function () {
-    const select = document.getElementById('s-existente');
-    const container = document.getElementById('s-detalhes-container');
-    if (!select || !container) return;
-    const inputs = container.querySelectorAll('input, select');
-    if (select.value === 'Sim') {
-        container.classList.remove('opacity-50', 'pointer-events-none');
-        inputs.forEach(el => el.disabled = false);
-    } else {
-        container.classList.add('opacity-50', 'pointer-events-none');
-        inputs.forEach(el => el.disabled = true);
-    }
-};
-
-// --- Persistência e Limpeza ---
-function restoreFormState() {
-    document.querySelectorAll('.save-state').forEach(input => {
-        const saved = localStorage.getItem(input.id);
-        if (saved !== null) {
-            if (input.type === 'checkbox') input.checked = (saved === 'true');
-            else input.value = saved;
-        }
-    });
-}
-
-function clearFormState(keepHeader = true) {
-    const idsToClear = [
-        'h-lances', 'h-obs', 'h-validade',
-        'e-peso', 'e-recarga', 'e-teste', 'e-obs',
-        'l-autonomia', 'l-obs',
-        'b-obs',
-        's-obs', 's-tipo',
-        'el-tipo', 'el-botoeiras', 'el-manutencao', 'el-obs',
-        'g-obs',
-        'sum-parecer', 'sum-resumo', 'sum-riscos', 'sum-conclusao'
-    ];
-
-    idsToClear.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.value = "";
-            localStorage.removeItem(id);
-        }
-    });
-
-    document.querySelectorAll('input[type="checkbox"]').forEach(el => {
-        if (['s-foto', 's-fixacao', 's-visivel', 's-legivel'].includes(el.id)) {
-            el.checked = true;
-        } else if (el.id === 'h-tem-mangueira') {
-            el.checked = true;
-        } else if (['el-painel', 'el-piloto', 'el-ruido', 'el-fixacao'].includes(el.id)) {
-            el.checked = true;
-        } else {
-            el.checked = false;
-        }
-        localStorage.removeItem(el.id);
-    });
-
-    document.querySelectorAll('select.save-state').forEach(el => {
-        el.selectedIndex = 0;
-        localStorage.removeItem(el.id);
-    });
-
-    if (document.getElementById('sum-parecer')) {
-        document.getElementById('sum-parecer').selectedIndex = 0;
-    }
-
-    if (window.toggleMangueiraFields) window.toggleMangueiraFields();
-    if (window.toggleSinalizacaoFields) window.toggleSinalizacaoFields();
-
-    if (!keepHeader) localStorage.clear();
-}
-
-// --- Autenticação ---
-async function handleLogin() {
-    if (!auth) return alert("Firebase não configurado");
-    try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert("Erro login: " + e.message); }
-}
-function handleLogout() { if (auth) signOut(auth); window.toggleMenu(); }
-
-// Função para navegar pelo Menu Lateral
-window.switchTabAndClose = function (type, titleFriendly) {
-
-    if (typeof window.showFormPage === 'function') {
-        window.showFormPage();
-    }
-
-    // 1. Muda a aba normalmente
-    window.switchTab(type);
-
-    // 2. Atualiza o título no topo da página (UX Essencial já que não temos abas visíveis)
-    const titleEl = document.getElementById('page-title');
-    if (titleEl) {
-        titleEl.innerHTML = `FireCheck <span class="text-slate-400 text-sm font-normal mx-2">|</span> <span class="text-blue-400">${titleFriendly}</span>`;
-    }
-
-    // 3. Fecha o menu lateral
     window.toggleMenu();
 };
-function updateUserUI() {
-    const loginBtn = document.getElementById('btn-login');
-    const userInfo = document.getElementById('user-info');
-    const nameSpan = document.getElementById('user-name');
-    const logoutSide = document.getElementById('btn-logout-side');
-    if (user) {
-        loginBtn.classList.add('hidden'); userInfo.classList.remove('hidden'); userInfo.classList.add('flex');
-        nameSpan.textContent = user.displayName.split(' ')[0]; logoutSide.classList.remove('hidden');
-    } else {
-        loginBtn.classList.remove('hidden'); userInfo.classList.add('hidden'); userInfo.classList.remove('flex');
-        logoutSide.classList.add('hidden'); document.getElementById('history-list').innerHTML = '<p class="text-sm text-gray-500 text-center">Faça login para ver.</p>';
-    }
-}
-window.loadHistory = async function () {
-    if (!user || !db) return;
-    const listEl = document.getElementById('history-list');
-    listEl.innerHTML = '<p class="text-center text-xs">Atualizando...</p>';
-    try {
-        const q = query(collection(db, "vistorias"), where("userId", "==", user.uid), orderBy("timestamp", "desc"), limit(10));
-        const querySnapshot = await getDocs(q);
-        listEl.innerHTML = "";
-        if (querySnapshot.empty) { listEl.innerHTML = '<p class="text-center text-xs text-gray-400">Nenhuma vistoria salva.</p>'; return; }
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleDateString() : 'Data N/A';
-            const item = document.createElement('div');
-            item.className = "bg-gray-100 p-3 rounded border border-gray-200 text-sm";
-            item.innerHTML = `<div class="font-bold text-slate-700">${data.cliente || 'Sem Nome'}</div><div class="text-xs text-gray-500">${data.local} • ${date}</div><div class="text-xs text-green-600 mt-1">Salvo na nuvem</div>`;
-            listEl.appendChild(item);
-        });
-    } catch (e) { listEl.innerHTML = '<p class="text-red-500 text-xs text-center">Erro ao carregar</p>'; }
+
+window.showFormPage = function () {
+    toggleMainInterface(true); // Mostra Form
+    const pageReports = document.getElementById('page-reports');
+    if (pageReports) pageReports.classList.add('hidden');
 };
 
-// --- Arquivos ---
-async function handleFileSelect(event) {
-    const input = event.target;
-    if (input.files && input.files.length > 0) {
-        const btnText = document.getElementById('btn-add-item');
-        const originalText = btnText.innerHTML;
+function toggleMainInterface(show) {
+    const els = [
+        document.getElementById('building-data-container'),
+        document.querySelector('section.bg-white'),
+        document.querySelector('section.mt-8'),
+        document.querySelector('.fixed.bottom-0')
+    ];
+    els.forEach(el => {
+        if (el) show ? el.classList.remove('hidden') : el.classList.add('hidden');
+    });
+}
 
-        // Feedback visual simples
-        btnText.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Comprimindo fotos...`;
-        if (window.lucide) window.lucide.createIcons();
+// Helpers de Formulário
+window.toggleMangueiraFields = function () { toggleFieldGroup('h-tem-mangueira', 'h-detalhes-container'); };
+window.toggleSinalizacaoFields = function () { toggleFieldGroup('s-existente', 's-detalhes-container', true); };
 
-        try {
-            // Converte FileList para Array
-            const filesArray = Array.from(input.files);
+function toggleFieldGroup(triggerId, containerId, isSelect = false) {
+    const trigger = document.getElementById(triggerId);
+    const container = document.getElementById(containerId);
+    if (!trigger || !container) return;
 
-            // Processa todas as imagens em paralelo
-            const compressedFiles = await Promise.all(
-                filesArray.map(file => compressImage(file))
-            );
+    const isActive = isSelect ? trigger.value === 'Sim' : trigger.checked;
+    const inputs = container.querySelectorAll('input, select, textarea, button');
 
-            // Adiciona ao array global
-            currentFiles = [...currentFiles, ...compressedFiles];
-            updateImagePreview();
-
-        } catch (error) {
-            console.error("Erro ao processar imagens:", error);
-            alert("Erro ao processar algumas imagens.");
-        } finally {
-            // Restaura o botão e limpa o input
-            btnText.innerHTML = originalText;
-            if (window.lucide) window.lucide.createIcons();
-            input.value = "";
-        }
+    if (isActive) {
+        container.classList.remove('opacity-50', 'pointer-events-none');
+        inputs.forEach(el => el.disabled = false);
+    } else {
+        container.classList.add('opacity-50', 'pointer-events-none');
+        inputs.forEach(el => el.disabled = true);
     }
 }
-function removeFile(index) { currentFiles.splice(index, 1); updateImagePreview(); }
-function clearFiles() { currentFiles = []; updateImagePreview(); }
-function updateImagePreview() {
-    const gallery = document.getElementById('preview-gallery');
-    gallery.innerHTML = "";
-    if (currentFiles.length > 0) {
-        gallery.classList.remove('hidden'); gallery.classList.add('flex');
-        currentFiles.forEach((file, index) => {
-            const container = document.createElement('div'); container.className = "thumb-container";
-            const img = document.createElement('img'); img.src = URL.createObjectURL(file); img.className = "thumb-preview";
-            const btn = document.createElement('button'); btn.className = "btn-remove-thumb"; btn.innerHTML = "×"; btn.onclick = () => removeFile(index);
-            container.appendChild(img); container.appendChild(btn); gallery.appendChild(container);
-        });
-    } else { gallery.classList.add('hidden'); gallery.classList.remove('flex'); }
+
+// Toast Notification
+window.showToast = function (message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    const bgColor = type === 'error' ? 'bg-red-500' : (type === 'info' ? 'bg-blue-500' : 'bg-emerald-600');
+
+    toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in transition-all transform translate-x-0`;
+    toast.innerHTML = `<span class="font-bold text-sm">${message}</span>`;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+};
+
+function refreshIcons() {
+    if (window.lucide) window.lucide.createIcons();
 }
 
-// --- CRUD ---
+function initializeDateInput() {
+    const dateInput = document.getElementById('data-relatorio');
+    if (dateInput && !dateInput.value) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        dateInput.value = now.toISOString().slice(0, 16);
+    }
+}
+
+/* ==========================================================================
+   5. CRUD (CREATE, READ, UPDATE, DELETE)
+   ========================================================================== */
+
+function captureFormData(type) {
+    let specifics = {};
+    switch (type) {
+        case 'hidrante':
+            const temMangueira = document.getElementById('h-tem-mangueira').checked;
+            specifics = {
+                check_registro: document.getElementById('h-registro').checked,
+                check_adaptador: document.getElementById('h-adaptador').checked,
+                check_chave: document.getElementById('h-chave').checked,
+                check_esguicho: document.getElementById('h-esguicho').checked,
+                tem_mangueira: temMangueira,
+                selo: temMangueira ? document.getElementById('h-selo').value : '-',
+                validade: temMangueira ? (document.getElementById('h-validade').value || '-') : '-',
+                lances: temMangueira ? (document.getElementById('h-lances').value || '1') : '0',
+                metragem: temMangueira ? document.getElementById('h-metragem').value : '-',
+                obs: temMangueira ? document.getElementById('h-obs').value : ''
+            };
+            break;
+        case 'extintor':
+            specifics = {
+                tipo: document.getElementById('e-tipo').value,
+                peso: document.getElementById('e-peso').value,
+                recarga: document.getElementById('e-recarga').value || '-',
+                teste_hidro: document.getElementById('e-teste').value || '-',
+                check_lacre: document.getElementById('e-lacre').checked,
+                check_manometro: document.getElementById('e-manometro').checked,
+                check_sinalizacao: document.getElementById('e-sinalizacao').checked,
+                check_mangueira: document.getElementById('e-mangueira').checked,
+                obs: document.getElementById('e-obs').value
+            };
+            break;
+        case 'luz':
+            specifics = {
+                tipo: document.getElementById('l-tipo').value,
+                estado: document.getElementById('l-estado').value,
+                autonomia: document.getElementById('l-autonomia').value,
+                check_acendimento: document.getElementById('l-acendimento').checked,
+                check_led: document.getElementById('l-led').checked,
+                check_fixacao: document.getElementById('l-fixacao').checked,
+                check_lux: document.getElementById('l-lux').checked,
+                obs: document.getElementById('l-obs').value
+            };
+            break;
+        case 'bomba':
+            specifics = {
+                operacao: document.getElementById('b-operacao').checked,
+                teste_pressao: document.getElementById('b-teste').checked,
+                necessita_manutencao: document.getElementById('b-manutencao').checked,
+                obs: document.getElementById('b-obs').value
+            };
+            break;
+        case 'sinalizacao':
+            const existe = document.getElementById('s-existente').value;
+            specifics = {
+                existente: existe,
+                tipo: existe === 'Sim' ? document.getElementById('s-tipo').value : '-',
+                check_foto: existe === 'Sim' ? document.getElementById('s-foto').checked : false,
+                check_fixacao: existe === 'Sim' ? document.getElementById('s-fixacao').checked : false,
+                check_visivel: existe === 'Sim' ? document.getElementById('s-visivel').checked : false,
+                check_legivel: existe === 'Sim' ? document.getElementById('s-legivel').checked : false,
+                obs: document.getElementById('s-obs').value
+            };
+            break;
+        case 'eletro':
+            specifics = {
+                tipo_sistema: document.getElementById('el-tipo').value,
+                botoeiras: document.getElementById('el-botoeiras').value,
+                precisa_manutencao: document.getElementById('el-manutencao').value,
+                check_painel: document.getElementById('el-painel').checked,
+                check_piloto: document.getElementById('el-piloto').checked,
+                check_ruido: document.getElementById('el-ruido').checked,
+                check_fixacao: document.getElementById('el-fixacao').checked,
+                obs: document.getElementById('el-obs').value
+            };
+            break;
+        case 'geral':
+            specifics = { obs: document.getElementById('g-obs').value };
+            break;
+    }
+    return specifics;
+}
+
 function addItem() {
     if (currentType === 'sumario') {
-        alert("A aba Sumário é para dados gerais do relatório. Preencha e clique em Salvar Nuvem ou PDF.");
+        alert("A aba Sumário é para dados gerais. Preencha e clique em Salvar Nuvem ou PDF.");
         return;
     }
 
     const andarInput = document.getElementById('andar').value;
     const idInput = document.getElementById('item-id').value;
 
-    // Validação: Só exige Andar/ID se NÃO for a aba Geral
-    if (currentType !== 'geral') {
-        if (!andarInput || !idInput) { alert("Preencha o Local e a Identificação do item."); return; }
+    if (currentType !== 'geral' && (!andarInput || !idInput)) {
+        window.showToast("Preencha o Local e a Identificação", "error");
+        return;
     }
 
-    // Define valores padrão para Geral (para não quebrar a estrutura)
-    const andar = currentType === 'geral' ? '-' : andarInput;
-    const id = currentType === 'geral' ? 'Geral' : idInput;
-
-    const baseItem = { uid: Date.now(), type: currentType, andar, id, imageFiles: [...currentFiles] };
-    let specifics = {};
-
-    if (currentType === 'hidrante') {
-        const temMangueira = document.getElementById('h-tem-mangueira').checked;
-        specifics = {
-            check_registro: document.getElementById('h-registro').checked,
-            check_adaptador: document.getElementById('h-adaptador').checked,
-            check_chave: document.getElementById('h-chave').checked,
-            check_esguicho: document.getElementById('h-esguicho').checked,
-            tem_mangueira: temMangueira,
-            selo: temMangueira ? document.getElementById('h-selo').value : '-',
-            validade: temMangueira ? (document.getElementById('h-validade').value || '-') : '-',
-            lances: temMangueira ? (document.getElementById('h-lances').value || '1') : '0',
-            metragem: temMangueira ? document.getElementById('h-metragem').value : '-',
-            obs: temMangueira ? document.getElementById('h-obs').value : ''
-        };
-    } else if (currentType === 'extintor') {
-        specifics = {
-            tipo: document.getElementById('e-tipo').value,
-            peso: document.getElementById('e-peso').value,
-            recarga: document.getElementById('e-recarga').value || '-',
-            teste_hidro: document.getElementById('e-teste').value || '-',
-            check_lacre: document.getElementById('e-lacre').checked,
-            check_manometro: document.getElementById('e-manometro').checked,
-            check_sinalizacao: document.getElementById('e-sinalizacao').checked,
-            check_mangueira: document.getElementById('e-mangueira').checked,
-            obs: document.getElementById('e-obs').value
-        };
-    } else if (currentType === 'luz') {
-        specifics = {
-            tipo: document.getElementById('l-tipo').value,
-            estado: document.getElementById('l-estado').value,
-            autonomia: document.getElementById('l-autonomia').value,
-            check_acendimento: document.getElementById('l-acendimento').checked,
-            check_led: document.getElementById('l-led').checked,
-            check_fixacao: document.getElementById('l-fixacao').checked,
-            check_lux: document.getElementById('l-lux').checked,
-            obs: document.getElementById('l-obs').value
-        };
-    } else if (currentType === 'bomba') {
-        specifics = {
-            operacao: document.getElementById('b-operacao').checked, teste_pressao: document.getElementById('b-teste').checked,
-            necessita_manutencao: document.getElementById('b-manutencao').checked, obs: document.getElementById('b-obs').value
-        };
-        if (specifics.necessita_manutencao && !specifics.obs.trim()) {
-            alert("⚠️ ATENÇÃO: Você indicou manutenção na bomba.\n\nPor favor, descreva o problema na observação.");
-            document.getElementById('b-obs').focus(); return;
-        }
-    } else if (currentType === 'sinalizacao') {
-        const existe = document.getElementById('s-existente').value;
-        specifics = {
-            existente: existe,
-            tipo: existe === 'Sim' ? document.getElementById('s-tipo').value : '-',
-            check_foto: existe === 'Sim' ? document.getElementById('s-foto').checked : false,
-            check_fixacao: existe === 'Sim' ? document.getElementById('s-fixacao').checked : false,
-            check_visivel: existe === 'Sim' ? document.getElementById('s-visivel').checked : false,
-            check_legivel: existe === 'Sim' ? document.getElementById('s-legivel').checked : false,
-            obs: document.getElementById('s-obs').value
-        };
-    } else if (currentType === 'eletro') {
-        specifics = {
-            tipo_sistema: document.getElementById('el-tipo').value,
-            botoeiras: document.getElementById('el-botoeiras').value,
-            precisa_manutencao: document.getElementById('el-manutencao').value,
-            check_painel: document.getElementById('el-painel').checked,
-            check_piloto: document.getElementById('el-piloto').checked,
-            check_ruido: document.getElementById('el-ruido').checked,
-            check_fixacao: document.getElementById('el-fixacao').checked,
-            obs: document.getElementById('el-obs').value
-        };
-        if (specifics.precisa_manutencao === 'Sim' && !specifics.obs.trim()) {
-            alert("⚠️ Por favor, descreva o motivo da manutenção na observação.");
-            document.getElementById('el-obs').focus();
-            return;
-        }
-    } else if (currentType === 'geral') {
-        specifics = {
-            obs: document.getElementById('g-obs').value
-        };
-        if (!specifics.obs.trim()) {
-            alert("⚠️ Digite alguma observação antes de adicionar.");
-            document.getElementById('g-obs').focus();
-            return;
-        }
+    if (currentType === 'bomba' && document.getElementById('b-manutencao').checked && !document.getElementById('b-obs').value.trim()) {
+        alert("Descreva o problema da bomba na observação.");
+        return;
     }
 
-    items.push({ ...baseItem, ...specifics });
+    const specificData = captureFormData(currentType);
+
+    const newItem = {
+        uid: Date.now(),
+        type: currentType,
+        andar: currentType === 'geral' ? '-' : andarInput,
+        id: currentType === 'geral' ? 'Geral' : idInput,
+        imageFiles: [...currentFiles],
+        ...specificData
+    };
+
+    items.push(newItem);
+
     backupItem = null;
-    atualizarBotoes(false);
+    atualizarBotoesModoEdicao(false);
     renderList();
     clearFormState();
     clearFiles();
 
-
-    // Foca no ID apenas se não for aba Geral (pois o campo está oculto)
-    if (currentType !== 'geral') {
-        document.getElementById('item-id').focus();
-    }
+    if (currentType !== 'geral') document.getElementById('item-id').focus();
+    window.showToast("Item adicionado!", "success");
 }
 
 window.editItem = function (uid) {
-    // 1. Encontra o item na lista
     const index = items.findIndex(i => i.uid === uid);
     if (index === -1) return;
     const item = items[index];
 
-    // 2. Se já estiver editando outro item, cancela o anterior primeiro para não perder dados
     if (backupItem) window.cancelarEdicao();
 
-    // 3. Abre o modal de confirmação
-    window.showConfirmModal("Editar Item", `Deseja editar o item "${item.id}"?`, () => {
-
-        // --- INÍCIO DO MODO EDIÇÃO ---
-        backupItem = item;     // Salva na "caixinha de segurança"
-        atualizarBotoes(true); // Muda botões para (Salvar Edição / Cancelar)
-        // -----------------------------
-
+    window.showConfirmModal("Editar Item", `Editar "${item.id}"?`, () => {
+        backupItem = item;
+        atualizarBotoesModoEdicao(true);
         window.switchTab(item.type);
 
-        // Preenchimento dos campos gerais
-        if (item.type !== 'geral') {
-            document.getElementById('andar').value = item.andar;
-            document.getElementById('item-id').value = item.id;
-        } else {
-            document.getElementById('andar').value = '';
-            document.getElementById('item-id').value = '';
-        }
+        document.getElementById('andar').value = item.type === 'geral' ? '' : item.andar;
+        document.getElementById('item-id').value = item.type === 'geral' ? '' : item.id;
 
-        // Preenchimento Específico por Tipo
+        // Lógica de Preenchimento Simplificada
+        // O app usa o sistema de restauração nativa do localStorage para facilitar,
+        // mas em edição precisa setar manual.
         if (item.type === 'hidrante') {
             document.getElementById('h-registro').checked = item.check_registro;
             document.getElementById('h-adaptador').checked = item.check_adaptador;
             document.getElementById('h-chave').checked = item.check_chave;
             document.getElementById('h-esguicho').checked = item.check_esguicho;
-
-            const temMangueira = item.tem_mangueira !== undefined ? item.tem_mangueira : true;
-            document.getElementById('h-tem-mangueira').checked = temMangueira;
-
+            document.getElementById('h-tem-mangueira').checked = item.tem_mangueira ?? true;
             document.getElementById('h-selo').value = item.selo;
             document.getElementById('h-validade').value = item.validade === '-' ? '' : item.validade;
             document.getElementById('h-lances').value = item.lances === '0' ? '' : item.lances;
             document.getElementById('h-metragem').value = item.metragem === '-' ? '15m' : item.metragem;
             document.getElementById('h-obs').value = item.obs;
-
-            if (window.toggleMangueiraFields) window.toggleMangueiraFields();
-
+            window.toggleMangueiraFields();
         } else if (item.type === 'extintor') {
             document.getElementById('e-tipo').value = item.tipo;
             document.getElementById('e-peso').value = item.peso;
@@ -610,7 +469,6 @@ window.editItem = function (uid) {
             document.getElementById('e-sinalizacao').checked = item.check_sinalizacao;
             document.getElementById('e-mangueira').checked = item.check_mangueira;
             document.getElementById('e-obs').value = item.obs || '';
-
         } else if (item.type === 'luz') {
             document.getElementById('l-tipo').value = item.tipo;
             document.getElementById('l-estado').value = item.estado;
@@ -620,13 +478,11 @@ window.editItem = function (uid) {
             document.getElementById('l-fixacao').checked = item.check_fixacao;
             document.getElementById('l-lux').checked = item.check_lux;
             document.getElementById('l-obs').value = item.obs || '';
-
         } else if (item.type === 'bomba') {
             document.getElementById('b-operacao').checked = item.operacao;
             document.getElementById('b-teste').checked = item.teste_pressao;
             document.getElementById('b-manutencao').checked = item.necessita_manutencao;
-            document.getElementById('b-obs').value = item.obs;
-
+            document.getElementById('b-obs').value = item.obs || '';
         } else if (item.type === 'sinalizacao') {
             document.getElementById('s-existente').value = item.existente;
             document.getElementById('s-tipo').value = item.tipo || 'Saida';
@@ -635,9 +491,7 @@ window.editItem = function (uid) {
             document.getElementById('s-visivel').checked = item.check_visivel;
             document.getElementById('s-legivel').checked = item.check_legivel;
             document.getElementById('s-obs').value = item.obs || '';
-
-            if (window.toggleSinalizacaoFields) window.toggleSinalizacaoFields();
-
+            window.toggleSinalizacaoFields();
         } else if (item.type === 'eletro') {
             document.getElementById('el-tipo').value = item.tipo_sistema;
             document.getElementById('el-botoeiras').value = item.botoeiras;
@@ -647,40 +501,42 @@ window.editItem = function (uid) {
             document.getElementById('el-ruido').checked = item.check_ruido;
             document.getElementById('el-fixacao').checked = item.check_fixacao;
             document.getElementById('el-obs').value = item.obs || '';
-
         } else if (item.type === 'geral') {
             document.getElementById('g-obs').value = item.obs || '';
         }
 
-        // Restaura as imagens para edição
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
         updateImagePreview();
 
-        // Remove o item da lista visual (mas ele está salvo no backupItem)
         items.splice(index, 1);
         renderList();
-
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+};
 
-        // Dispara evento para salvar estado local dos inputs
-        document.querySelectorAll('.save-state').forEach(el => el.dispatchEvent(new Event('input')));
-
-    }, false); // Modal não destrutivo (botão azul)
+window.cancelarEdicao = function () {
+    if (!backupItem) return;
+    items.push(backupItem);
+    backupItem = null;
+    clearFormState();
+    clearFiles();
+    renderList();
+    atualizarBotoesModoEdicao(false);
+    window.showToast("Edição cancelada", "info");
 };
 
 window.removeItem = function (uid) {
-    window.showConfirmModal("Excluir Item", "Tem certeza que deseja remover este item da lista?", () => {
+    window.showConfirmModal("Excluir", "Remover este item?", () => {
         items = items.filter(i => i.uid !== uid);
         renderList();
+        window.showToast("Item removido", "info");
     }, true);
 };
+
 function renderList() {
     const listEl = document.getElementById('lista-itens');
     const countEl = document.getElementById('count');
-
-    // Atualiza contador
     if (countEl) countEl.innerText = items.length;
-
     listEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -689,718 +545,502 @@ function renderList() {
     }
 
     const fragment = document.createDocumentFragment();
-
-    // Cria uma cópia invertida para mostrar os mais recentes primeiro
     items.slice().reverse().forEach(item => {
-        // Define ícone baseado no tipo
-        let icon = 'circle';
-        let color = 'gray';
-
-        if (item.type === 'hidrante') { icon = 'droplets'; color = 'blue'; }
-        else if (item.type === 'extintor') { icon = 'fire-extinguisher'; color = 'red'; }
-        else if (item.type === 'luz') { icon = 'lightbulb'; color = 'amber'; }
-        else if (item.type === 'bomba') { icon = 'activity'; color = 'purple'; }
-        else if (item.type === 'sinalizacao') { icon = 'signpost'; color = 'teal'; }
-        else if (item.type === 'eletro') { icon = 'zap'; color = 'indigo'; }
-        else if (item.type === 'geral') { icon = 'clipboard-list'; color = 'slate'; }
-
-        // Badge de fotos
-        const photoBadge = (item.imageFiles && item.imageFiles.length > 0)
-            ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1 flex items-center gap-1"><i data-lucide="camera" class="w-3 h-3"></i> ${item.imageFiles.length}</span>`
-            : '';
-
         const div = document.createElement('div');
-        div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in group hover:shadow-md transition-all`;
+        let color = 'blue';
+        if (item.type === 'extintor') color = 'red';
+        else if (item.type === 'luz') color = 'amber';
+        else if (item.type === 'bomba') color = 'purple';
+        else if (item.type === 'sinalizacao') color = 'teal';
+        else if (item.type === 'eletro') color = 'indigo';
+        else if (item.type === 'geral') color = 'slate';
 
-        // Título do item (Lógica para Geral vs Outros)
-        let titleText = (item.type === 'geral')
-            ? (item.obs ? (item.obs.length > 30 ? item.obs.substring(0, 30) + '...' : item.obs) : 'Observação Geral')
-            : `${item.id} | ${item.andar}`;
+        div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center group hover:shadow-md transition-all`;
+
+        const photoBadge = (item.imageFiles?.length)
+            ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1"><i data-lucide="camera" class="w-3 h-3 inline"></i> ${item.imageFiles.length}</span>`
+            : '';
 
         div.innerHTML = `
             <div class="flex items-center gap-3 overflow-hidden">
-                <div class="p-2 bg-gray-50 rounded-full text-gray-600 flex-shrink-0 group-hover:bg-${color}-50 group-hover:text-${color}-600 transition-colors">
-                    <i data-lucide="${icon}" class="w-5 h-5"></i>
-                </div>
                 <div class="min-w-0">
-                    <div class="font-bold text-gray-800 text-sm truncate" id="item-title-${item.uid}"></div>
-                    <div class="text-xs text-gray-500 truncate flex items-center">
-                        ${item.type.toUpperCase()} ${photoBadge}
-                    </div>
+                    <div class="font-bold text-gray-800 text-sm truncate">${item.type === 'geral' ? (item.obs?.substring(0, 30) || 'Geral') : item.id + ' | ' + item.andar}</div>
+                    <div class="text-xs text-gray-500 uppercase">${item.type} ${photoBadge}</div>
                 </div>
             </div>
-            <div class="flex items-center gap-1">
-                <button class="btn-edit text-blue-400 hover:text-blue-600 p-2 rounded hover:bg-blue-50 transition-colors" title="Editar">
-                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                </button>
-                <button class="btn-del text-red-300 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors" title="Excluir">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
+            <div class="flex gap-1">
+                <button class="btn-edit text-blue-500 p-2"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                <button class="btn-del text-red-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
         `;
 
-        // Insere texto seguro e adiciona eventos
-        div.querySelector(`#item-title-${item.uid}`).textContent = titleText;
-        div.querySelector('.btn-edit').addEventListener('click', () => window.editItem(item.uid));
-        div.querySelector('.btn-del').addEventListener('click', () => window.removeItem(item.uid));
-
+        div.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
+        div.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
         fragment.appendChild(div);
     });
-
     listEl.appendChild(fragment);
-
-    if (window.lucide) window.lucide.createIcons();
+    refreshIcons();
 }
 
-async function saveToFirebase() {
-    if (!db || !user || !storage) return alert("Faça login para salvar!");
+function atualizarBotoesModoEdicao(editando) {
+    const btnAdd = document.getElementById('btn-add-item');
+    const btnCancel = document.getElementById('btn-cancelar');
+    const btnTexto = document.getElementById('btn-add-text');
 
-    const btn = document.getElementById('btn-save');
-    const oldText = btn.innerHTML;
-    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Enviando...`;
-    btn.disabled = true;
+    if (editando) {
+        btnCancel.classList.remove('hidden'); btnCancel.classList.add('flex');
+        btnAdd.classList.remove('bg-slate-800'); btnAdd.classList.add('bg-blue-600');
+        btnTexto.innerText = "Salvar Edição";
+    } else {
+        btnCancel.classList.add('hidden'); btnCancel.classList.remove('flex');
+        btnAdd.classList.add('bg-slate-800'); btnAdd.classList.remove('bg-blue-600');
+        btnTexto.innerText = "Adicionar Item";
+    }
+    refreshIcons();
+}
+
+/* ==========================================================================
+   6. FILES & IMAGENS
+   ========================================================================== */
+async function handleFileSelect(event) {
+    const input = event.target;
+    if (!input.files.length) return;
+
+    const btnText = document.getElementById('btn-add-item');
+    const originalHtml = btnText.innerHTML;
+    btnText.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Processando...`;
+    refreshIcons();
 
     try {
-        // 1. Gera um ID novo se não existir (formato: REL_timestamp_random)
-        if (!currentReportId) {
-            currentReportId = `REL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        }
-
-        // 2. Prepara os dados (Converte imagens atuais para Base64)
-        const itemsWithImages = await Promise.all(items.map(async (item) => {
-            let imagesBase64 = [];
-            // Se tiver arquivos (File objects), converte para string
-            if (item.imageFiles && item.imageFiles.length > 0) {
-                imagesBase64 = await Promise.all(item.imageFiles.map(file => fileToBase64(file)));
-            }
-            return {
-                ...item,
-                imageFiles: [], // Remove o objeto File (não salva em JSON)
-                _savedImages: imagesBase64 // Salva a string Base64
-            };
-        }));
-
-        // Monta o objeto completo do relatório
-        const reportData = {
-            id: currentReportId,
-            version: "2.0",
-            timestamp: new Date().toISOString(),
-            userId: user.uid,
-            header: {
-                cliente: document.getElementById('cliente').value || "Sem Nome",
-                local: document.getElementById('local').value || "",
-                tecnico: document.getElementById('resp-tecnico').value || "",
-                classificacao: document.getElementById('classificacao').value || "",
-                data: document.getElementById('data-relatorio').value,
-                parecer: document.getElementById('sum-parecer').value,
-                resumo: document.getElementById('sum-resumo').value,
-                riscos: document.getElementById('sum-riscos').value,
-                conclusao: document.getElementById('sum-conclusao').value
-            },
-            items: itemsWithImages,
-            signatures: {
-                tecnico: sigTecnico && !sigTecnico.isEmpty() ? sigTecnico.getImageData() : null,
-                cliente: sigCliente && !sigCliente.isEmpty() ? sigCliente.getImageData() : null
-            }
-        };
-
-        // 3. Cria o Arquivo JSON (Blob) e faz Upload
-        const jsonString = JSON.stringify(reportData);
-        const blob = new Blob([jsonString], { type: "application/json" });
-
-        // Salva no Storage com o ID fixo (sobrescreve o anterior se for o mesmo ID)
-        const storageRef = ref(storage, `backups/${user.uid}/${currentReportId}.json`);
-        await uploadBytes(storageRef, blob);
-        const downloadUrl = await getDownloadURL(storageRef);
-
-        // 4. Salva/Atualiza os metadados no Firestore
-        // Usamos setDoc com { merge: true } para atualizar ou criar
-        const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-
-        await setDoc(doc(db, "reports", currentReportId), {
-            reportId: currentReportId,
-            userId: user.uid,
-            cliente: reportData.header.cliente,
-            local: reportData.header.local,
-            dataRelatorio: reportData.header.data,
-            updatedAt: new Date(), // Data da última modificação
-            fileUrl: downloadUrl, // Link para baixar o JSON completo
-            itemCount: items.length
-        }, { merge: true });
-
-        window.showToast("Relatório salvo/atualizado na nuvem!", "success");
-
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao salvar: " + e.message);
+        const compressed = await Promise.all(Array.from(input.files).map(file => compressImage(file)));
+        currentFiles = [...currentFiles, ...compressed];
+        updateImagePreview();
+    } catch (error) {
+        console.error(error);
+        alert("Erro ao processar imagens.");
     } finally {
-        btn.innerHTML = oldText;
-        btn.disabled = false;
-        if (window.lucide) lucide.createIcons();
+        btnText.innerHTML = originalHtml;
+        input.value = "";
+        refreshIcons();
     }
 }
 
-// --- FUNÇÕES DE BACKUP (EXPORTAR / IMPORTAR) ---
-
-function exportBackup() {
-    if (items.length === 0) {
-        alert("A lista está vazia. Nada para salvar.");
-        return;
+function updateImagePreview() {
+    const gallery = document.getElementById('preview-gallery');
+    gallery.innerHTML = "";
+    if (currentFiles.length > 0) {
+        gallery.classList.remove('hidden'); gallery.classList.add('flex');
+        currentFiles.forEach((file, index) => {
+            const container = document.createElement('div');
+            container.className = "thumb-container relative w-16 h-16";
+            container.innerHTML = `
+                <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover rounded border">
+                <button class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">×</button>
+            `;
+            container.querySelector('button').onclick = () => {
+                currentFiles.splice(index, 1);
+                updateImagePreview();
+            };
+            gallery.appendChild(container);
+        });
+    } else {
+        gallery.classList.add('hidden'); gallery.classList.remove('flex');
     }
-
-    // 1. Captura todos os dados do cabeçalho
-    const backupData = {
-        version: "1.0",
-        timestamp: new Date().toISOString(),
-        header: {
-            cliente: document.getElementById('cliente').value,
-            local: document.getElementById('local').value,
-            respTecnico: document.getElementById('resp-tecnico').value,
-            classificacao: document.getElementById('classificacao').value,
-            dataRelatorio: document.getElementById('data-relatorio').value,
-            // Campos do Sumário
-            parecer: document.getElementById('sum-parecer').value,
-            resumo: document.getElementById('sum-resumo').value,
-            riscos: document.getElementById('sum-riscos').value,
-            conclusao: document.getElementById('sum-conclusao').value,
-            // Assinaturas (Se quiser salvar a imagem base64)
-            // Nota: Imagens pesam o arquivo, mas é possível salvar se precisar.
-        },
-        items: items // Sua lista global de itens
-    };
-
-    // 2. Cria o arquivo JSON
-    const dataStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-
-    // 3. Força o download
-    const a = document.createElement('a');
-    a.href = url;
-    // Nome do arquivo: Backup_Cliente_Data.json
-    const safeClient = (backupData.header.cliente || "SemNome").replace(/[^a-z0-9]/gi, '_');
-    a.download = `Backup_${safeClient}_${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-
-    // Limpeza
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 }
 
-function importBackup(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Confirmação para não perder o que já está na tela
-    if (items.length > 0) {
-        const confirmacao = confirm("ATENÇÃO: Isso irá substituir todos os itens atuais da tela pelos do arquivo.\nDeseja continuar?");
-        if (!confirmacao) {
-            event.target.value = ''; // Limpa o input
-            return;
-        }
-    }
-
+// Helpers Base64
+const fileToBase64 = file => new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const data = JSON.parse(e.target.result);
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
 
-            // 1. Restaura Cabeçalhos
-            if (data.header) {
-                document.getElementById('cliente').value = data.header.cliente || '';
-                document.getElementById('local').value = data.header.local || '';
-                document.getElementById('resp-tecnico').value = data.header.respTecnico || '';
-                document.getElementById('classificacao').value = data.header.classificacao || '';
-                document.getElementById('data-relatorio').value = data.header.dataRelatorio || '';
-
-                // Restaura Sumário
-                if (document.getElementById('sum-parecer')) document.getElementById('sum-parecer').value = data.header.parecer || 'Aprovado';
-                if (document.getElementById('sum-resumo')) document.getElementById('sum-resumo').value = data.header.resumo || '';
-                if (document.getElementById('sum-riscos')) document.getElementById('sum-riscos').value = data.header.riscos || '';
-                if (document.getElementById('sum-conclusao')) document.getElementById('sum-conclusao').value = data.header.conclusao || '';
-
-                // Atualiza o resumo visual (header expansível)
-                const summaryEl = document.getElementById('header-summary');
-                if (summaryEl) summaryEl.innerText = data.header.cliente || "Clique para editar";
-            }
-
-            // 2. Restaura Itens
-            if (Array.isArray(data.items)) {
-                items = data.items;
-                // Importante: Zerar os arquivos de imagem (Blob) pois JSON não salva binário das fotos novas
-                // As URLs do Firebase (se já salvas) estarão lá, mas fotos recém tiradas e não salvas serão perdidas no JSON.
-                items.forEach(i => {
-                    // Se quiser manter compatibilidade, recria o array vazio de arquivos locais
-                    i.imageFiles = [];
-                });
-
-                renderList();
-                alert("Backup restaurado com sucesso! " + items.length + " itens carregados.");
-            }
-
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao ler o arquivo de backup. Verifique se é um JSON válido.");
-        }
-    };
-
-    reader.readAsText(file);
-    event.target.value = ''; // Permite carregar o mesmo arquivo novamente se necessário
-}
-// Converte File/Blob para Base64 (String)
-const fileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-};
-
-// Converte Base64 (String) de volta para File
 const base64ToFile = (dataurl, filename) => {
     const arr = dataurl.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-    }
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
     return new File([u8arr], filename, { type: mime });
 };
 
-window.exportBackup = async function () {
-    const btn = document.getElementById('btn-backup'); // Supondo que você tenha esse botão
-    if (btn) btn.innerText = "Gerando Backup...";
+/* ==========================================================================
+   7. CLOUD & PERSISTÊNCIA (FIREBASE)
+   ========================================================================== */
+async function saveToFirebase() {
+    if (!auth.currentUser) return alert("Faça login para salvar.");
+
+    const btn = document.getElementById('btn-save');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Salvando...`;
+    btn.disabled = true;
+    refreshIcons();
 
     try {
-        // 1. Prepara os itens convertendo imagens para Base64
-        const itemsWithImages = await Promise.all(items.map(async (item) => {
-            let imagesBase64 = [];
+        if (!currentReportId) currentReportId = `REL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
-            // Se tiver arquivos locais (fotos tiradas agora)
-            if (item.imageFiles && item.imageFiles.length > 0) {
-                imagesBase64 = await Promise.all(item.imageFiles.map(file => fileToBase64(file)));
-            }
+        const itemsReady = await Promise.all(items.map(async (item) => ({
+            ...item,
+            imageFiles: [],
+            _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
+        })));
 
-            // Retorna uma cópia do item, trocando 'imageFiles' por strings Base64
-            // Mantemos fotoUrls caso seja um item que já veio do Firebase
-            return {
-                ...item,
-                imageFiles: [], // Limpa o objeto File pois não salva em JSON
-                _savedImages: imagesBase64 // Salva as strings aqui
-            };
-        }));
-
-        // 2. Pega dados do cabeçalho
-        const headerData = {
-            cliente: document.getElementById('cliente').value,
-            local: document.getElementById('local').value,
-            tecnico: document.getElementById('resp-tecnico').value,
-            classificacao: document.getElementById('classificacao').value,
-            data: document.getElementById('data-relatorio').value,
-            // Sumário
-            parecer: document.getElementById('sum-parecer') ? document.getElementById('sum-parecer').value : '',
-            resumo: document.getElementById('sum-resumo') ? document.getElementById('sum-resumo').value : '',
-            riscos: document.getElementById('sum-riscos') ? document.getElementById('sum-riscos').value : '',
-            conclusao: document.getElementById('sum-conclusao') ? document.getElementById('sum-conclusao').value : ''
-        };
-
-        // 3. Pega Assinaturas
-        const signatures = {
-            tecnico: sigTecnico && !sigTecnico.isEmpty() ? sigTecnico.getImageData() : null,
-            cliente: sigCliente && !sigCliente.isEmpty() ? sigCliente.getImageData() : null
-        };
-
-        // 4. Monta o objeto final
-        const backupData = {
-            version: "1.0",
+        const reportData = {
+            id: currentReportId,
+            version: "2.0",
             timestamp: new Date().toISOString(),
-            header: headerData,
-            items: itemsWithImages,
-            signatures: signatures
+            userId: user.uid,
+            header: {
+                cliente: document.getElementById('cliente').value,
+                local: document.getElementById('local').value,
+                tecnico: document.getElementById('resp-tecnico').value,
+                classificacao: document.getElementById('classificacao').value,
+                data: document.getElementById('data-relatorio').value,
+                parecer: document.getElementById('sum-parecer').value,
+                resumo: document.getElementById('sum-resumo').value,
+                riscos: document.getElementById('sum-riscos').value,
+                conclusao: document.getElementById('sum-conclusao').value
+            },
+            items: itemsReady,
+            signatures: {
+                tecnico: sigTecnico?.getImageData(),
+                cliente: sigCliente?.getImageData()
+            }
         };
 
-        // 5. Cria o arquivo para download
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
-        const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href", dataStr);
-        downloadAnchorNode.setAttribute("download", `Backup_FireCheck_${Date.now()}.json`);
-        document.body.appendChild(downloadAnchorNode);
-        downloadAnchorNode.click();
-        downloadAnchorNode.remove();
+        const blob = new Blob([JSON.stringify(reportData)], { type: "application/json" });
+        const storageRef = ref(storage, `backups/${user.uid}/${currentReportId}.json`);
+        await uploadBytes(storageRef, blob);
+        const downloadUrl = await getDownloadURL(storageRef);
 
-        alert("Backup (com fotos) gerado com sucesso!");
+        await setDoc(doc(db, "reports", currentReportId), {
+            reportId: currentReportId,
+            userId: user.uid,
+            cliente: reportData.header.cliente,
+            local: reportData.header.local,
+            updatedAt: new Date(),
+            fileUrl: downloadUrl,
+            itemCount: items.length
+        }, { merge: true });
+
+        window.showToast("Salvo na nuvem com sucesso!");
 
     } catch (e) {
         console.error(e);
-        alert("Erro ao gerar backup: " + e.message);
+        alert("Erro ao salvar: " + e.message);
     } finally {
-        if (btn) btn.innerText = "Fazer Backup";
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+        refreshIcons();
     }
-};
-
-window.importBackup = function (event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const data = JSON.parse(e.target.result);
-
-            if (!data.items || !data.header) throw new Error("Formato de backup inválido");
-
-            // 1. Restaurar Cabeçalho
-            document.getElementById('cliente').value = data.header.cliente || "";
-            document.getElementById('local').value = data.header.local || "";
-            document.getElementById('resp-tecnico').value = data.header.tecnico || "";
-            document.getElementById('classificacao').value = data.header.classificacao || "";
-            document.getElementById('data-relatorio').value = data.header.data || "";
-
-            if (document.getElementById('sum-parecer')) document.getElementById('sum-parecer').value = data.header.parecer || "Aprovado";
-            if (document.getElementById('sum-resumo')) document.getElementById('sum-resumo').value = data.header.resumo || "";
-            if (document.getElementById('sum-riscos')) document.getElementById('sum-riscos').value = data.header.riscos || "";
-            if (document.getElementById('sum-conclusao')) document.getElementById('sum-conclusao').value = data.header.conclusao || "";
-
-            window.toggleHeader(); // Atualiza visualização do acordeão
-
-            // 2. Restaurar Itens e Imagens
-            items = data.items.map(item => {
-                let restoredFiles = [];
-
-                // Se tiver imagens salvas em Base64, converte de volta para FILE
-                if (item._savedImages && item._savedImages.length > 0) {
-                    restoredFiles = item._savedImages.map((b64, index) => {
-                        return base64ToFile(b64, `foto_restore_${item.id}_${index}.jpg`);
-                    });
-                }
-
-                return {
-                    ...item,
-                    imageFiles: restoredFiles, // Agora o app volta a ter objetos File reais
-                    _savedImages: undefined // Limpa a string da memória para não pesar
-                };
-            });
-
-            // 3. Restaurar Assinaturas (Se houver método no seu SignaturePad)
-            // Nota: O SignaturePad geralmente precisa que a gente desenhe a imagem no canvas
-            if (data.signatures) {
-                if (data.signatures.tecnico && sigTecnico) {
-                    sigTecnico.fromDataURL(data.signatures.tecnico);
-                }
-                if (data.signatures.cliente && sigCliente) {
-                    sigCliente.fromDataURL(data.signatures.cliente);
-                }
-            }
-
-            // 4. Renderizar
-            renderList();
-            alert("Backup restaurado com sucesso! Fotos recuperadas.");
-
-        } catch (err) {
-            console.error(err);
-            alert("Erro ao restaurar: " + err.message);
-        }
-    };
-    reader.readAsText(file);
-
-    // Reseta o input para permitir carregar o mesmo arquivo novamente se necessário
-    event.target.value = '';
-};// --- FUNÇÕES DE CANCELAMENTO E EDIÇÃO ---
-
-// Função que muda o visual dos botões (Adicione ou substitua no final do app.js)
-function atualizarBotoes(editando) {
-    const btnAdd = document.getElementById('btn-add-item');
-    const btnCancel = document.getElementById('btn-cancelar');
-    const btnTexto = document.getElementById('btn-add-text');
-
-    if (editando) {
-        // MODO EDIÇÃO
-        // 1. Mostra o botão cancelar (remove hidden, adiciona flex para alinhar icone e texto)
-        btnCancel.classList.remove('hidden');
-        btnCancel.classList.add('flex');
-
-        // 2. Muda o botão principal para Azul
-        btnAdd.classList.remove('bg-slate-800', 'hover:bg-slate-900');
-        btnAdd.classList.add('bg-blue-600', 'hover:bg-blue-700');
-
-        // 3. Muda o texto
-        btnTexto.innerText = "Salvar Edição";
-    } else {
-        // MODO NORMAL
-        // 1. Esconde o botão cancelar
-        btnCancel.classList.add('hidden');
-        btnCancel.classList.remove('flex');
-
-        // 2. Volta o botão principal para Escuro
-        btnAdd.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-        btnAdd.classList.add('bg-slate-800', 'hover:bg-slate-900');
-
-        // 3. Volta o texto
-        btnTexto.innerText = "Adicionar Item";
-    }
-
-    // CRUCIAL: Recarrega os ícones para o ícone do botão Cancelar aparecer
-    if (window.lucide) lucide.createIcons();
 }
 
-// 2. Função que acontece quando clica em Cancelar
-window.cancelarEdicao = function () {
-    if (!backupItem) return; // Se não tem nada salvo, sai
-
-    // 1. Devolve o item original para a lista
-    items.push(backupItem);
-
-    // 2. Limpa a variável de backup
-    backupItem = null;
-
-    // 3. Limpa os campos de texto do formulário
-    clearFormState();
-
-    // 4. LIMPEZA DAS FOTOS (Adicionado)
-    // Isso apaga as fotos do array temporário e remove as miniaturas da tela
-    if (typeof clearFiles === 'function') {
-        clearFiles();
-    } else {
-        // Fallback caso a função não esteja acessível diretamente
-        currentFiles = [];
-        updateImagePreview();
-    }
-
-    // 5. Atualiza a lista visualmente
-    renderList();
-
-    // 6. Reseta os botões para o estado "Adicionar"
-    atualizarBotoes(false);
-
-    window.showToast("Edição cancelada. Fotos limpas.", "info");
-};
-
-// --- NAVEGAÇÃO E CONTROLE DE ID ---
-
-window.showReportsPage = function () {
-    // 1. Esconde as telas de edição (Formulários, Lista e Cabeçalho)
-    const buildingData = document.getElementById('building-data-container');
-    const formSection = document.querySelector('section.bg-white');
-    const listSection = document.querySelector('section.mt-8');
-    const footerBtns = document.querySelector('.fixed.bottom-0'); // Botões Salvar/PDF
-
-    if (buildingData) buildingData.classList.add('hidden');
-    if (formSection) formSection.classList.add('hidden');
-    if (listSection) listSection.classList.add('hidden');
-    if (footerBtns) footerBtns.classList.add('hidden');
-
-    // 2. Mostra a página de relatórios
-    const pageReports = document.getElementById('page-reports');
-    if (pageReports) {
-        pageReports.classList.remove('hidden');
-        window.loadCloudReports(); // Carrega a lista do Firebase
-    }
-
-    // 3. Fecha o menu
-    window.toggleMenu();
-};
-
-window.showFormPage = function () {
-    // 1. Mostra as telas de edição de volta
-    const buildingData = document.getElementById('building-data-container');
-    const formSection = document.querySelector('section.bg-white');
-    const listSection = document.querySelector('section.mt-8');
-    const footerBtns = document.querySelector('.fixed.bottom-0');
-
-    if (buildingData) buildingData.classList.remove('hidden');
-    if (formSection) formSection.classList.remove('hidden');
-    if (listSection) listSection.classList.remove('hidden');
-    if (footerBtns) footerBtns.classList.remove('hidden');
-
-    // 2. Esconde a página de relatórios
-    const pageReports = document.getElementById('page-reports');
-    if (pageReports) {
-        pageReports.classList.add('hidden');
-    }
-};
-
-window.resetApp = function () {
-    if (items.length > 0 && !confirm("Deseja limpar a tela e iniciar um novo relatório? Dados não salvos serão perdidos.")) {
-        return;
-    }
-
-    // Zera tudo para começar um novo
-    items = [];
-    currentReportId = null; // Garante que será criado um novo ID ao salvar
-    clearFormState(false); // Limpa formulários
-    renderList();
-
-    // Limpa campos do cabeçalho
-    document.getElementById('cliente').value = "";
-    document.getElementById('local').value = "";
-    document.getElementById('resp-tecnico').value = "";
-
-    window.showToast("Novo relatório iniciado", "info");
-    window.toggleMenu();
-    window.showFormPage();
-};
-
-// --- GERENCIAMENTO DE RELATÓRIOS NA NUVEM ---
-
-window.loadCloudReports = async function () {
+async function loadCloudReports() {
     const container = document.getElementById('reports-list-container');
-    if (!user) {
-        container.innerHTML = '<p class="text-center text-red-500">Faça login para ver seus relatórios.</p>';
-        return;
-    }
+    if (!user) { container.innerHTML = '<p class="text-center text-red-400">Faça login.</p>'; return; }
 
-    container.innerHTML = '<div class="flex justify-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 text-blue-600"></i></div>';
-    if (window.lucide) lucide.createIcons();
+    container.innerHTML = '<div class="text-center"><i data-lucide="loader-2" class="animate-spin"></i></div>';
+    refreshIcons();
 
     try {
-        // Busca os relatórios do usuário ordenados por data
         const q = query(collection(db, "reports"), where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(20));
-        const querySnapshot = await getDocs(q);
+        const snapshot = await getDocs(q);
 
         container.innerHTML = "";
+        if (snapshot.empty) { container.innerHTML = "<p class='text-center text-gray-400'>Nenhum relatório.</p>"; return; }
 
-        if (querySnapshot.empty) {
-            container.innerHTML = '<div class="text-center py-10 border-2 border-dashed rounded text-gray-400">Nenhum relatório salvo na nuvem.</div>';
-            return;
-        }
-
-        querySnapshot.forEach((docSnap) => {
+        snapshot.forEach(docSnap => {
             const data = docSnap.data();
-            const date = data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString() : 'Data N/A';
+            const date = data.updatedAt?.seconds ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString() : '-';
 
             const div = document.createElement('div');
-            div.className = "bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4";
-
+            div.className = "bg-white p-4 rounded border mb-2 flex justify-between items-center hover:shadow";
             div.innerHTML = `
                 <div>
-                    <h3 class="font-bold text-slate-800 text-lg">${data.cliente || 'Sem Cliente'}</h3>
-                    <div class="text-sm text-slate-500 flex flex-col gap-1">
-                        <span><i data-lucide="map-pin" class="w-3 h-3 inline"></i> ${data.local || 'Local N/A'}</span>
-                        <span><i data-lucide="calendar" class="w-3 h-3 inline"></i> Modificado em: ${date}</span>
-                        <span class="text-xs bg-slate-100 px-2 py-0.5 rounded w-fit text-slate-400">ID: ${data.reportId}</span>
-                    </div>
+                    <div class="font-bold">${data.cliente || 'Sem Cliente'}</div>
+                    <div class="text-xs text-gray-500">${data.local} • ${date}</div>
                 </div>
-                <div class="flex gap-2 w-full md:w-auto">
-                    <button onclick="window.restoreCloudReport('${data.fileUrl}')" 
-                        class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold flex items-center justify-center gap-2 transition-colors">
-                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Abrir
-                    </button>
-                </div>
+                <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Abrir</button>
             `;
+            div.querySelector('button').onclick = () => window.restoreCloudReport(data.fileUrl);
             container.appendChild(div);
         });
-        if (window.lucide) lucide.createIcons();
 
     } catch (e) {
         console.error(e);
-        container.innerHTML = `<p class="text-center text-red-500">Erro ao carregar lista: ${e.message}</p>`;
+        container.innerHTML = "<p class='text-red-500 text-center'>Erro ao carregar lista.</p>";
     }
-};
+}
 
+window.loadCloudReports = loadCloudReports;
 window.restoreCloudReport = async function (url) {
-    if (items.length > 0 && !confirm("Isso substituirá o relatório atual na tela. Deseja continuar?")) return;
+    if (items.length > 0 && !confirm("Substituir relatório atual?")) return;
 
-    // Loading Screen Improvisado
-    const loading = document.createElement('div');
-    loading.className = "fixed inset-0 bg-black/50 z-[70] flex items-center justify-center text-white flex-col gap-3 backdrop-blur-sm";
-    loading.innerHTML = '<i data-lucide="loader-2" class="w-10 h-10 animate-spin"></i><span class="font-bold">Baixando Relatório...</span>';
-    document.body.appendChild(loading);
-    if (window.lucide) lucide.createIcons();
+    const loadMsg = document.createElement('div');
+    loadMsg.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center text-white";
+    loadMsg.innerHTML = "Baixando...";
+    document.body.appendChild(loadMsg);
 
     try {
-        // 1. Baixa o JSON completo do Storage
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Falha ao baixar arquivo do servidor");
-        const data = await response.json();
+        const resp = await fetch(url);
+        const data = await resp.json();
 
-        // 2. Define o ID atual (para que o próximo save sobrescreva esse, e não crie outro)
         currentReportId = data.id || data.reportId;
 
-        // 3. Restaura Cabeçalhos
-        document.getElementById('cliente').value = data.header.cliente || "";
-        document.getElementById('local').value = data.header.local || "";
-        document.getElementById('resp-tecnico').value = data.header.tecnico || "";
-        document.getElementById('classificacao').value = data.header.classificacao || "";
-        document.getElementById('data-relatorio').value = data.header.data || "";
-
-        if (document.getElementById('sum-parecer')) document.getElementById('sum-parecer').value = data.header.parecer || "Aprovado";
-        if (document.getElementById('sum-resumo')) document.getElementById('sum-resumo').value = data.header.resumo || "";
-        if (document.getElementById('sum-riscos')) document.getElementById('sum-riscos').value = data.header.riscos || "";
-        if (document.getElementById('sum-conclusao')) document.getElementById('sum-conclusao').value = data.header.conclusao || "";
+        document.getElementById('cliente').value = data.header.cliente || '';
+        document.getElementById('local').value = data.header.local || '';
+        document.getElementById('resp-tecnico').value = data.header.tecnico || '';
+        document.getElementById('classificacao').value = data.header.classificacao || '';
+        document.getElementById('data-relatorio').value = data.header.data || '';
+        document.getElementById('sum-parecer').value = data.header.parecer || 'Aprovado';
+        document.getElementById('sum-resumo').value = data.header.resumo || '';
+        document.getElementById('sum-riscos').value = data.header.riscos || '';
+        document.getElementById('sum-conclusao').value = data.header.conclusao || '';
 
         window.toggleHeader();
 
-        // 4. Restaura Itens e Converte as Strings Base64 de volta para Arquivos (Blob)
-        items = data.items.map(item => {
-            let restoredFiles = [];
-            // Recupera as imagens salvas
-            if (item._savedImages && item._savedImages.length > 0) {
-                restoredFiles = item._savedImages.map((b64, index) => {
-                    return base64ToFile(b64, `foto_cloud_${item.id}_${index}.jpg`);
-                });
-            }
-            return {
-                ...item,
-                imageFiles: restoredFiles, // Agora são editáveis novamente!
-                _savedImages: undefined
-            };
-        });
+        items = data.items.map(item => ({
+            ...item,
+            imageFiles: item._savedImages ? item._savedImages.map((b64, i) => base64ToFile(b64, `img_${i}.jpg`)) : [],
+            _savedImages: undefined
+        }));
 
-        // 5. Restaura Assinaturas
         if (data.signatures) {
             if (data.signatures.tecnico && sigTecnico) sigTecnico.fromDataURL(data.signatures.tecnico);
             if (data.signatures.cliente && sigCliente) sigCliente.fromDataURL(data.signatures.cliente);
         }
 
         renderList();
-        window.showFormPage(); // Volta para a tela de edição
-        window.showToast("Relatório carregado com sucesso!", "success");
+        window.showFormPage();
+        window.showToast("Relatório carregado!");
 
     } catch (e) {
-        console.error(e);
-        alert("Erro ao abrir relatório: " + e.message);
+        alert("Erro ao abrir: " + e.message);
     } finally {
-        document.body.removeChild(loading);
+        loadMsg.remove();
     }
 };
 
-// --- LÓGICA DE INSTALAÇÃO PWA (Adicione no final do app.js) ---
+/* ==========================================================================
+   8. BACKUP LOCAL (JSON)
+   ========================================================================== */
 
-let deferredPrompt; // Variável para guardar o evento de instalação
+// EXPORTAR BACKUP
+window.exportBackup = async function () {
+    if (!items.length) return alert("Lista vazia.");
 
+    const btn = document.getElementById('btn-backup');
+    const oldText = btn.innerText;
+    btn.innerText = "Gerando...";
+
+    try {
+        // Prepara imagens
+        const itemsReady = await Promise.all(items.map(async (item) => ({
+            ...item,
+            imageFiles: [],
+            _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
+        })));
+
+        const backupData = {
+            version: "1.0",
+            timestamp: new Date().toISOString(),
+            header: {
+                cliente: document.getElementById('cliente').value,
+                local: document.getElementById('local').value,
+                tecnico: document.getElementById('resp-tecnico').value,
+                classificacao: document.getElementById('classificacao').value,
+                data: document.getElementById('data-relatorio').value,
+                parecer: document.getElementById('sum-parecer').value,
+                resumo: document.getElementById('sum-resumo').value,
+                riscos: document.getElementById('sum-riscos').value,
+                conclusao: document.getElementById('sum-conclusao').value
+            },
+            items: itemsReady,
+            signatures: {
+                tecnico: sigTecnico?.getImageData(),
+                cliente: sigCliente?.getImageData()
+            }
+        };
+
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = `Backup_FireCheck_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        window.showToast("Backup gerado!");
+
+    } catch (e) {
+        alert("Erro: " + e.message);
+    } finally {
+        btn.innerText = oldText;
+    }
+};
+
+// IMPORTAR BACKUP (A função que faltava!)
+window.importBackup = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (items.length > 0 && !confirm("Substituir dados atuais pelo backup?")) {
+        event.target.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.header || !data.items) throw new Error("JSON Inválido");
+
+            // Restaura Header
+            document.getElementById('cliente').value = data.header.cliente || '';
+            document.getElementById('local').value = data.header.local || '';
+            document.getElementById('resp-tecnico').value = data.header.tecnico || '';
+            document.getElementById('classificacao').value = data.header.classificacao || '';
+            document.getElementById('data-relatorio').value = data.header.data || '';
+            document.getElementById('sum-parecer').value = data.header.parecer || 'Aprovado';
+            document.getElementById('sum-resumo').value = data.header.resumo || '';
+            document.getElementById('sum-riscos').value = data.header.riscos || '';
+            document.getElementById('sum-conclusao').value = data.header.conclusao || '';
+
+            window.toggleHeader();
+
+            // Restaura Itens e Imagens
+            items = data.items.map(item => ({
+                ...item,
+                imageFiles: (item._savedImages || []).map((b64, i) => base64ToFile(b64, `restored_${i}.jpg`)),
+                _savedImages: undefined
+            }));
+
+            // Restaura Assinaturas
+            if (data.signatures) {
+                if (data.signatures.tecnico && sigTecnico) sigTecnico.fromDataURL(data.signatures.tecnico);
+                if (data.signatures.cliente && sigCliente) sigCliente.fromDataURL(data.signatures.cliente);
+            }
+
+            renderList();
+            window.showToast("Backup restaurado!");
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao ler backup: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Permite recarregar o mesmo arquivo
+};
+
+/* ==========================================================================
+   9. AUTH & ESTADO
+   ========================================================================== */
+async function handleLogin() {
+    try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert(e.message); }
+}
+
+function handleLogout() {
+    signOut(auth);
+    window.toggleMenu();
+}
+
+function updateUserUI() {
+    const loginBtn = document.getElementById('btn-login');
+    const userInfo = document.getElementById('user-info');
+    const userName = document.getElementById('user-name');
+    const logoutSide = document.getElementById('btn-logout-side');
+
+    if (user) {
+        loginBtn.classList.add('hidden');
+        userInfo.classList.remove('hidden'); userInfo.classList.add('flex');
+        userName.innerText = user.displayName.split(' ')[0];
+        logoutSide.classList.remove('hidden');
+    } else {
+        loginBtn.classList.remove('hidden');
+        userInfo.classList.add('hidden'); userInfo.classList.remove('flex');
+        logoutSide.classList.add('hidden');
+    }
+}
+
+async function loadHistory() {
+    // Implementação simplificada
+}
+
+/* ==========================================================================
+   10. UTILITÁRIOS (Helpers)
+   ========================================================================== */
+function restoreFormState() {
+    document.querySelectorAll('.save-state').forEach(input => {
+        const saved = localStorage.getItem(input.id);
+        if (saved !== null) input.type === 'checkbox' ? input.checked = (saved === 'true') : input.value = saved;
+    });
+}
+
+function clearFormState(keepHeader = true) {
+    const formInputs = document.querySelectorAll('#form-hidrante input, #form-extintor input, textarea');
+    formInputs.forEach(el => {
+        if (el.type === 'checkbox') el.checked = false;
+        else el.value = '';
+        localStorage.removeItem(el.id);
+    });
+    document.querySelectorAll('select.save-state').forEach(el => el.selectedIndex = 0);
+
+    if (!keepHeader) {
+        document.getElementById('cliente').value = '';
+        localStorage.clear();
+    }
+}
+
+function clearFiles() {
+    currentFiles = [];
+    updateImagePreview();
+}
+
+window.showConfirmModal = function (title, msg, callback, isDestructive = false) {
+    const modal = document.getElementById('modal-confirm');
+    document.getElementById('modal-confirm-title').innerText = title;
+    document.getElementById('modal-confirm-msg').innerText = msg;
+    const btn = document.getElementById('btn-confirm-action');
+
+    btn.className = `px-6 py-2 text-white font-bold rounded-lg shadow-md flex items-center gap-2 ${isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`;
+    btn.innerText = isDestructive ? "Sim, Remover" : "Confirmar";
+
+    pendingAction = callback;
+    modal.classList.remove('hidden');
+};
+
+window.closeConfirmModal = function () {
+    document.getElementById('modal-confirm').classList.add('hidden');
+    pendingAction = null;
+};
+
+window.resetApp = function () {
+    if (items.length && !confirm("Limpar tudo?")) return;
+    items = [];
+    currentReportId = null;
+    clearFormState(false);
+    renderList();
+    window.showToast("Novo relatório iniciado");
+    window.toggleMenu();
+};
+
+/* ==========================================================================
+   11. PWA INSTALL
+   ========================================================================== */
 window.addEventListener('beforeinstallprompt', (e) => {
-    // 1. Impede o Chrome de mostrar a barrinha padrão automaticamente
     e.preventDefault();
-    // 2. Guarda o evento para usar depois
     deferredPrompt = e;
-    // 3. Mostra o botão que criamos no index.html
-    const installBtn = document.getElementById('btn-install-app');
-    if (installBtn) installBtn.classList.remove('hidden');
+    const btn = document.getElementById('btn-install-app');
+    if (btn) btn.classList.remove('hidden');
 });
 
 window.installPWA = async function () {
     if (!deferredPrompt) return;
-
-    // 1. Mostra o prompt nativo do navegador
     deferredPrompt.prompt();
-
-    // 2. Espera a escolha do usuário
     const { outcome } = await deferredPrompt.userChoice;
-    console.log(`Usuário escolheu: ${outcome}`);
-
-    // 3. Limpa a variável (o prompt só pode ser usado uma vez)
-    deferredPrompt = null;
-
-    // 4. Esconde o botão novamente
+    if (outcome === 'accepted') deferredPrompt = null;
     document.getElementById('btn-install-app').classList.add('hidden');
 };
-
-window.addEventListener('appinstalled', () => {
-    // Esconde o botão se o app for instalado
-    document.getElementById('btn-install-app').classList.add('hidden');
-    console.log('App instalado com sucesso!');
-});

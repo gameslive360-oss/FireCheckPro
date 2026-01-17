@@ -912,3 +912,165 @@ function importBackup(event) {
     reader.readAsText(file);
     event.target.value = ''; // Permite carregar o mesmo arquivo novamente se necessário
 }
+// Converte File/Blob para Base64 (String)
+const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+};
+
+// Converte Base64 (String) de volta para File
+const base64ToFile = (dataurl, filename) => {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+};
+
+window.exportBackup = async function () {
+    const btn = document.getElementById('btn-backup'); // Supondo que você tenha esse botão
+    if (btn) btn.innerText = "Gerando Backup...";
+
+    try {
+        // 1. Prepara os itens convertendo imagens para Base64
+        const itemsWithImages = await Promise.all(items.map(async (item) => {
+            let imagesBase64 = [];
+
+            // Se tiver arquivos locais (fotos tiradas agora)
+            if (item.imageFiles && item.imageFiles.length > 0) {
+                imagesBase64 = await Promise.all(item.imageFiles.map(file => fileToBase64(file)));
+            }
+
+            // Retorna uma cópia do item, trocando 'imageFiles' por strings Base64
+            // Mantemos fotoUrls caso seja um item que já veio do Firebase
+            return {
+                ...item,
+                imageFiles: [], // Limpa o objeto File pois não salva em JSON
+                _savedImages: imagesBase64 // Salva as strings aqui
+            };
+        }));
+
+        // 2. Pega dados do cabeçalho
+        const headerData = {
+            cliente: document.getElementById('cliente').value,
+            local: document.getElementById('local').value,
+            tecnico: document.getElementById('resp-tecnico').value,
+            classificacao: document.getElementById('classificacao').value,
+            data: document.getElementById('data-relatorio').value,
+            // Sumário
+            parecer: document.getElementById('sum-parecer') ? document.getElementById('sum-parecer').value : '',
+            resumo: document.getElementById('sum-resumo') ? document.getElementById('sum-resumo').value : '',
+            riscos: document.getElementById('sum-riscos') ? document.getElementById('sum-riscos').value : '',
+            conclusao: document.getElementById('sum-conclusao') ? document.getElementById('sum-conclusao').value : ''
+        };
+
+        // 3. Pega Assinaturas
+        const signatures = {
+            tecnico: sigTecnico && !sigTecnico.isEmpty() ? sigTecnico.getImageData() : null,
+            cliente: sigCliente && !sigCliente.isEmpty() ? sigCliente.getImageData() : null
+        };
+
+        // 4. Monta o objeto final
+        const backupData = {
+            version: "1.0",
+            timestamp: new Date().toISOString(),
+            header: headerData,
+            items: itemsWithImages,
+            signatures: signatures
+        };
+
+        // 5. Cria o arquivo para download
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", `Backup_FireCheck_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+
+        alert("Backup (com fotos) gerado com sucesso!");
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao gerar backup: " + e.message);
+    } finally {
+        if (btn) btn.innerText = "Fazer Backup";
+    }
+};
+
+window.importBackup = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = JSON.parse(e.target.result);
+
+            if (!data.items || !data.header) throw new Error("Formato de backup inválido");
+
+            // 1. Restaurar Cabeçalho
+            document.getElementById('cliente').value = data.header.cliente || "";
+            document.getElementById('local').value = data.header.local || "";
+            document.getElementById('resp-tecnico').value = data.header.tecnico || "";
+            document.getElementById('classificacao').value = data.header.classificacao || "";
+            document.getElementById('data-relatorio').value = data.header.data || "";
+
+            if (document.getElementById('sum-parecer')) document.getElementById('sum-parecer').value = data.header.parecer || "Aprovado";
+            if (document.getElementById('sum-resumo')) document.getElementById('sum-resumo').value = data.header.resumo || "";
+            if (document.getElementById('sum-riscos')) document.getElementById('sum-riscos').value = data.header.riscos || "";
+            if (document.getElementById('sum-conclusao')) document.getElementById('sum-conclusao').value = data.header.conclusao || "";
+
+            window.toggleHeader(); // Atualiza visualização do acordeão
+
+            // 2. Restaurar Itens e Imagens
+            items = data.items.map(item => {
+                let restoredFiles = [];
+
+                // Se tiver imagens salvas em Base64, converte de volta para FILE
+                if (item._savedImages && item._savedImages.length > 0) {
+                    restoredFiles = item._savedImages.map((b64, index) => {
+                        return base64ToFile(b64, `foto_restore_${item.id}_${index}.jpg`);
+                    });
+                }
+
+                return {
+                    ...item,
+                    imageFiles: restoredFiles, // Agora o app volta a ter objetos File reais
+                    _savedImages: undefined // Limpa a string da memória para não pesar
+                };
+            });
+
+            // 3. Restaurar Assinaturas (Se houver método no seu SignaturePad)
+            // Nota: O SignaturePad geralmente precisa que a gente desenhe a imagem no canvas
+            if (data.signatures) {
+                if (data.signatures.tecnico && sigTecnico) {
+                    sigTecnico.fromDataURL(data.signatures.tecnico);
+                }
+                if (data.signatures.cliente && sigCliente) {
+                    sigCliente.fromDataURL(data.signatures.cliente);
+                }
+            }
+
+            // 4. Renderizar
+            renderList();
+            alert("Backup restaurado com sucesso! Fotos recuperadas.");
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao restaurar: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+
+    // Reseta o input para permitir carregar o mesmo arquivo novamente se necessário
+    event.target.value = '';
+};

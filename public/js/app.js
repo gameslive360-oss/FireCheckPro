@@ -330,8 +330,14 @@ async function handleLogin() {
     try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert("Erro login: " + e.message); }
 }
 function handleLogout() { if (auth) signOut(auth); window.toggleMenu(); }
+
 // Função para navegar pelo Menu Lateral
 window.switchTabAndClose = function (type, titleFriendly) {
+
+    if (typeof window.showFormPage === 'function') {
+        window.showFormPage();
+    }
+
     // 1. Muda a aba normalmente
     window.switchTab(type);
 
@@ -1176,35 +1182,45 @@ window.cancelarEdicao = function () {
 // --- NAVEGAÇÃO E CONTROLE DE ID ---
 
 window.showReportsPage = function () {
-    // 1. Esconde TODAS as telas de edição (incluindo o cabeçalho da edificação)
-    document.getElementById('building-data-container').classList.add('hidden'); // <--- NOVO
-    document.querySelector('section.bg-white').classList.add('hidden');         // Formulários
-    document.querySelector('section.mt-8').classList.add('hidden');             // Lista de itens
+    // 1. Esconde as telas de edição (Formulários, Lista e Cabeçalho)
+    const buildingData = document.getElementById('building-data-container');
+    const formSection = document.querySelector('section.bg-white');
+    const listSection = document.querySelector('section.mt-8');
+    const footerBtns = document.querySelector('.fixed.bottom-0'); // Botões Salvar/PDF
+
+    if (buildingData) buildingData.classList.add('hidden');
+    if (formSection) formSection.classList.add('hidden');
+    if (listSection) listSection.classList.add('hidden');
+    if (footerBtns) footerBtns.classList.add('hidden');
 
     // 2. Mostra a página de relatórios
     const pageReports = document.getElementById('page-reports');
-    pageReports.classList.remove('hidden');
+    if (pageReports) {
+        pageReports.classList.remove('hidden');
+        window.loadCloudReports(); // Carrega a lista do Firebase
+    }
 
-    // 3. Fecha menu e carrega lista
+    // 3. Fecha o menu
     window.toggleMenu();
-    window.loadCloudReports();
 };
 
 window.showFormPage = function () {
     // 1. Mostra as telas de edição de volta
-    document.getElementById('building-data-container').classList.remove('hidden'); // <--- NOVO
-    document.querySelector('section.bg-white').classList.remove('hidden');
-    document.querySelector('section.mt-8').classList.remove('hidden');
+    const buildingData = document.getElementById('building-data-container');
+    const formSection = document.querySelector('section.bg-white');
+    const listSection = document.querySelector('section.mt-8');
+    const footerBtns = document.querySelector('.fixed.bottom-0');
+
+    if (buildingData) buildingData.classList.remove('hidden');
+    if (formSection) formSection.classList.remove('hidden');
+    if (listSection) listSection.classList.remove('hidden');
+    if (footerBtns) footerBtns.classList.remove('hidden');
 
     // 2. Esconde a página de relatórios
-    document.getElementById('page-reports').classList.add('hidden');
-};
-
-window.showFormPage = function () {
-    // Volta para a tela de edição
-    document.querySelector('section.bg-white').classList.remove('hidden');
-    document.querySelector('section.mt-8').classList.remove('hidden');
-    document.getElementById('page-reports').classList.add('hidden');
+    const pageReports = document.getElementById('page-reports');
+    if (pageReports) {
+        pageReports.classList.add('hidden');
+    }
 };
 
 window.resetApp = function () {

@@ -1367,3 +1367,40 @@ window.restoreCloudReport = async function (url) {
         document.body.removeChild(loading);
     }
 };
+
+// --- LÓGICA DE INSTALAÇÃO PWA (Adicione no final do app.js) ---
+
+let deferredPrompt; // Variável para guardar o evento de instalação
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    // 1. Impede o Chrome de mostrar a barrinha padrão automaticamente
+    e.preventDefault();
+    // 2. Guarda o evento para usar depois
+    deferredPrompt = e;
+    // 3. Mostra o botão que criamos no index.html
+    const installBtn = document.getElementById('btn-install-app');
+    if (installBtn) installBtn.classList.remove('hidden');
+});
+
+window.installPWA = async function () {
+    if (!deferredPrompt) return;
+
+    // 1. Mostra o prompt nativo do navegador
+    deferredPrompt.prompt();
+
+    // 2. Espera a escolha do usuário
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Usuário escolheu: ${outcome}`);
+
+    // 3. Limpa a variável (o prompt só pode ser usado uma vez)
+    deferredPrompt = null;
+
+    // 4. Esconde o botão novamente
+    document.getElementById('btn-install-app').classList.add('hidden');
+};
+
+window.addEventListener('appinstalled', () => {
+    // Esconde o botão se o app for instalado
+    document.getElementById('btn-install-app').classList.add('hidden');
+    console.log('App instalado com sucesso!');
+});

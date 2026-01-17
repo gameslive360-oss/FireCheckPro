@@ -48,6 +48,7 @@ let currentType = 'hidrante';
 let currentFiles = [];
 let backupItem = null;
 let pendingAction = null;
+let currentReportId = null;
 
 // --- DOMContentLoaded ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -746,99 +747,91 @@ function renderList() {
 }
 
 async function saveToFirebase() {
-    if (!db || !user) return alert("Faça login para salvar!");
-    const btn = document.getElementById('btn-save'); const oldText = btn.innerHTML;
-    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Salvando...`;
-    lucide.createIcons();
+    if (!db || !user || !storage) return alert("Faça login para salvar!");
+
+    const btn = document.getElementById('btn-save');
+    const oldText = btn.innerHTML;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Enviando...`;
     btn.disabled = true;
 
     try {
-        const headerData = {
-            userId: user.uid,
-            cliente: document.getElementById('cliente').value || "Não Informado",
-            local: document.getElementById('local').value || "Não Informado",
-            respTecnico: document.getElementById('resp-tecnico').value || "Não Informado",
-            classificacao: document.getElementById('classificacao').value || "-",
-            // Novos campos do Sumário
-            parecerTecnico: document.getElementById('sum-parecer').value,
-            resumoInstalacoes: document.getElementById('sum-resumo').value,
-            principaisRiscos: document.getElementById('sum-riscos').value,
-            conclusaoFinal: document.getElementById('sum-conclusao').value,
+        // 1. Gera um ID novo se não existir (formato: REL_timestamp_random)
+        if (!currentReportId) {
+            currentReportId = `REL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        }
 
-            data: document.getElementById('data-relatorio').value,
-            timestamp: new Date(),
-            totalItens: items.length
+        // 2. Prepara os dados (Converte imagens atuais para Base64)
+        const itemsWithImages = await Promise.all(items.map(async (item) => {
+            let imagesBase64 = [];
+            // Se tiver arquivos (File objects), converte para string
+            if (item.imageFiles && item.imageFiles.length > 0) {
+                imagesBase64 = await Promise.all(item.imageFiles.map(file => fileToBase64(file)));
+            }
+            return {
+                ...item,
+                imageFiles: [], // Remove o objeto File (não salva em JSON)
+                _savedImages: imagesBase64 // Salva a string Base64
+            };
+        }));
+
+        // Monta o objeto completo do relatório
+        const reportData = {
+            id: currentReportId,
+            version: "2.0",
+            timestamp: new Date().toISOString(),
+            userId: user.uid,
+            header: {
+                cliente: document.getElementById('cliente').value || "Sem Nome",
+                local: document.getElementById('local').value || "",
+                tecnico: document.getElementById('resp-tecnico').value || "",
+                classificacao: document.getElementById('classificacao').value || "",
+                data: document.getElementById('data-relatorio').value,
+                parecer: document.getElementById('sum-parecer').value,
+                resumo: document.getElementById('sum-resumo').value,
+                riscos: document.getElementById('sum-riscos').value,
+                conclusao: document.getElementById('sum-conclusao').value
+            },
+            items: itemsWithImages,
+            signatures: {
+                tecnico: sigTecnico && !sigTecnico.isEmpty() ? sigTecnico.getImageData() : null,
+                cliente: sigCliente && !sigCliente.isEmpty() ? sigCliente.getImageData() : null
+            }
         };
 
-        const vistoriaRef = await addDoc(collection(db, "vistorias"), headerData);
-        const promises = items.map(async (item) => {
-            let urls = [];
-            if (item.imageFiles && item.imageFiles.length > 0) {
-                const uploadPromises = item.imageFiles.map(async (file, index) => {
-                    const imgRef = ref(storage, `fotos/${user.uid}/${vistoriaRef.id}/${item.id}_${index}_${Date.now()}`);
-                    await uploadBytes(imgRef, file);
-                    return await getDownloadURL(imgRef);
-                });
-                urls = await Promise.all(uploadPromises);
-            }
-            const { imageFiles, ...itemData } = item;
-            return addDoc(collection(db, `vistorias/${vistoriaRef.id}/itens`), {
-                ...itemData,
-                fotoUrls: urls
-            });
-        });
-        await Promise.all(promises);
-        alert("Vistoria salva com sucesso na nuvem!");
-        loadHistory();
+        // 3. Cria o Arquivo JSON (Blob) e faz Upload
+        const jsonString = JSON.stringify(reportData);
+        const blob = new Blob([jsonString], { type: "application/json" });
+
+        // Salva no Storage com o ID fixo (sobrescreve o anterior se for o mesmo ID)
+        const storageRef = ref(storage, `backups/${user.uid}/${currentReportId}.json`);
+        await uploadBytes(storageRef, blob);
+        const downloadUrl = await getDownloadURL(storageRef);
+
+        // 4. Salva/Atualiza os metadados no Firestore
+        // Usamos setDoc com { merge: true } para atualizar ou criar
+        const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+
+        await setDoc(doc(db, "reports", currentReportId), {
+            reportId: currentReportId,
+            userId: user.uid,
+            cliente: reportData.header.cliente,
+            local: reportData.header.local,
+            dataRelatorio: reportData.header.data,
+            updatedAt: new Date(), // Data da última modificação
+            fileUrl: downloadUrl, // Link para baixar o JSON completo
+            itemCount: items.length
+        }, { merge: true });
+
+        window.showToast("Relatório salvo/atualizado na nuvem!", "success");
+
     } catch (e) {
         console.error(e);
         alert("Erro ao salvar: " + e.message);
     } finally {
         btn.innerHTML = oldText;
         btn.disabled = false;
-        lucide.createIcons();
+        if (window.lucide) lucide.createIcons();
     }
-
-    // --- Sistema de Notificações (Toast) ---
-    window.showToast = function (message, type = 'success') {
-        const container = document.getElementById('toast-container');
-
-        // Configuração de cores e ícones baseada no tipo
-        const styles = {
-            success: { bg: 'bg-emerald-600', icon: 'check-circle-2' },
-            error: { bg: 'bg-red-600', icon: 'alert-circle' },
-            info: { bg: 'bg-blue-600', icon: 'info' }
-        };
-
-        const style = styles[type] || styles.success;
-
-        // Cria o elemento da notificação
-        const toast = document.createElement('div');
-        toast.className = `${style.bg} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 transform transition-all duration-300 translate-x-10 opacity-0 min-w-[300px] pointer-events-auto`;
-
-        toast.innerHTML = `
-        <i data-lucide="${style.icon}" class="w-6 h-6 flex-shrink-0"></i>
-        <span class="font-bold text-sm">${message}</span>
-    `;
-
-        // Adiciona ao container
-        container.appendChild(toast);
-
-        // Renderiza o ícone
-        if (window.lucide) window.lucide.createIcons();
-
-        // Animação de Entrada (pequeno delay para o navegador renderizar)
-        requestAnimationFrame(() => {
-            toast.classList.remove('translate-x-10', 'opacity-0');
-        });
-
-        // Remove automaticamente após 3 segundos
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-x-10'); // Animação de saída
-            setTimeout(() => toast.remove(), 300); // Remove do DOM após a animação
-        }, 3000);
-    };
-
 }
 
 // --- FUNÇÕES DE BACKUP (EXPORTAR / IMPORTAR) ---
@@ -1178,4 +1171,183 @@ window.cancelarEdicao = function () {
     atualizarBotoes(false);
 
     window.showToast("Edição cancelada. Fotos limpas.", "info");
+};
+
+// --- NAVEGAÇÃO E CONTROLE DE ID ---
+
+window.showReportsPage = function () {
+    // 1. Esconde TODAS as telas de edição (incluindo o cabeçalho da edificação)
+    document.getElementById('building-data-container').classList.add('hidden'); // <--- NOVO
+    document.querySelector('section.bg-white').classList.add('hidden');         // Formulários
+    document.querySelector('section.mt-8').classList.add('hidden');             // Lista de itens
+
+    // 2. Mostra a página de relatórios
+    const pageReports = document.getElementById('page-reports');
+    pageReports.classList.remove('hidden');
+
+    // 3. Fecha menu e carrega lista
+    window.toggleMenu();
+    window.loadCloudReports();
+};
+
+window.showFormPage = function () {
+    // 1. Mostra as telas de edição de volta
+    document.getElementById('building-data-container').classList.remove('hidden'); // <--- NOVO
+    document.querySelector('section.bg-white').classList.remove('hidden');
+    document.querySelector('section.mt-8').classList.remove('hidden');
+
+    // 2. Esconde a página de relatórios
+    document.getElementById('page-reports').classList.add('hidden');
+};
+
+window.showFormPage = function () {
+    // Volta para a tela de edição
+    document.querySelector('section.bg-white').classList.remove('hidden');
+    document.querySelector('section.mt-8').classList.remove('hidden');
+    document.getElementById('page-reports').classList.add('hidden');
+};
+
+window.resetApp = function () {
+    if (items.length > 0 && !confirm("Deseja limpar a tela e iniciar um novo relatório? Dados não salvos serão perdidos.")) {
+        return;
+    }
+
+    // Zera tudo para começar um novo
+    items = [];
+    currentReportId = null; // Garante que será criado um novo ID ao salvar
+    clearFormState(false); // Limpa formulários
+    renderList();
+
+    // Limpa campos do cabeçalho
+    document.getElementById('cliente').value = "";
+    document.getElementById('local').value = "";
+    document.getElementById('resp-tecnico').value = "";
+
+    window.showToast("Novo relatório iniciado", "info");
+    window.toggleMenu();
+    window.showFormPage();
+};
+
+// --- GERENCIAMENTO DE RELATÓRIOS NA NUVEM ---
+
+window.loadCloudReports = async function () {
+    const container = document.getElementById('reports-list-container');
+    if (!user) {
+        container.innerHTML = '<p class="text-center text-red-500">Faça login para ver seus relatórios.</p>';
+        return;
+    }
+
+    container.innerHTML = '<div class="flex justify-center p-10"><i data-lucide="loader-2" class="animate-spin w-8 h-8 text-blue-600"></i></div>';
+    if (window.lucide) lucide.createIcons();
+
+    try {
+        // Busca os relatórios do usuário ordenados por data
+        const q = query(collection(db, "reports"), where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(20));
+        const querySnapshot = await getDocs(q);
+
+        container.innerHTML = "";
+
+        if (querySnapshot.empty) {
+            container.innerHTML = '<div class="text-center py-10 border-2 border-dashed rounded text-gray-400">Nenhum relatório salvo na nuvem.</div>';
+            return;
+        }
+
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const date = data.updatedAt ? new Date(data.updatedAt.seconds * 1000).toLocaleString() : 'Data N/A';
+
+            const div = document.createElement('div');
+            div.className = "bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between items-start md:items-center gap-4";
+
+            div.innerHTML = `
+                <div>
+                    <h3 class="font-bold text-slate-800 text-lg">${data.cliente || 'Sem Cliente'}</h3>
+                    <div class="text-sm text-slate-500 flex flex-col gap-1">
+                        <span><i data-lucide="map-pin" class="w-3 h-3 inline"></i> ${data.local || 'Local N/A'}</span>
+                        <span><i data-lucide="calendar" class="w-3 h-3 inline"></i> Modificado em: ${date}</span>
+                        <span class="text-xs bg-slate-100 px-2 py-0.5 rounded w-fit text-slate-400">ID: ${data.reportId}</span>
+                    </div>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button onclick="window.restoreCloudReport('${data.fileUrl}')" 
+                        class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-bold flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Abrir
+                    </button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+        if (window.lucide) lucide.createIcons();
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = `<p class="text-center text-red-500">Erro ao carregar lista: ${e.message}</p>`;
+    }
+};
+
+window.restoreCloudReport = async function (url) {
+    if (items.length > 0 && !confirm("Isso substituirá o relatório atual na tela. Deseja continuar?")) return;
+
+    // Loading Screen Improvisado
+    const loading = document.createElement('div');
+    loading.className = "fixed inset-0 bg-black/50 z-[70] flex items-center justify-center text-white flex-col gap-3 backdrop-blur-sm";
+    loading.innerHTML = '<i data-lucide="loader-2" class="w-10 h-10 animate-spin"></i><span class="font-bold">Baixando Relatório...</span>';
+    document.body.appendChild(loading);
+    if (window.lucide) lucide.createIcons();
+
+    try {
+        // 1. Baixa o JSON completo do Storage
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Falha ao baixar arquivo do servidor");
+        const data = await response.json();
+
+        // 2. Define o ID atual (para que o próximo save sobrescreva esse, e não crie outro)
+        currentReportId = data.id || data.reportId;
+
+        // 3. Restaura Cabeçalhos
+        document.getElementById('cliente').value = data.header.cliente || "";
+        document.getElementById('local').value = data.header.local || "";
+        document.getElementById('resp-tecnico').value = data.header.tecnico || "";
+        document.getElementById('classificacao').value = data.header.classificacao || "";
+        document.getElementById('data-relatorio').value = data.header.data || "";
+
+        if (document.getElementById('sum-parecer')) document.getElementById('sum-parecer').value = data.header.parecer || "Aprovado";
+        if (document.getElementById('sum-resumo')) document.getElementById('sum-resumo').value = data.header.resumo || "";
+        if (document.getElementById('sum-riscos')) document.getElementById('sum-riscos').value = data.header.riscos || "";
+        if (document.getElementById('sum-conclusao')) document.getElementById('sum-conclusao').value = data.header.conclusao || "";
+
+        window.toggleHeader();
+
+        // 4. Restaura Itens e Converte as Strings Base64 de volta para Arquivos (Blob)
+        items = data.items.map(item => {
+            let restoredFiles = [];
+            // Recupera as imagens salvas
+            if (item._savedImages && item._savedImages.length > 0) {
+                restoredFiles = item._savedImages.map((b64, index) => {
+                    return base64ToFile(b64, `foto_cloud_${item.id}_${index}.jpg`);
+                });
+            }
+            return {
+                ...item,
+                imageFiles: restoredFiles, // Agora são editáveis novamente!
+                _savedImages: undefined
+            };
+        });
+
+        // 5. Restaura Assinaturas
+        if (data.signatures) {
+            if (data.signatures.tecnico && sigTecnico) sigTecnico.fromDataURL(data.signatures.tecnico);
+            if (data.signatures.cliente && sigCliente) sigCliente.fromDataURL(data.signatures.cliente);
+        }
+
+        renderList();
+        window.showFormPage(); // Volta para a tela de edição
+        window.showToast("Relatório carregado com sucesso!", "success");
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao abrir relatório: " + e.message);
+    } finally {
+        document.body.removeChild(loading);
+    }
 };

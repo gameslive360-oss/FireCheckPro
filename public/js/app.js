@@ -46,6 +46,7 @@ try {
 let items = [];
 let currentType = 'hidrante';
 let currentFiles = [];
+let backupItem = null;
 let pendingAction = null;
 
 // --- DOMContentLoaded ---
@@ -79,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-save').addEventListener('click', saveToFirebase);
     document.getElementById('camera-input').addEventListener('change', handleFileSelect);
     document.getElementById('upload-input').addEventListener('change', handleFileSelect);
+    document.getElementById('btn-cancelar').addEventListener('click', cancelarEdicao);
     document.getElementById('btn-pdf').addEventListener('click', () => {
         const currentSignatures = {
             tecnico: sigTecnico ? sigTecnico.getImageData() : null,
@@ -532,6 +534,8 @@ function addItem() {
     }
 
     items.push({ ...baseItem, ...specifics });
+    backupItem = null;
+    atualizarBotoes(false);
     renderList();
     clearFormState();
     clearFiles();
@@ -544,14 +548,25 @@ function addItem() {
 }
 
 window.editItem = function (uid) {
+    // 1. Encontra o item na lista
     const index = items.findIndex(i => i.uid === uid);
     if (index === -1) return;
     const item = items[index];
 
-    window.showConfirmModal("Editar Item", `Deseja trazer o item "${item.id}" de volta para o formulário de edição?`, () => {
+    // 2. Se já estiver editando outro item, cancela o anterior primeiro para não perder dados
+    if (backupItem) window.cancelarEdicao();
+
+    // 3. Abre o modal de confirmação
+    window.showConfirmModal("Editar Item", `Deseja editar o item "${item.id}"?`, () => {
+
+        // --- INÍCIO DO MODO EDIÇÃO ---
+        backupItem = item;     // Salva na "caixinha de segurança"
+        atualizarBotoes(true); // Muda botões para (Salvar Edição / Cancelar)
+        // -----------------------------
+
         window.switchTab(item.type);
 
-        // Só restaura ID/Andar se não for 'Geral'
+        // Preenchimento dos campos gerais
         if (item.type !== 'geral') {
             document.getElementById('andar').value = item.andar;
             document.getElementById('item-id').value = item.id;
@@ -560,19 +575,24 @@ window.editItem = function (uid) {
             document.getElementById('item-id').value = '';
         }
 
+        // Preenchimento Específico por Tipo
         if (item.type === 'hidrante') {
             document.getElementById('h-registro').checked = item.check_registro;
             document.getElementById('h-adaptador').checked = item.check_adaptador;
             document.getElementById('h-chave').checked = item.check_chave;
             document.getElementById('h-esguicho').checked = item.check_esguicho;
+
             const temMangueira = item.tem_mangueira !== undefined ? item.tem_mangueira : true;
             document.getElementById('h-tem-mangueira').checked = temMangueira;
+
             document.getElementById('h-selo').value = item.selo;
             document.getElementById('h-validade').value = item.validade === '-' ? '' : item.validade;
             document.getElementById('h-lances').value = item.lances === '0' ? '' : item.lances;
             document.getElementById('h-metragem').value = item.metragem === '-' ? '15m' : item.metragem;
             document.getElementById('h-obs').value = item.obs;
-            window.toggleMangueiraFields();
+
+            if (window.toggleMangueiraFields) window.toggleMangueiraFields();
+
         } else if (item.type === 'extintor') {
             document.getElementById('e-tipo').value = item.tipo;
             document.getElementById('e-peso').value = item.peso;
@@ -583,6 +603,7 @@ window.editItem = function (uid) {
             document.getElementById('e-sinalizacao').checked = item.check_sinalizacao;
             document.getElementById('e-mangueira').checked = item.check_mangueira;
             document.getElementById('e-obs').value = item.obs || '';
+
         } else if (item.type === 'luz') {
             document.getElementById('l-tipo').value = item.tipo;
             document.getElementById('l-estado').value = item.estado;
@@ -592,11 +613,13 @@ window.editItem = function (uid) {
             document.getElementById('l-fixacao').checked = item.check_fixacao;
             document.getElementById('l-lux').checked = item.check_lux;
             document.getElementById('l-obs').value = item.obs || '';
+
         } else if (item.type === 'bomba') {
             document.getElementById('b-operacao').checked = item.operacao;
             document.getElementById('b-teste').checked = item.teste_pressao;
             document.getElementById('b-manutencao').checked = item.necessita_manutencao;
             document.getElementById('b-obs').value = item.obs;
+
         } else if (item.type === 'sinalizacao') {
             document.getElementById('s-existente').value = item.existente;
             document.getElementById('s-tipo').value = item.tipo || 'Saida';
@@ -605,7 +628,9 @@ window.editItem = function (uid) {
             document.getElementById('s-visivel').checked = item.check_visivel;
             document.getElementById('s-legivel').checked = item.check_legivel;
             document.getElementById('s-obs').value = item.obs || '';
-            window.toggleSinalizacaoFields();
+
+            if (window.toggleSinalizacaoFields) window.toggleSinalizacaoFields();
+
         } else if (item.type === 'eletro') {
             document.getElementById('el-tipo').value = item.tipo_sistema;
             document.getElementById('el-botoeiras').value = item.botoeiras;
@@ -615,17 +640,25 @@ window.editItem = function (uid) {
             document.getElementById('el-ruido').checked = item.check_ruido;
             document.getElementById('el-fixacao').checked = item.check_fixacao;
             document.getElementById('el-obs').value = item.obs || '';
+
         } else if (item.type === 'geral') {
             document.getElementById('g-obs').value = item.obs || '';
         }
 
+        // Restaura as imagens para edição
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
         updateImagePreview();
+
+        // Remove o item da lista visual (mas ele está salvo no backupItem)
         items.splice(index, 1);
         renderList();
+
         window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Dispara evento para salvar estado local dos inputs
         document.querySelectorAll('.save-state').forEach(el => el.dispatchEvent(new Event('input')));
-    }, false);
+
+    }, false); // Modal não destrutivo (botão azul)
 };
 
 window.removeItem = function (uid) {
@@ -634,10 +667,13 @@ window.removeItem = function (uid) {
         renderList();
     }, true);
 };
-
 function renderList() {
     const listEl = document.getElementById('lista-itens');
-    document.getElementById('count').innerText = items.length;
+    const countEl = document.getElementById('count');
+
+    // Atualiza contador
+    if (countEl) countEl.innerText = items.length;
+
     listEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -647,23 +683,21 @@ function renderList() {
 
     const fragment = document.createDocumentFragment();
 
+    // Cria uma cópia invertida para mostrar os mais recentes primeiro
     items.slice().reverse().forEach(item => {
-        let icon = item.type === 'hidrante' ? 'droplets' :
-            (item.type === 'extintor' ? 'fire-extinguisher' :
-                (item.type === 'luz' ? 'lightbulb' :
-                    (item.type === 'bomba' ? 'activity' :
-                        (item.type === 'sinalizacao' ? 'signpost' :
-                            (item.type === 'eletro' ? 'zap' :
-                                (item.type === 'geral' ? 'clipboard-list' : 'circle'))))));
+        // Define ícone baseado no tipo
+        let icon = 'circle';
+        let color = 'gray';
 
-        let color = item.type === 'hidrante' ? 'blue' :
-            (item.type === 'extintor' ? 'red' :
-                (item.type === 'luz' ? 'amber' :
-                    (item.type === 'bomba' ? 'purple' :
-                        (item.type === 'sinalizacao' ? 'teal' :
-                            (item.type === 'eletro' ? 'indigo' :
-                                (item.type === 'geral' ? 'slate' : 'gray'))))));
+        if (item.type === 'hidrante') { icon = 'droplets'; color = 'blue'; }
+        else if (item.type === 'extintor') { icon = 'fire-extinguisher'; color = 'red'; }
+        else if (item.type === 'luz') { icon = 'lightbulb'; color = 'amber'; }
+        else if (item.type === 'bomba') { icon = 'activity'; color = 'purple'; }
+        else if (item.type === 'sinalizacao') { icon = 'signpost'; color = 'teal'; }
+        else if (item.type === 'eletro') { icon = 'zap'; color = 'indigo'; }
+        else if (item.type === 'geral') { icon = 'clipboard-list'; color = 'slate'; }
 
+        // Badge de fotos
         const photoBadge = (item.imageFiles && item.imageFiles.length > 0)
             ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1 flex items-center gap-1"><i data-lucide="camera" class="w-3 h-3"></i> ${item.imageFiles.length}</span>`
             : '';
@@ -671,7 +705,7 @@ function renderList() {
         const div = document.createElement('div');
         div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center animate-fade-in group hover:shadow-md transition-all`;
 
-        // Se for Geral, mostra a descrição resumida no título. Se for outro, mostra ID | Andar
+        // Título do item (Lógica para Geral vs Outros)
         let titleText = (item.type === 'geral')
             ? (item.obs ? (item.obs.length > 30 ? item.obs.substring(0, 30) + '...' : item.obs) : 'Observação Geral')
             : `${item.id} | ${item.andar}`;
@@ -698,14 +732,17 @@ function renderList() {
             </div>
         `;
 
+        // Insere texto seguro e adiciona eventos
         div.querySelector(`#item-title-${item.uid}`).textContent = titleText;
         div.querySelector('.btn-edit').addEventListener('click', () => window.editItem(item.uid));
         div.querySelector('.btn-del').addEventListener('click', () => window.removeItem(item.uid));
+
         fragment.appendChild(div);
     });
 
     listEl.appendChild(fragment);
-    lucide.createIcons();
+
+    if (window.lucide) window.lucide.createIcons();
 }
 
 async function saveToFirebase() {
@@ -1073,4 +1110,72 @@ window.importBackup = function (event) {
 
     // Reseta o input para permitir carregar o mesmo arquivo novamente se necessário
     event.target.value = '';
+};// --- FUNÇÕES DE CANCELAMENTO E EDIÇÃO ---
+
+// Função que muda o visual dos botões (Adicione ou substitua no final do app.js)
+function atualizarBotoes(editando) {
+    const btnAdd = document.getElementById('btn-add-item');
+    const btnCancel = document.getElementById('btn-cancelar');
+    const btnTexto = document.getElementById('btn-add-text');
+
+    if (editando) {
+        // MODO EDIÇÃO
+        // 1. Mostra o botão cancelar (remove hidden, adiciona flex para alinhar icone e texto)
+        btnCancel.classList.remove('hidden');
+        btnCancel.classList.add('flex');
+
+        // 2. Muda o botão principal para Azul
+        btnAdd.classList.remove('bg-slate-800', 'hover:bg-slate-900');
+        btnAdd.classList.add('bg-blue-600', 'hover:bg-blue-700');
+
+        // 3. Muda o texto
+        btnTexto.innerText = "Salvar Edição";
+    } else {
+        // MODO NORMAL
+        // 1. Esconde o botão cancelar
+        btnCancel.classList.add('hidden');
+        btnCancel.classList.remove('flex');
+
+        // 2. Volta o botão principal para Escuro
+        btnAdd.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+        btnAdd.classList.add('bg-slate-800', 'hover:bg-slate-900');
+
+        // 3. Volta o texto
+        btnTexto.innerText = "Adicionar Item";
+    }
+
+    // CRUCIAL: Recarrega os ícones para o ícone do botão Cancelar aparecer
+    if (window.lucide) lucide.createIcons();
+}
+
+// 2. Função que acontece quando clica em Cancelar
+window.cancelarEdicao = function () {
+    if (!backupItem) return; // Se não tem nada salvo, sai
+
+    // 1. Devolve o item original para a lista
+    items.push(backupItem);
+
+    // 2. Limpa a variável de backup
+    backupItem = null;
+
+    // 3. Limpa os campos de texto do formulário
+    clearFormState();
+
+    // 4. LIMPEZA DAS FOTOS (Adicionado)
+    // Isso apaga as fotos do array temporário e remove as miniaturas da tela
+    if (typeof clearFiles === 'function') {
+        clearFiles();
+    } else {
+        // Fallback caso a função não esteja acessível diretamente
+        currentFiles = [];
+        updateImagePreview();
+    }
+
+    // 5. Atualiza a lista visualmente
+    renderList();
+
+    // 6. Reseta os botões para o estado "Adicionar"
+    atualizarBotoes(false);
+
+    window.showToast("Edição cancelada. Fotos limpas.", "info");
 };

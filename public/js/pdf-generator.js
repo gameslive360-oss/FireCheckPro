@@ -229,6 +229,9 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
                 columnStyles: {
                     0: { cellWidth: 25, halign: 'center' }, // Local
                     1: { cellWidth: 20, halign: 'center' }, // ID
+                    2: { halign: 'center' },                // <--- ADICIONE ISSO (Centraliza a 3ª coluna)
+                    3: { halign: 'center' },                // (Opcional) Centraliza a Validade/Recarga também
+                    4: { halign: 'center' }                 // (Opcional) Centraliza o Status/Abrigo
                 },
                 margin: { left: 14, right: 14 }
             });
@@ -236,26 +239,32 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         };
 
         // Geração das tabelas (Mesma lógica, estilo novo)
-        const hid = items.filter(i => i.type === 'hidrante')
-            .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }));
+        // --- SUBSTITUA ESTE BLOCO NO SEU ARQUIVO ---
 
-        // 2. Gera a tabela com a ordem correta
+        const hid = items.filter(i => i.type === 'hidrante');
         generateTable("SISTEMA DE HIDRANTES", hid.map(i => {
+            let faltantes = [];
+            if (!i.check_registro) faltantes.push('Reg');
+            if (!i.check_adaptador) faltantes.push('Adap');
+            if (!i.check_chave) faltantes.push('Chv');
+            if (!i.check_esguicho) faltantes.push('Esg');
+            const statusComp = faltantes.length === 0 ? 'Completo' : 'Falta: ' + faltantes.join(',');
+
+            // NOVA LÓGICA: Combina Lances + Metragem na mesma coluna
+            const infoMangueira = i.tem_mangueira
+                ? `${i.lances} lance(s) / ${i.metragem}`
+                : 'S/ Mangueira';
+
             return [
                 i.andar,
                 i.id,
-                i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira',
+                infoMangueira, // Agora exibe "1 lance(s) / 15m"
                 i.tem_mangueira ? i.validade : '-',
-                i.check_registro ? 'OK' : 'Falta',
-                i.check_adaptador ? 'OK' : 'Falta',
-                i.check_chave ? 'OK' : 'Falta',
-                i.check_esguicho ? 'OK' : 'Falta',
+                statusComp,
                 i.obs || '-'
             ];
-        }),
-            // Cabeçalho
-            ['Local', 'ID', 'Mangueira', 'Validade', 'Registro', 'Adaptador', 'Chave', 'Esguicho', 'Observações'],
-            [51, 65, 85]);
+            // Atualizei também o título da coluna para 'Mang./Comp.'
+        }), ['Local', 'ID', 'Mangueira/Comprimento.', 'Validade', 'Abrigo', 'Observações'], [51, 65, 85]);
 
         const ext = items.filter(i => i.type === 'extintor');
         generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [

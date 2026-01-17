@@ -377,6 +377,27 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         // --- PÁGINA 6: FOTOS ---
         const itemsWithPhotos = items.filter(i => i.imageFiles && i.imageFiles.length > 0);
+        const typeOrder = {
+            'hidrante': 1,
+            'extintor': 2,
+            'luz': 3,
+            'sinalizacao': 4,
+            'eletro': 5,
+            'bomba': 6,
+            'geral': 7
+        };
+
+        itemsWithPhotos.sort((a, b) => {
+            // 1. Ordena pelo Tipo (Para agrupar Hidrantes com Hidrantes, etc.)
+            const orderA = typeOrder[a.type] || 99;
+            const orderB = typeOrder[b.type] || 99;
+            if (orderA !== orderB) return orderA - orderB;
+
+            // 2. Ordena pelo ID de forma Crescente (Natural: H-2 vem antes de H-10)
+            const idA = a.id || "";
+            const idB = b.id || "";
+            return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+        });
         if (itemsWithPhotos.length > 0) {
             doc.addPage();
             yPos = 20;

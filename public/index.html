@@ -38,7 +38,7 @@
                 <button id="btn-login"
                     class="bg-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 transition-colors">Entrar</button>
                 <div id="user-info" class="hidden items-center gap-2"><span id="user-name"
-                        class="text-xs font-bold text-slate-300">User</span></div>
+                        class="text-xs font-bold text-slate-300">Usuário</span></div>
             </div>
         </div>
     </nav>
@@ -73,7 +73,7 @@
 
             <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Finalização</div>
             <nav class="space-y-1 px-2">
-                <button onclick="switchTabAndClose('geral', 'Geral / Obs')" class="nav-btn"><i
+                <button onclick="switchTabAndClose('geral', 'Geral / Observações')" class="nav-btn"><i
                         data-lucide="clipboard-list" class="w-5 h-5 text-slate-400"></i><span
                         class="font-medium">Geral</span></button>
                 <button onclick="switchTabAndClose('sumario', 'Sumário Executivo')" class="nav-btn"><i
@@ -135,13 +135,14 @@
                 class="p-4 border-t border-gray-200 transition-all duration-500 ease-in-out overflow-hidden max-h-[1000px] opacity-100">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div class="md:col-span-2 lg:col-span-1"><label class="label-std">Cliente</label><input type="text"
-                            id="cliente" class="input-std save-state" placeholder="Nome do Cliente"></div>
+                            id="cliente" class="input-std save-state" placeholder="Nome completo ou Razão Social"></div>
                     <div class="md:col-span-2 lg:col-span-2"><label class="label-std">Local / Endereço</label><input
-                            type="text" id="local" class="input-std save-state" placeholder="Endereço Completo"></div>
-                    <div><label class="label-std">Resp. Técnico</label><input type="text" id="resp-tecnico"
-                            class="input-std save-state" placeholder="Seu Nome"></div>
+                            type="text" id="local" class="input-std save-state"
+                            placeholder="Endereço completo da edificação"></div>
+                    <div><label class="label-std">Responsável Técnico</label><input type="text" id="resp-tecnico"
+                            class="input-std save-state" placeholder="Seu Nome Completo"></div>
                     <div><label class="label-std">Classificação</label><input type="text" id="classificacao"
-                            class="input-std save-state" placeholder="Ex: Comercial"></div>
+                            class="input-std save-state" placeholder="Ex: Comercial, Industrial, Residencial"></div>
                     <div><label class="label-std">Data</label><input type="datetime-local" id="data-relatorio"
                             class="input-std save-state"></div>
                 </div>
@@ -151,9 +152,9 @@
         <section class="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div><label class="label-std">Local/Andar</label><input type="text" id="andar"
-                        class="input-std save-state" placeholder="Ex: Térreo"></div>
-                <div><label class="label-std">ID</label><input type="text" id="item-id" class="input-std save-state"
-                        placeholder="Ex: H-01"></div>
+                        class="input-std save-state" placeholder="Ex: Térreo, 1º Andar"></div>
+                <div><label class="label-std">ID do Item</label><input type="text" id="item-id"
+                        class="input-std save-state" placeholder="Ex: H-01, E-05"></div>
             </div>
 
             <div id="form-sumario" class="form-section hidden">
@@ -167,15 +168,17 @@
                         <option value="Reprovado">❌ REPROVADO</option>
                     </select>
                     <label class="label-std">Resumo</label><textarea id="sum-resumo" class="input-std save-state mb-3"
-                        rows="3"></textarea>
+                        rows="3" placeholder="Breve resumo da vistoria realizada..."></textarea>
                     <label class="label-std text-red-700">Riscos / Não Conformidades</label><textarea id="sum-riscos"
-                        class="input-std save-state border-red-200 bg-red-50" rows="3"></textarea>
+                        class="input-std save-state border-red-200 bg-red-50" rows="3"
+                        placeholder="Liste os principais riscos ou falhas críticas encontradas..."></textarea>
                 </div>
                 <div class="mt-6 border-t pt-4 border-slate-200">
                     <label class="label-std font-bold mb-2">Conclusão</label>
                     <div class="flex justify-end mb-1"><button onclick="window.phrases.open('sum-conclusao', 'sumario')"
-                            class="btn-frases">Frases</button></div>
-                    <textarea id="sum-conclusao" class="input-std save-state" rows="4"></textarea>
+                            class="btn-frases">Frases Prontas</button></div>
+                    <textarea id="sum-conclusao" class="input-std save-state" rows="4"
+                        placeholder="Conclusão final e recomendações..."></textarea>
                 </div>
             </div>
 
@@ -188,8 +191,8 @@
                                 class="save-state"><span>Registro</span></label>
                         <label class="check-group"><input type="checkbox" id="h-adaptador"
                                 class="save-state"><span>Adaptador</span></label>
-                        <label class="check-group"><input type="checkbox" id="h-chave"
-                                class="save-state"><span>Chave</span></label>
+                        <label class="check-group"><input type="checkbox" id="h-chave" class="save-state"><span>Chave
+                                Storz</span></label>
                         <label class="check-group"><input type="checkbox" id="h-esguicho"
                                 class="save-state"><span>Esguicho</span></label>
                     </div>
@@ -213,7 +216,7 @@
                             <div><label class="label-std">Validade</label><input type="month" id="h-validade"
                                     class="input-std save-state"></div>
                             <div><label class="label-std">Lances</label><input type="number" id="h-lances"
-                                    class="input-std save-state" value="1"></div>
+                                    class="input-std save-state" value="1" placeholder="Qtd"></div>
                             <div><label class="label-std">Metragem</label><select id="h-metragem"
                                     class="input-std save-state">
                                     <option value="15m">15m</option>
@@ -223,10 +226,12 @@
                                 </select></div>
                         </div>
                         <div>
-                            <div class="flex justify-between items-end mb-1"><label class="label-std">Obs</label><button
-                                    onclick="window.phrases.open('h-obs', 'hidrante')"
-                                    class="btn-frases">Frases</button></div>
-                            <textarea id="h-obs" class="input-std save-state" rows="2"></textarea>
+                            <div class="flex justify-between items-end mb-1"><label
+                                    class="label-std">Observações</label><button
+                                    onclick="window.phrases.open('h-obs', 'hidrante')" class="btn-frases">Frases
+                                    Prontas</button></div>
+                            <textarea id="h-obs" class="input-std save-state" rows="2"
+                                placeholder="Descreva avarias na caixa, porta, vidro ou mangueiras..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -236,15 +241,15 @@
                 <h4 class="section-title text-red-800 border-red-100">Extintores</h4>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div><label class="label-std">Tipo</label><select id="e-tipo" class="input-std save-state">
-                            <option value="AP">Água</option>
-                            <option value="PQS">Pó Químico</option>
-                            <option value="CO2">CO2</option>
+                            <option value="AP">Água (AP)</option>
+                            <option value="PQS">Pó Químico (PQS)</option>
+                            <option value="CO2">Gás Carbônico (CO2)</option>
                         </select></div>
                     <div><label class="label-std">Peso (Kg)</label><input type="number" id="e-peso"
-                            class="input-std save-state"></div>
+                            class="input-std save-state" placeholder="Ex: 4, 6, 10"></div>
                     <div><label class="label-std">Recarga</label><input type="month" id="e-recarga"
                             class="input-std save-state"></div>
-                    <div><label class="label-std">Teste Hidro</label><input type="month" id="e-teste"
+                    <div><label class="label-std">Teste Hidrostático</label><input type="month" id="e-teste"
                             class="input-std save-state"></div>
                 </div>
                 <div class="checklist-grid">
@@ -258,9 +263,11 @@
                             class="save-state"><span>Mangueira</span></label>
                 </div>
                 <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Obs</label><button
-                            onclick="window.phrases.open('e-obs', 'extintor')" class="btn-frases">Frases</button></div>
-                    <textarea id="e-obs" class="input-std save-state" rows="2"></textarea>
+                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                            onclick="window.phrases.open('e-obs', 'extintor')" class="btn-frases">Frases
+                            Prontas</button></div>
+                    <textarea id="e-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva estado do cilindro, pintura ou suporte..."></textarea>
                 </div>
             </div>
 
@@ -274,7 +281,7 @@
                     <div><label class="label-std">Estado</label><select id="l-estado" class="input-std save-state">
                             <option value="OK">OK</option>
                             <option value="Queimada">Queimada</option>
-                            <option value="Bateria Fraca">Bat. Fraca</option>
+                            <option value="Bateria Fraca">Bateria Fraca</option>
                         </select></div>
                     <div class="col-span-2"><label class="label-std">Autonomia</label><select id="l-autonomia"
                             class="input-std save-state">
@@ -287,16 +294,18 @@
                     <label class="check-group"><input type="checkbox" id="l-acendimento"
                             class="save-state"><span>Acendimento</span></label>
                     <label class="check-group"><input type="checkbox" id="l-led" class="save-state"><span>LED
-                            Carga</span></label>
+                            de Carga</span></label>
                     <label class="check-group"><input type="checkbox" id="l-fixacao"
                             class="save-state"><span>Fixação</span></label>
-                    <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"><span>Lux
-                            OK</span></label>
+                    <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"><span>Luminosidade
+                            (Lux) OK</span></label>
                 </div>
                 <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Obs</label><button
-                            onclick="window.phrases.open('l-obs', 'luz')" class="btn-frases">Frases</button></div>
-                    <textarea id="l-obs" class="input-std save-state" rows="2"></textarea>
+                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                            onclick="window.phrases.open('l-obs', 'luz')" class="btn-frases">Frases Prontas</button>
+                    </div>
+                    <textarea id="l-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva falhas de funcionamento ou estado físico..."></textarea>
                 </div>
             </div>
 
@@ -305,15 +314,17 @@
                 <div class="checklist-grid">
                     <label class="check-group"><input type="checkbox" id="b-operacao"
                             class="save-state"><span>Automático</span></label>
-                    <label class="check-group"><input type="checkbox" id="b-teste" class="save-state"><span>Teste
+                    <label class="check-group"><input type="checkbox" id="b-teste" class="save-state"><span>Teste de
                             Pressão</span></label>
                     <label class="check-group"><input type="checkbox" id="b-manutencao" class="save-state"><span>Requer
                             Manutenção</span></label>
                 </div>
                 <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Obs</label><button
-                            onclick="window.phrases.open('b-obs', 'bomba')" class="btn-frases">Frases</button></div>
-                    <textarea id="b-obs" class="input-std save-state" rows="2"></textarea>
+                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                            onclick="window.phrases.open('b-obs', 'bomba')" class="btn-frases">Frases Prontas</button>
+                    </div>
+                    <textarea id="b-obs" class="input-std save-state" rows="2"
+                        placeholder="Detalhes sobre ruído, vazamentos ou painel..."></textarea>
                 </div>
             </div>
 
@@ -330,10 +341,10 @@
                 <div id="s-detalhes-container">
                     <div class="mb-4"><label class="label-std">Tipo</label><select id="s-tipo"
                             class="input-std save-state">
-                            <option value="Saida">Saída</option>
+                            <option value="Saida">Saída de Emergência</option>
                             <option value="Extintor">Extintor</option>
                             <option value="Hidrante">Hidrante</option>
-                            <option value="Alerta">Alerta</option>
+                            <option value="Alerta">Alerta / Perigo</option>
                             <option value="Outros">Outros</option>
                         </select></div>
                     <div class="checklist-grid mb-4">
@@ -348,10 +359,12 @@
                     </div>
                 </div>
                 <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Obs</label><button
-                            onclick="window.phrases.open('s-obs', 'sinalizacao')" class="btn-frases">Frases</button>
+                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                            onclick="window.phrases.open('s-obs', 'sinalizacao')" class="btn-frases">Frases
+                            Prontas</button>
                     </div>
-                    <textarea id="s-obs" class="input-std save-state" rows="2"></textarea>
+                    <textarea id="s-obs" class="input-std save-state" rows="2"
+                        placeholder="Descreva danos na placa ou visibilidade comprometida..."></textarea>
                 </div>
             </div>
 
@@ -359,10 +372,10 @@
                 <h4 class="section-title text-indigo-800 border-indigo-100">Eletromecânica</h4>
                 <div class="mb-4"><label class="label-std">Sistema</label><select id="el-tipo"
                         class="input-std save-state">
-                        <option value="Pressurizacao">Pressurização</option>
+                        <option value="Pressurizacao">Pressurização de Escada</option>
                         <option value="Gerador">Gerador</option>
-                        <option value="Dampers">Dampers</option>
-                        <option value="Exaustao">Exaustão</option>
+                        <option value="Dampers">Dampers Corta-Fogo</option>
+                        <option value="Exaustao">Exaustão de Fumaça</option>
                     </select></div>
                 <div class="grid grid-cols-2 gap-3 mb-4">
                     <div><label class="label-std">Botoeiras OK?</label><select id="el-botoeiras"
@@ -380,35 +393,39 @@
                 <div class="border-t border-gray-100 pt-3 mb-3">
                     <div class="checklist-grid">
                         <label class="check-group"><input type="checkbox" id="el-painel" class="save-state"
-                                checked><span>Painel Auto</span></label>
+                                checked><span>Painel Automático</span></label>
                         <label class="check-group"><input type="checkbox" id="el-piloto" class="save-state"
                                 checked><span>Luzes Piloto</span></label>
                         <label class="check-group"><input type="checkbox" id="el-ruido" class="save-state"
-                                checked><span>Sem Ruído</span></label>
+                                checked><span>Sem Ruído Anormal</span></label>
                         <label class="check-group"><input type="checkbox" id="el-fixacao" class="save-state"
                                 checked><span>Fixação</span></label>
                     </div>
                 </div>
                 <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Obs</label><button
-                            onclick="window.phrases.open('el-obs', 'eletro')" class="btn-frases">Frases</button></div>
-                    <textarea id="el-obs" class="input-std save-state" rows="2"></textarea>
+                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                            onclick="window.phrases.open('el-obs', 'eletro')" class="btn-frases">Frases Prontas</button>
+                    </div>
+                    <textarea id="el-obs" class="input-std save-state" rows="2"
+                        placeholder="Detalhes técnicos adicionais..."></textarea>
                 </div>
             </div>
 
             <div id="form-geral" class="form-section hidden">
                 <h4 class="section-title text-slate-700 border-slate-200">Geral / Diversos</h4>
-                <div class="mt-2"><label class="label-std">Ocorrência</label><textarea id="g-obs"
-                        class="input-std save-state" rows="4"></textarea></div>
+                <div class="mt-2"><label class="label-std">Ocorrência / Relato</label><textarea id="g-obs"
+                        class="input-std save-state" rows="4"
+                        placeholder="Descreva ocorrências gerais que não se enquadram nas categorias específicas..."></textarea>
+                </div>
                 <div class="mt-2 text-right"><button onclick="window.phrases.open('g-obs', 'geral')"
-                        class="btn-frases">Frases</button></div>
+                        class="btn-frases">Frases Prontas</button></div>
             </div>
 
             <div id="form-assinatura" class="form-section hidden">
                 <h4 class="section-title text-slate-700 border-slate-200">Assinaturas</h4>
                 <div class="space-y-6">
                     <div>
-                        <label class="label-std">Técnico</label>
+                        <label class="label-std">Técnico Responsável</label>
                         <div class="border-2 border-dashed border-slate-300 rounded bg-slate-50 relative">
                             <canvas id="sig-tecnico" class="w-full h-[200px] cursor-crosshair"></canvas>
                             <div class="absolute top-2 right-2"><button id="btn-clear-tecnico"
@@ -416,7 +433,7 @@
                         </div>
                     </div>
                     <div>
-                        <label class="label-std">Cliente</label>
+                        <label class="label-std">Cliente / Responsável Local</label>
                         <div class="border-2 border-dashed border-slate-300 rounded bg-slate-50 relative">
                             <canvas id="sig-cliente" class="w-full h-[200px] cursor-crosshair"></canvas>
                             <div class="absolute top-2 right-2"><button id="btn-clear-cliente"
@@ -458,7 +475,7 @@
             </div>
             <div id="lista-itens" class="space-y-3 pb-10">
                 <div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
-                    Lista vazia.</div>
+                    Sua lista está vazia. Adicione itens acima.</div>
             </div>
             <div id="pdf-preview-container" class="hidden pb-10">
                 <iframe id="pdf-frame"
@@ -495,13 +512,14 @@
         class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
             <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-lg">
-                <h3 class="font-bold text-slate-700">Frases</h3>
+                <h3 class="font-bold text-slate-700">Frases Prontas</h3>
                 <button onclick="window.phrases.close()" class="text-gray-400 hover:text-red-500"><i
                         data-lucide="x"></i></button>
             </div>
             <div id="phrases-list" class="p-4 overflow-y-auto space-y-2 flex-1"></div>
             <div class="p-3 border-t bg-slate-50 rounded-b-lg flex gap-2">
-                <input type="text" id="new-phrase-input" class="input-std flex-1" placeholder="Nova frase...">
+                <input type="text" id="new-phrase-input" class="input-std flex-1"
+                    placeholder="Nova frase personalizada...">
                 <button onclick="window.phrases.addCustom()"
                     class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"><i
                         data-lucide="plus"></i></button>

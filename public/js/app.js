@@ -665,6 +665,20 @@ const fileToBase64 = file => new Promise((resolve, reject) => {
     reader.onerror = error => reject(error);
 });
 
+function getHeaderData() {
+    return {
+        cliente: document.getElementById('cliente').value || "Sem Cliente",
+        local: document.getElementById('local').value || "Sem Local",
+        tecnico: document.getElementById('resp-tecnico').value,
+        classificacao: document.getElementById('classificacao').value,
+        data: document.getElementById('data-relatorio').value,
+        parecer: document.getElementById('sum-parecer').value,
+        resumo: document.getElementById('sum-resumo').value,
+        riscos: document.getElementById('sum-riscos').value,
+        conclusao: document.getElementById('sum-conclusao').value
+    };
+}
+
 const base64ToFile = (dataurl, filename) => {
     const arr = dataurl.split(',');
     const mime = arr[0].match(/:(.*?);/)[1];
@@ -838,55 +852,49 @@ window.restoreCloudReport = async function (url) {
 
 // EXPORTAR BACKUP
 window.exportBackup = async function () {
-    if (!items.length) return alert("Lista vazia.");
+    if (!items.length) return alert("A lista está vazia. Nada para salvar.");
 
     const btn = document.getElementById('btn-backup');
     const oldText = btn.innerText;
-    btn.innerText = "Gerando...";
+    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Gerando Backup Completo...`;
 
     try {
-        // Prepara imagens
-        const itemsReady = await Promise.all(items.map(async (item) => ({
+        // 1. Processa itens E CONVERTE imagens para Base64
+        const itemsFull = await Promise.all(items.map(async (item) => ({
             ...item,
-            imageFiles: [],
+            imageFiles: [], // Remove o objeto File (não salva em JSON)
+            // AQUI ESTÁ O SEGREDO: Convertemos e guardamos a string gigante
             _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
         })));
 
         const backupData = {
-            version: "1.0",
+            version: "2.0-full", // Versão completa
             timestamp: new Date().toISOString(),
-            header: {
-                cliente: document.getElementById('cliente').value,
-                local: document.getElementById('local').value,
-                tecnico: document.getElementById('resp-tecnico').value,
-                classificacao: document.getElementById('classificacao').value,
-                data: document.getElementById('data-relatorio').value,
-                parecer: document.getElementById('sum-parecer').value,
-                resumo: document.getElementById('sum-resumo').value,
-                riscos: document.getElementById('sum-riscos').value,
-                conclusao: document.getElementById('sum-conclusao').value
-            },
-            items: itemsReady,
+            header: getHeaderData(), // Usa o helper
+            items: itemsFull,
             signatures: {
                 tecnico: sigTecnico?.getImageData(),
                 cliente: sigCliente?.getImageData()
             }
         };
 
+        // 2. Cria o arquivo para download
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
         const a = document.createElement('a');
         a.href = dataStr;
-        a.download = `Backup_FireCheck_${Date.now()}.json`;
+        a.download = `Backup_FireCheck_COMPLETO_${Date.now()}.json`; // Nome sugere que é completo
         document.body.appendChild(a);
         a.click();
         a.remove();
 
-        window.showToast("Backup gerado!");
+        window.showToast("Backup completo (com fotos) salvo no dispositivo!");
 
     } catch (e) {
-        alert("Erro: " + e.message);
+        console.error(e);
+        alert("Erro ao gerar backup: " + e.message);
     } finally {
-        btn.innerText = oldText;
+        btn.innerHTML = oldText;
+        if (window.lucide) window.lucide.createIcons();
     }
 };
 

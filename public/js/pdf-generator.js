@@ -258,13 +258,19 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             return [
                 i.andar,
                 i.id,
-                infoMangueira, // Agora exibe "1 lance(s) / 15m"
+                i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira',
                 i.tem_mangueira ? i.validade : '-',
-                statusComp,
-                i.obs || '-'
+                i.check_registro ? 'OK' : 'Falta',
+                i.check_adaptador ? 'OK' : 'Falta',
+                i.check_chave ? 'OK' : 'Falta',
+                i.check_esguicho ? 'OK' : 'Falta',
+                i.obs || '-' // Aqui fica SOMENTE a sua observação manual (ou traço se vazio)
             ];
-            // Atualizei também o título da coluna para 'Mang./Comp.'
-        }), ['Local', 'ID', 'Mangueira/Comprimento.', 'Validade', 'Abrigo', 'Observações'], [51, 65, 85]);
+        }),
+            // Cabeçalho (9 colunas no total)
+            ['Local', 'ID', 'Mangueira', 'Validade', 'Registro', 'Adaptador', 'Chave', 'Esguicho', 'Observações'],
+            [51, 65, 85]);
+
 
         const ext = items.filter(i => i.type === 'extintor');
         generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [

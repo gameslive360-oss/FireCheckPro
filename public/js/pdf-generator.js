@@ -215,25 +215,34 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
                 startY: yPos,
                 head: [headers],
                 body: data,
-                theme: 'striped', // Tema listrado é mais profissional que grid simples
+                theme: 'striped',
                 headStyles: {
                     fillColor: headColor,
-                    fontSize: 8,
+                    fontSize: 7, // Diminuí um pouco a fonte pois são muitas colunas
                     fontStyle: 'bold',
-                    halign: 'center'
+                    halign: 'center',
+                    valign: 'middle' // Centraliza verticalmente o cabeçalho
                 },
                 bodyStyles: {
-                    fontSize: 8,
-                    textColor: 50
+                    fontSize: 7, // Fonte menor para caber tudo
+                    textColor: 50,
+                    valign: 'middle'
                 },
+                // AQUI É ONDE VOCÊ CONTROLA A LARGURA
                 columnStyles: {
-                    0: { cellWidth: 25, halign: 'center' }, // Local
-                    1: { cellWidth: 20, halign: 'center' }, // ID
-                    2: { halign: 'center' },                // <--- ADICIONE ISSO (Centraliza a 3ª coluna)
-                    3: { halign: 'center' },                // (Opcional) Centraliza a Validade/Recarga também
-                    4: { halign: 'center' }                 // (Opcional) Centraliza o Status/Abrigo
+                    0: { cellWidth: 15, halign: 'center' }, // Local
+                    1: { cellWidth: 15, halign: 'center' }, // ID
+                    2: { cellWidth: 14, halign: 'center' },
+                    3: { cellWidth: 25, halign: 'center' }, // Mangueira
+                    4: { cellWidth: 18, halign: 'center' }, // Validade
+                    5: { cellWidth: 15, halign: 'center' }, // Registro
+                    6: { cellWidth: 15, halign: 'center' }, // Adaptador
+                    7: { cellWidth: 15, halign: 'center' }, // Chave
+                    8: { cellWidth: 15, halign: 'center' }, // Esguicho
+                    9: { halign: 'left' }
                 },
-                margin: { left: 14, right: 14 }
+                // Margens laterais (para garantir que cabe tudo)
+                margin: { left: 10, right: 10 } // Margens menores para aproveitar a folha
             });
             yPos = doc.lastAutoTable.finalY + 12;
         };

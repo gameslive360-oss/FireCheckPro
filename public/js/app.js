@@ -62,6 +62,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inicialização de Componentes
     const phrasesManager = new PhraseManager();
     window.phrases = phrasesManager;
+    const chkFuncional = document.getElementById('h-acionador-funcional');
+    const chkQuebrado = document.getElementById('h-acionador-quebrado');
+
+    if (chkFuncional && chkQuebrado) {
+        // Se marcar "Funcional", desmarca "Quebrado"
+        chkFuncional.addEventListener('change', function () {
+            if (this.checked) {
+                chkQuebrado.checked = false;
+                localStorage.setItem('h-acionador-quebrado', 'false'); // Atualiza memória local
+            }
+        });
+
+        // Se marcar "Quebrado", desmarca "Funcional"
+        chkQuebrado.addEventListener('change', function () {
+            if (this.checked) {
+                chkFuncional.checked = false;
+                localStorage.setItem('h-acionador-funcional', 'false'); // Atualiza memória local
+            }
+        });
+    }
     sigTecnico = new SignaturePad('sig-tecnico', 'btn-clear-tecnico');
     sigCliente = new SignaturePad('sig-cliente', 'btn-clear-cliente');
 

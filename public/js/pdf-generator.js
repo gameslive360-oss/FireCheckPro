@@ -238,37 +238,41 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             yPos = doc.lastAutoTable.finalY + 12;
         };
 
-        // Geração das tabelas (Mesma lógica, estilo novo)
-        // --- SUBSTITUA ESTE BLOCO NO SEU ARQUIVO ---
-
         const hid = items.filter(i => i.type === 'hidrante');
         generateTable("SISTEMA DE HIDRANTES", hid.map(i => {
+            // Verifica itens faltantes
             let faltantes = [];
             if (!i.check_registro) faltantes.push('Reg');
             if (!i.check_adaptador) faltantes.push('Adap');
             if (!i.check_chave) faltantes.push('Chv');
             if (!i.check_esguicho) faltantes.push('Esg');
-            const statusComp = faltantes.length === 0 ? 'Completo' : 'Falta: ' + faltantes.join(',');
 
-            // NOVA LÓGICA: Combina Lances + Metragem na mesma coluna
-            const infoMangueira = i.tem_mangueira
-                ? `${i.lances} lance(s) / ${i.metragem}`
-                : 'S/ Mangueira';
+            // Lógica da Coluna BOMBA
+            let statusBomba = '-'; // Padrão se não tiver acionador (como solicitado)
+            if (i.tem_acionador) {
+                if (i.acionador_quebrado) {
+                    statusBomba = 'DEFEITO';
+                } else if (i.acionador_funcional) {
+                    statusBomba = 'OK';
+                } else {
+                    statusBomba = '?'; // Caso tenha marcado "Possui" mas nenhum estado
+                }
+            }
 
             return [
                 i.andar,
                 i.id,
+                statusBomba, // <--- NOVA COLUNA (Ao lado do ID)
                 i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira',
                 i.tem_mangueira ? i.validade : '-',
                 i.check_registro ? 'OK' : 'Falta',
                 i.check_adaptador ? 'OK' : 'Falta',
                 i.check_chave ? 'OK' : 'Falta',
                 i.check_esguicho ? 'OK' : 'Falta',
-                i.obs || '-' // Aqui fica SOMENTE a sua observação manual (ou traço se vazio)
+                i.obs || '-'
             ];
         }),
-            // Cabeçalho (9 colunas no total)
-            ['Local', 'ID', 'Mangueira', 'Validade', 'Registro', 'Adaptador', 'Chave', 'Esguicho', 'Observações'],
+            ['Local', 'ID', 'Bomba', 'Mangueira', 'Validade', 'Registro', 'Adaptador', 'Chave', 'Esguicho', 'Observações'],
             [51, 65, 85]);
 
 

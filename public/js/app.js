@@ -322,6 +322,9 @@ function captureFormData(type) {
                 validade: temMangueira ? (document.getElementById('h-validade').value || '-') : '-',
                 lances: temMangueira ? (document.getElementById('h-lances').value || '1') : '0',
                 metragem: temMangueira ? document.getElementById('h-metragem').value : '-',
+                tem_acionador: temAcionador,
+                acionador_funcional: temAcionador ? document.getElementById('h-acionador-funcional').checked : false,
+                acionador_quebrado: temAcionador ? document.getElementById('h-acionador-quebrado').checked : false,
                 obs: temMangueira ? document.getElementById('h-obs').value : ''
             };
             break;
@@ -462,6 +465,13 @@ window.editItem = function (uid) {
             document.getElementById('h-validade').value = item.validade === '-' ? '' : item.validade;
             document.getElementById('h-lances').value = item.lances === '0' ? '' : item.lances;
             document.getElementById('h-metragem').value = item.metragem === '-' ? '15m' : item.metragem;
+            if (document.getElementById('h-tem-acionador')) {
+                document.getElementById('h-tem-acionador').checked = item.tem_acionador || false;
+                document.getElementById('h-acionador-funcional').checked = item.acionador_funcional || false;
+                document.getElementById('h-acionador-quebrado').checked = item.acionador_quebrado || false;
+                // Chama a função visual se ela existir
+                if (window.toggleAcionadorFields) window.toggleAcionadorFields();
+            }
             document.getElementById('h-obs').value = item.obs;
             document.getElementById('h-tem-acionador').checked = item.tem_acionador || false;
             document.getElementById('h-acionador-funcional').checked = item.acionador_funcional || false;

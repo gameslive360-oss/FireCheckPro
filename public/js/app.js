@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Configura campos condicionais iniciais
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
+    if (document.getElementById('h-tem-acionador')) window.toggleAcionadorFields();
     if (document.getElementById('s-existente')) window.toggleSinalizacaoFields();
 
     // --- EVENT LISTENERS ---
@@ -310,6 +311,7 @@ function captureFormData(type) {
     switch (type) {
         case 'hidrante':
             const temMangueira = document.getElementById('h-tem-mangueira').checked;
+            const temAcionador = document.getElementById('h-tem-acionador').checked;
             specifics = {
                 check_registro: document.getElementById('h-registro').checked,
                 check_adaptador: document.getElementById('h-adaptador').checked,
@@ -333,7 +335,10 @@ function captureFormData(type) {
                 check_manometro: document.getElementById('e-manometro').checked,
                 check_sinalizacao: document.getElementById('e-sinalizacao').checked,
                 check_mangueira: document.getElementById('e-mangueira').checked,
-                obs: document.getElementById('e-obs').value
+                obs: document.getElementById('e-obs').value,
+                tem_acionador: temAcionador,
+                acionador_funcional: temAcionador ? document.getElementById('h-acionador-funcional').checked : false,
+                acionador_quebrado: temAcionador ? document.getElementById('h-acionador-quebrado').checked : false
             };
             break;
         case 'luz':
@@ -458,7 +463,10 @@ window.editItem = function (uid) {
             document.getElementById('h-lances').value = item.lances === '0' ? '' : item.lances;
             document.getElementById('h-metragem').value = item.metragem === '-' ? '15m' : item.metragem;
             document.getElementById('h-obs').value = item.obs;
-            window.toggleMangueiraFields();
+            document.getElementById('h-tem-acionador').checked = item.tem_acionador || false;
+            document.getElementById('h-acionador-funcional').checked = item.acionador_funcional || false;
+            document.getElementById('h-acionador-quebrado').checked = item.acionador_quebrado || false;
+            window.toggleAcionadorFields();
         } else if (item.type === 'extintor') {
             document.getElementById('e-tipo').value = item.tipo;
             document.getElementById('e-peso').value = item.peso;
@@ -1042,6 +1050,10 @@ window.resetApp = function () {
     renderList();
     window.showToast("Novo relatório iniciado");
     window.toggleMenu();
+};
+
+window.toggleAcionadorFields = function () {
+    toggleFieldGroup('h-tem-acionador', 'h-acionador-container');
 };
 
 /* ==========================================================================

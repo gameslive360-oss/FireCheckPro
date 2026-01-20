@@ -1103,3 +1103,180 @@ window.installPWA = async function () {
     if (outcome === 'accepted') deferredPrompt = null;
     document.getElementById('btn-install-app').classList.add('hidden');
 };
+
+/* ==========================================================================
+   12. EXCEL IMPORT / EXPORT (NOVO)
+   ========================================================================== */
+
+// Função auxiliar para converter Booleano em "Sim/Não"
+const boolToText = (val) => val === true ? "Sim" : (val === false ? "Não" : val);
+// Função auxiliar para converter "Sim/Não" em Booleano
+const textToBool = (val) => String(val).trim().toLowerCase() === "sim";
+
+window.exportToExcel = function () {
+    if (!items.length) return alert("A lista está vazia.");
+
+    // 1. Preparar Dados do Cabeçalho (Sheet 1)
+    const headerData = [
+        ["Campo", "Valor"],
+        ["Cliente", document.getElementById('cliente').value],
+        ["Local", document.getElementById('local').value],
+        ["Técnico", document.getElementById('resp-tecnico').value],
+        ["Classificação", document.getElementById('classificacao').value],
+        ["Data", document.getElementById('data-relatorio').value],
+        ["Parecer", document.getElementById('sum-parecer').value],
+        ["Resumo", document.getElementById('sum-resumo').value],
+        ["Riscos", document.getElementById('sum-riscos').value],
+        ["Conclusão", document.getElementById('sum-conclusao').value]
+    ];
+
+    // 2. Preparar Lista de Itens (Sheet 2)
+    // Achatamos os dados para caberem em colunas
+    const itemsData = items.map(item => {
+        return {
+            "Tipo": item.type,
+            "Local/Andar": item.andar,
+            "ID": item.id,
+            "Observações": item.obs || "",
+
+            // Hidrantes
+            "H-Mangueira?": boolToText(item.tem_mangueira),
+            "H-Validade": item.validade || "",
+            "H-Lances": item.lances || "",
+            "H-Metragem": item.metragem || "",
+            "H-Registro OK": boolToText(item.check_registro),
+            "H-Adaptador OK": boolToText(item.check_adaptador),
+            "H-Chave OK": boolToText(item.check_chave),
+            "H-Esguicho OK": boolToText(item.check_esguicho),
+            // Novos campos da Bomba
+            "H-Tem Acionador?": boolToText(item.tem_acionador),
+            "H-Acionador Funcional": boolToText(item.acionador_funcional),
+            "H-Acionador Quebrado": boolToText(item.acionador_quebrado),
+
+            // Extintores
+            "E-Tipo": item.tipo || "",
+            "E-Peso": item.peso || "",
+            "E-Recarga": item.recarga || "",
+            "E-Teste Hidro": item.teste_hidro || "",
+            "E-Lacre OK": boolToText(item.check_lacre),
+            "E-Manometro OK": boolToText(item.check_manometro),
+            "E-Sinalizacao OK": boolToText(item.check_sinalizacao),
+
+            // Luz
+            "L-Estado": item.estado || "",
+            "L-Autonomia": item.autonomia || "",
+
+            // Identificador Único (Não edite isso na planilha)
+            "_UID": item.uid
+        };
+    });
+
+    // 3. Criar Workbook e Sheets
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Cabeçalho
+    const wsHeader = XLSX.utils.aoa_to_sheet(headerData);
+    XLSX.utils.book_append_sheet(wb, wsHeader, "Dados Cliente");
+
+    // Sheet 2: Itens
+    const wsItems = XLSX.utils.json_to_sheet(itemsData);
+    XLSX.utils.book_append_sheet(wb, wsItems, "Itens Vistoriados");
+
+    // 4. Download
+    XLSX.writeFile(wb, `Planilha_FireCheck_${Date.now()}.xlsx`);
+};
+
+window.importFromExcel = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (items.length > 0 && !confirm("Isso substituirá a lista atual. Deseja continuar?")) {
+        event.target.value = "";
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: 'array' });
+
+            // 1. Ler Cabeçalho (Sheet 1)
+            const wsHeader = wb.Sheets["Dados Cliente"];
+            if (wsHeader) {
+                const headerArr = XLSX.utils.sheet_to_json(wsHeader, { header: 1 });
+                // Transforma array de arrays em objeto chave-valor
+                const headerMap = {};
+                headerArr.forEach(row => { if (row[0]) headerMap[row[0]] = row[1]; });
+
+                document.getElementById('cliente').value = headerMap["Cliente"] || "";
+                document.getElementById('local').value = headerMap["Local"] || "";
+                document.getElementById('resp-tecnico').value = headerMap["Técnico"] || "";
+                document.getElementById('classificacao').value = headerMap["Classificação"] || "";
+                document.getElementById('data-relatorio').value = headerMap["Data"] || "";
+                document.getElementById('sum-parecer').value = headerMap["Parecer"] || "Aprovado";
+                document.getElementById('sum-resumo').value = headerMap["Resumo"] || "";
+                document.getElementById('sum-riscos').value = headerMap["Riscos"] || "";
+                document.getElementById('sum-conclusao').value = headerMap["Conclusão"] || "";
+
+                window.toggleHeader();
+            }
+
+            // 2. Ler Itens (Sheet 2)
+            const wsItems = wb.Sheets["Itens Vistoriados"];
+            if (wsItems) {
+                const rows = XLSX.utils.sheet_to_json(wsItems);
+
+                items = rows.map(row => {
+                    // Reconstrói o objeto item
+                    const type = row["Tipo"] || "geral";
+
+                    return {
+                        uid: row["_UID"] || Date.now() + Math.random(), // Mantém UID ou cria novo
+                        type: type,
+                        id: row["ID"] || "",
+                        andar: row["Local/Andar"] || "",
+                        obs: row["Observações"] || "",
+                        imageFiles: [], // Planilha não importa imagens
+
+                        // Hidrante Mappers
+                        tem_mangueira: textToBool(row["H-Mangueira?"]),
+                        validade: row["H-Validade"] || "-",
+                        lances: row["H-Lances"] || "1",
+                        metragem: row["H-Metragem"] || "15m",
+                        check_registro: textToBool(row["H-Registro OK"]),
+                        check_adaptador: textToBool(row["H-Adaptador OK"]),
+                        check_chave: textToBool(row["H-Chave OK"]),
+                        check_esguicho: textToBool(row["H-Esguicho OK"]),
+                        // Mappers da Bomba
+                        tem_acionador: textToBool(row["H-Tem Acionador?"]),
+                        acionador_funcional: textToBool(row["H-Acionador Funcional"]),
+                        acionador_quebrado: textToBool(row["H-Acionador Quebrado"]),
+
+                        // Extintor Mappers
+                        tipo: row["E-Tipo"] || "",
+                        peso: row["E-Peso"] || "",
+                        recarga: row["E-Recarga"] || "-",
+                        teste_hidro: row["E-Teste Hidro"] || "-",
+                        check_lacre: textToBool(row["E-Lacre OK"]),
+                        check_manometro: textToBool(row["E-Manometro OK"]),
+                        check_sinalizacao: textToBool(row["E-Sinalizacao OK"]),
+
+                        // Luz Mappers
+                        estado: row["L-Estado"] || "OK",
+                        autonomia: row["L-Autonomia"] || "Nao Testado"
+                    };
+                });
+
+                renderList();
+                window.showToast("Importado do Excel com sucesso!");
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro ao ler planilha: " + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    event.target.value = "";
+};

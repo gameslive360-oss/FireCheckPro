@@ -423,13 +423,35 @@ function addItem() {
     }
 
     const andarInput = document.getElementById('andar').value;
-    const idInput = document.getElementById('item-id').value;
+    const rawIdInput = document.getElementById('item-id').value; // Pega o valor bruto
+    const idInput = rawIdInput.trim().toUpperCase(); // Limpa espaços e põe em maiúsculo
 
+    // 1. Validação de Campos Vazios
     if (currentType !== 'geral' && (!andarInput || !idInput)) {
         window.showToast("Preencha o Local e a Identificação", "error");
         return;
     }
 
+    // 2. NOVA LOGICA: BLOQUEIO DE ID DUPLICADO
+    // Só verifica se não for edição (ou seja, se o ID mudou ou é novo)
+    if (currentType !== 'geral') {
+        const duplicado = items.some(item =>
+            item.id && item.id.toUpperCase() === idInput
+        );
+
+        if (duplicado) {
+            // Toca um efeito visual no campo para alertar
+            const inputEl = document.getElementById('item-id');
+            inputEl.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+            setTimeout(() => inputEl.classList.remove('border-red-500', 'ring-2', 'ring-red-200'), 2000);
+
+            // Mostra aviso e para a função
+            window.showToast(`O ID "${idInput}" já existe na lista!`, "error");
+            return;
+        }
+    }
+
+    // 3. Validação Específica de Bomba
     if (currentType === 'bomba' && document.getElementById('b-manutencao').checked && !document.getElementById('b-obs').value.trim()) {
         alert("Descreva o problema da bomba na observação.");
         return;
@@ -441,7 +463,7 @@ function addItem() {
         uid: Date.now(),
         type: currentType,
         andar: currentType === 'geral' ? '-' : andarInput,
-        id: currentType === 'geral' ? 'Geral' : idInput,
+        id: currentType === 'geral' ? 'Geral' : rawIdInput, // Salva como o usuário digitou (ex: h-01 ou H-01)
         imageFiles: [...currentFiles],
         ...specificData
     };

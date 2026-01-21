@@ -684,12 +684,24 @@ function atualizarBotoesModoEdicao(editando) {
     const btnTexto = document.getElementById('btn-add-text');
 
     if (editando) {
-        btnCancel.classList.remove('hidden'); btnCancel.classList.add('flex');
-        btnAdd.classList.remove('bg-slate-800'); btnAdd.classList.add('bg-blue-600');
+        // Mostra cancelar
+        btnCancel.classList.remove('hidden');
+        btnCancel.classList.add('flex');
+
+        // Muda botão principal para Azul (Salvar)
+        btnAdd.classList.remove('bg-slate-900'); // Remove cor padrão (escura)
+        btnAdd.classList.add('bg-blue-600');     // Adiciona cor de edição
+
         btnTexto.innerText = "Salvar Edição";
     } else {
-        btnCancel.classList.add('hidden'); btnCancel.classList.remove('flex');
-        btnAdd.classList.add('bg-slate-800'); btnAdd.classList.remove('bg-blue-600');
+        // Esconde cancelar
+        btnCancel.classList.add('hidden');
+        btnCancel.classList.remove('flex');
+
+        // Volta botão principal para Slate (Adicionar)
+        btnAdd.classList.add('bg-slate-900');    // Volta cor padrão
+        btnAdd.classList.remove('bg-blue-600');
+
         btnTexto.innerText = "Adicionar Item";
     }
     refreshIcons();

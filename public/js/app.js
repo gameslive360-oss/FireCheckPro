@@ -24,6 +24,7 @@ let backupItem = null; // Para edição
 let pendingAction = null; // Para modal de confirmação
 let currentReportId = null;
 let deferredPrompt; // PWA
+let currentSortOrder = 'newest';
 
 /* ==========================================================================
    2. INICIALIZAÇÃO DO FIREBASE
@@ -582,8 +583,29 @@ function renderList() {
         return;
     }
 
+    // 1. Cria uma cópia para não bagunçar a lista original
+    let displayItems = [...items];
+
+    // 2. Aplica a ordenação baseada na escolha
+    if (currentSortOrder === 'newest') {
+        // UID maior (mais novo) primeiro
+        displayItems.sort((a, b) => b.uid - a.uid);
+    } else if (currentSortOrder === 'oldest') {
+        // UID menor (mais velho) primeiro
+        displayItems.sort((a, b) => a.uid - b.uid);
+    } else if (currentSortOrder === 'az') {
+        // Ordenação Alfabética Inteligente (H-2 vem antes de H-10)
+        displayItems.sort((a, b) => {
+            const idA = a.id || "";
+            const idB = b.id || "";
+            return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+        });
+    }
+
     const fragment = document.createDocumentFragment();
-    items.slice().reverse().forEach(item => {
+
+    // 3. Loop na lista já ordenada
+    displayItems.forEach(item => {
         const div = document.createElement('div');
         let color = 'blue';
         if (item.type === 'extintor') color = 'red';
@@ -1279,4 +1301,13 @@ window.importFromExcel = function (event) {
     };
     reader.readAsArrayBuffer(file);
     event.target.value = "";
+};
+
+/* ==========================================================================
+    13. FILTRO DE ORDEM
+    ========================================================================== */
+
+window.handleSort = function (order) {
+    currentSortOrder = order;
+    renderList(); // Apenas renderiza novamente com a nova ordem
 };

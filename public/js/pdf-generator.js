@@ -199,6 +199,15 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         yPos = drawSectionHeader(doc, "2. Detalhamento Técnico (Checklists)", yPos);
 
+        // HELPER: Função para ordenar itens por ID (H-1, H-2, H-10...)
+        const sortById = (list) => {
+            return list.sort((a, b) => {
+                const idA = String(a.id || "").trim();
+                const idB = String(b.id || "").trim();
+                return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+            });
+        };
+
         // Função de tabela aprimorada
         const generateTable = (title, data, headers, headColor) => {
             if (!data || data.length === 0) return;
@@ -218,36 +227,36 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
                 theme: 'striped',
                 headStyles: {
                     fillColor: headColor,
-                    fontSize: 7, // Diminuí um pouco a fonte pois são muitas colunas
+                    fontSize: 7,
                     fontStyle: 'bold',
                     halign: 'center',
-                    valign: 'middle' // Centraliza verticalmente o cabeçalho
+                    valign: 'middle'
                 },
                 bodyStyles: {
-                    fontSize: 7, // Fonte menor para caber tudo
+                    fontSize: 7,
                     textColor: 50,
                     valign: 'middle'
                 },
-                // AQUI É ONDE VOCÊ CONTROLA A LARGURA
                 columnStyles: {
                     0: { cellWidth: 15, halign: 'center' }, // Local
                     1: { cellWidth: 15, halign: 'center' }, // ID
-                    2: { cellWidth: 14, halign: 'center' },
+                    2: { cellWidth: 14, halign: 'center' }, // Bomba/Detalhe
                     3: { cellWidth: 25, halign: 'center' }, // Mangueira
                     4: { cellWidth: 18, halign: 'center' }, // Validade
-                    5: { cellWidth: 15, halign: 'center' }, // Registro
-                    6: { cellWidth: 15, halign: 'center' }, // Adaptador
-                    7: { cellWidth: 15, halign: 'center' }, // Chave
-                    8: { cellWidth: 15, halign: 'center' }, // Esguicho
+                    5: { cellWidth: 15, halign: 'center' },
+                    6: { cellWidth: 15, halign: 'center' },
+                    7: { cellWidth: 15, halign: 'center' },
+                    8: { cellWidth: 15, halign: 'center' },
                     9: { halign: 'left' }
                 },
-                // Margens laterais (para garantir que cabe tudo)
-                margin: { left: 10, right: 10 } // Margens menores para aproveitar a folha
+                margin: { left: 10, right: 10 }
             });
             yPos = doc.lastAutoTable.finalY + 12;
         };
 
-        const hid = items.filter(i => i.type === 'hidrante');
+        // --- AQUI APLICAMOS O SORT EM CADA CATEGORIA ---
+
+        const hid = sortById(items.filter(i => i.type === 'hidrante')); // <--- Ordenado
         generateTable("SISTEMA DE HIDRANTES", hid.map(i => {
             // Verifica itens faltantes
             let faltantes = [];
@@ -256,22 +265,17 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             if (!i.check_chave) faltantes.push('Chv');
             if (!i.check_esguicho) faltantes.push('Esg');
 
-            // Lógica da Coluna BOMBA
-            let statusBomba = '-'; // Padrão se não tiver acionador (como solicitado)
+            let statusBomba = '-';
             if (i.tem_acionador) {
-                if (i.acionador_quebrado) {
-                    statusBomba = 'DEFEITO';
-                } else if (i.acionador_funcional) {
-                    statusBomba = 'OK';
-                } else {
-                    statusBomba = '?'; // Caso tenha marcado "Possui" mas nenhum estado
-                }
+                if (i.acionador_quebrado) statusBomba = 'DEFEITO';
+                else if (i.acionador_funcional) statusBomba = 'OK';
+                else statusBomba = '?';
             }
 
             return [
                 i.andar,
                 i.id,
-                statusBomba, // <--- NOVA COLUNA (Ao lado do ID)
+                statusBomba,
                 i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira',
                 i.tem_mangueira ? i.validade : '-',
                 i.check_registro ? 'OK' : 'Falta',
@@ -285,34 +289,33 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             [51, 65, 85]);
 
 
-        const ext = items.filter(i => i.type === 'extintor');
+        const ext = sortById(items.filter(i => i.type === 'extintor')); // <--- Ordenado
         generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [
             i.andar, i.id, i.tipo, `${i.peso} kg`, i.recarga,
             (i.check_lacre && i.check_manometro) ? 'OK' : 'Irregular', i.obs || '-'
         ]), ['Local', 'ID', 'Tipo', 'Capac.', 'Recarga', 'Visual', 'Observações'], [51, 65, 85]);
 
-        const luz = items.filter(i => i.type === 'luz');
+        const luz = sortById(items.filter(i => i.type === 'luz')); // <--- Ordenado
         generateTable("ILUMINAÇÃO DE EMERGÊNCIA", luz.map(i => [
             i.andar, i.id, i.tipo, i.estado, i.autonomia, i.obs || '-'
         ]), ['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Observações'], [51, 65, 85]);
 
-        const sin = items.filter(i => i.type === 'sinalizacao');
+        const sin = sortById(items.filter(i => i.type === 'sinalizacao')); // <--- Ordenado
         generateTable("SINALIZAÇÃO DE EMERGÊNCIA", sin.map(i => {
             let status = i.existente === 'Sim' ? 'Presente' : 'Ausente';
             return [i.andar, i.id, i.tipo || '-', status, i.obs || '-'];
         }), ['Local', 'ID', 'Tipo', 'Status', 'Observações'], [51, 65, 85]);
 
-        const eletro = items.filter(i => i.type === 'eletro');
+        const eletro = sortById(items.filter(i => i.type === 'eletro'));
         generateTable("ELETROMECÂNICA / ALARME", eletro.map(i => {
             const manut = i.precisa_manutencao === 'Sim' ? 'SIM' : 'Não';
             return [i.andar, i.tipo_sistema, i.botoeiras, manut, i.obs || '-'];
         }), ['Local', 'Sistema', 'Acionador', 'Manut.', 'Observações'], [51, 65, 85]);
 
-        const bombas = items.filter(i => i.type === 'bomba');
+        const bombas = sortById(items.filter(i => i.type === 'bomba'));
         generateTable("CONJUNTO DE BOMBAS", bombas.map(i => [
             i.andar, i.id, i.operacao ? 'Automático' : 'Manual/Off', i.teste_pressao ? 'OK' : 'Pend.', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
         ]), ['Local', 'ID', 'Painel', 'Pressão', 'Manut.', 'Observações'], [51, 65, 85]);
-
 
         // --- PÁGINA 3: OBSERVAÇÕES GERAIS ---
         doc.addPage();

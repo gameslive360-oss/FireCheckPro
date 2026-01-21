@@ -575,7 +575,11 @@ window.removeItem = function (uid) {
 function renderList() {
     const listEl = document.getElementById('lista-itens');
     const countEl = document.getElementById('count');
+
+    // Atualiza o contador visual
     if (countEl) countEl.innerText = items.length;
+
+    // Limpa a lista atual
     listEl.innerHTML = "";
 
     if (items.length === 0) {
@@ -583,31 +587,37 @@ function renderList() {
         return;
     }
 
-    // 1. Cria uma cópia para não bagunçar a lista original
+    // 1. CRIA CÓPIA SEGURA DA LISTA
     let displayItems = [...items];
 
-    // 2. Aplica a ordenação baseada na escolha
+    // 2. LÓGICA DE ORDENAÇÃO ROBUSTA
     if (currentSortOrder === 'newest') {
-        // UID maior (mais novo) primeiro
-        displayItems.sort((a, b) => b.uid - a.uid);
-    } else if (currentSortOrder === 'oldest') {
-        // UID menor (mais velho) primeiro
-        displayItems.sort((a, b) => a.uid - b.uid);
-    } else if (currentSortOrder === 'az') {
-        // Ordenação Alfabética Inteligente (H-2 vem antes de H-10)
+        // Ordena por Criação (Mais Novo Primeiro)
+        // Forçamos "Number()" para garantir que strings numéricas não quebrem a conta
+        displayItems.sort((a, b) => Number(b.uid) - Number(a.uid));
+    }
+    else if (currentSortOrder === 'oldest') {
+        // Ordena por Criação (Mais Antigo Primeiro)
+        displayItems.sort((a, b) => Number(a.uid) - Number(b.uid));
+    }
+    else if (currentSortOrder === 'az') {
+        // Ordena pelo ID Visual (H-1, H-2, H-10...)
         displayItems.sort((a, b) => {
-            const idA = a.id || "";
-            const idB = b.id || "";
+            const idA = String(a.id || "").trim(); // Força texto e remove espaços
+            const idB = String(b.id || "").trim();
+
+            // O segredo: { numeric: true } faz o computador entender que "10" é maior que "2"
             return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
         });
     }
 
+    // 3. RENDERIZAÇÃO
     const fragment = document.createDocumentFragment();
 
-    // 3. Loop na lista já ordenada
     displayItems.forEach(item => {
         const div = document.createElement('div');
         let color = 'blue';
+        // Define cores baseadas no tipo
         if (item.type === 'extintor') color = 'red';
         else if (item.type === 'luz') color = 'amber';
         else if (item.type === 'bomba') color = 'purple';
@@ -621,16 +631,19 @@ function renderList() {
             ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1"><i data-lucide="camera" class="w-3 h-3 inline"></i> ${item.imageFiles.length}</span>`
             : '';
 
+        // Monta o visual do item
         div.innerHTML = `
             <div class="flex items-center gap-3 overflow-hidden">
                 <div class="min-w-0">
-                    <div class="font-bold text-gray-800 text-sm truncate">${item.type === 'geral' ? (item.obs?.substring(0, 30) || 'Geral') : item.id + ' | ' + item.andar}</div>
+                    <div class="font-bold text-gray-800 text-sm truncate">
+                        ${item.type === 'geral' ? (item.obs?.substring(0, 30) || 'Geral') : (item.id + ' | ' + item.andar)}
+                    </div>
                     <div class="text-xs text-gray-500 uppercase">${item.type} ${photoBadge}</div>
                 </div>
             </div>
             <div class="flex gap-1">
-                <button class="btn-edit text-blue-500 p-2"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                <button class="btn-del text-red-400 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                <button class="btn-edit text-blue-500 p-2 hover:bg-blue-50 rounded"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                <button class="btn-del text-red-400 p-2 hover:bg-red-50 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
         `;
 
@@ -638,6 +651,7 @@ function renderList() {
         div.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
         fragment.appendChild(div);
     });
+
     listEl.appendChild(fragment);
     refreshIcons();
 }
@@ -918,19 +932,23 @@ window.exportBackup = async function () {
     const oldText = btn.innerText;
     btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Gerando Backup Completo...`;
 
+    // Atualiza ícones imediatamente
+    if (window.lucide) window.lucide.createIcons();
+
     try {
         // 1. Processa itens E CONVERTE imagens para Base64
+        // Isso pode demorar um pouco dependendo da qtd de fotos
         const itemsFull = await Promise.all(items.map(async (item) => ({
             ...item,
             imageFiles: [], // Remove o objeto File (não salva em JSON)
-            // AQUI ESTÁ O SEGREDO: Convertemos e guardamos a string gigante
+            // Converte as imagens para string Base64
             _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
         })));
 
         const backupData = {
-            version: "2.0-full", // Versão completa
+            version: "2.0-full",
             timestamp: new Date().toISOString(),
-            header: getHeaderData(), // Usa o helper
+            header: getHeaderData(),
             items: itemsFull,
             signatures: {
                 tecnico: sigTecnico?.getImageData(),
@@ -938,16 +956,25 @@ window.exportBackup = async function () {
             }
         };
 
-        // 2. Cria o arquivo para download
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+        // 2. CRIA O ARQUIVO DE FORMA SEGURA (USANDO BLOB)
+        // Isso corrige o problema do arquivo corrompido/cortado
+        const jsonString = JSON.stringify(backupData);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
         const a = document.createElement('a');
-        a.href = dataStr;
-        a.download = `Backup_FireCheck_COMPLETO_${Date.now()}.json`; // Nome sugere que é completo
+        a.href = url;
+        a.download = `Backup_FireCheck_COMPLETO_${Date.now()}.json`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
 
-        window.showToast("Backup completo (com fotos) salvo no dispositivo!");
+        // Limpeza de memória
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+
+        window.showToast("Backup completo salvo no dispositivo!");
 
     } catch (e) {
         console.error(e);

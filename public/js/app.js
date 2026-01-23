@@ -598,84 +598,159 @@ function renderList() {
     const listEl = document.getElementById('lista-itens');
     const countEl = document.getElementById('count');
 
-    // Atualiza o contador visual
+    // Atualiza contador
     if (countEl) countEl.innerText = items.length;
 
-    // Limpa a lista atual
+    // Limpa lista
     listEl.innerHTML = "";
 
     if (items.length === 0) {
-        listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia.</div>';
+        listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia. Adicione itens acima.</div>';
         return;
     }
 
-    // 1. CRIA CÓPIA SEGURA DA LISTA
+    // 1. Ordenação (Mantive sua lógica corrigida)
     let displayItems = [...items];
-
-    // 2. LÓGICA DE ORDENAÇÃO ROBUSTA
     if (currentSortOrder === 'newest') {
-        // Ordena por Criação (Mais Novo Primeiro)
-        // Forçamos "Number()" para garantir que strings numéricas não quebrem a conta
         displayItems.sort((a, b) => Number(b.uid) - Number(a.uid));
-    }
-    else if (currentSortOrder === 'oldest') {
-        // Ordena por Criação (Mais Antigo Primeiro)
+    } else if (currentSortOrder === 'oldest') {
         displayItems.sort((a, b) => Number(a.uid) - Number(b.uid));
-    }
-    else if (currentSortOrder === 'az') {
-        // Ordena pelo ID Visual (H-1, H-2, H-10...)
+    } else if (currentSortOrder === 'az') {
         displayItems.sort((a, b) => {
-            const idA = String(a.id || "").trim(); // Força texto e remove espaços
+            const idA = String(a.id || "").trim();
             const idB = String(b.id || "").trim();
-
-            // O segredo: { numeric: true } faz o computador entender que "10" é maior que "2"
             return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
         });
     }
 
-    // 3. RENDERIZAÇÃO
-    const fragment = document.createDocumentFragment();
+    // 2. Cria a Estrutura da Tabela
+    const tableContainer = document.createElement('div');
+    tableContainer.className = "overflow-x-auto rounded-lg border border-gray-200 shadow-sm"; // Responsividade
+
+    const table = document.createElement('table');
+    table.className = "w-full text-sm text-left text-gray-600 bg-white";
+
+    // Cabeçalho da Tabela
+    const thead = document.createElement('thead');
+    thead.className = "text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200";
+    thead.innerHTML = `
+        <tr>
+            <th class="px-4 py-3 w-16 text-center">Tipo</th>
+            <th class="px-4 py-3 w-32">Local</th>
+            <th class="px-4 py-3 w-24">ID</th>
+            <th class="px-4 py-3">Resumo / Detalhes</th>
+            <th class="px-4 py-3">Observações</th>
+            <th class="px-4 py-3 w-24 text-center">Ações</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+
+    // Corpo da Tabela
+    const tbody = document.createElement('tbody');
+    tbody.className = "divide-y divide-gray-100";
 
     displayItems.forEach(item => {
-        const div = document.createElement('div');
-        let color = 'blue';
-        // Define cores baseadas no tipo
-        if (item.type === 'extintor') color = 'red';
-        else if (item.type === 'luz') color = 'amber';
-        else if (item.type === 'bomba') color = 'purple';
-        else if (item.type === 'sinalizacao') color = 'teal';
-        else if (item.type === 'eletro') color = 'indigo';
-        else if (item.type === 'geral') color = 'slate';
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-blue-50 transition-colors group";
 
-        div.className = `bg-white p-3 rounded shadow-sm border-l-4 border-${color}-500 flex justify-between items-center group hover:shadow-md transition-all`;
+        // Definir ícone ou sigla baseada no tipo
+        let typeLabel = item.type.substring(0, 3).toUpperCase();
+        let typeColor = "bg-slate-100 text-slate-600";
+        if (item.type === 'hidrante') { typeLabel = "HID"; typeColor = "bg-blue-100 text-blue-700"; }
+        if (item.type === 'extintor') { typeLabel = "EXT"; typeColor = "bg-red-100 text-red-700"; }
+        if (item.type === 'luz') { typeLabel = "LUZ"; typeColor = "bg-amber-100 text-amber-700"; }
+        if (item.type === 'bomba') { typeLabel = "BOM"; typeColor = "bg-purple-100 text-purple-700"; }
 
+        // Gerar Resumo Automático (Para coluna Detalhes)
+        let summary = generateItemSummary(item);
+
+        // Badge de Fotos
         const photoBadge = (item.imageFiles?.length)
-            ? `<span class="text-xs bg-blue-100 text-blue-700 px-1 rounded ml-1"><i data-lucide="camera" class="w-3 h-3 inline"></i> ${item.imageFiles.length}</span>`
+            ? `<span class="ml-2 inline-flex items-center text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-600"><i data-lucide="camera" class="w-3 h-3 mr-1"></i> ${item.imageFiles.length}</span>`
             : '';
 
-        // Monta o visual do item
-        div.innerHTML = `
-            <div class="flex items-center gap-3 overflow-hidden">
-                <div class="min-w-0">
-                    <div class="font-bold text-gray-800 text-sm truncate">
-                        ${item.type === 'geral' ? (item.obs?.substring(0, 30) || 'Geral') : (item.id + ' | ' + item.andar)}
-                    </div>
-                    <div class="text-xs text-gray-500 uppercase">${item.type} ${photoBadge}</div>
+        tr.innerHTML = `
+            <td class="px-4 py-2 text-center">
+                <span class="text-[10px] font-bold px-2 py-1 rounded ${typeColor}">${typeLabel}</span>
+            </td>
+            
+            <td class="px-2 py-1">
+                <input type="text" 
+                    value="${item.andar || ''}" 
+                    onblur="updateItemField(${item.uid}, 'andar', this.value)"
+                    class="w-full bg-transparent border-transparent focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 rounded px-2 py-1 text-gray-800 font-medium transition-all"
+                    placeholder="Local...">
+            </td>
+
+            <td class="px-2 py-1">
+                <input type="text" 
+                    value="${item.id || ''}" 
+                    onblur="updateItemField(${item.uid}, 'id', this.value)"
+                    class="w-full bg-transparent border-transparent focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 rounded px-2 py-1 text-gray-900 font-bold transition-all"
+                    placeholder="ID...">
+            </td>
+
+            <td class="px-4 py-2 text-xs text-gray-500">
+                <div class="truncate max-w-[200px]" title="${summary}">${summary}</div>
+                ${photoBadge}
+            </td>
+
+            <td class="px-2 py-1">
+                <input type="text" 
+                    value="${item.obs || ''}" 
+                    onblur="updateItemField(${item.uid}, 'obs', this.value)"
+                    class="w-full bg-transparent border-transparent focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 rounded px-2 py-1 text-gray-600 italic transition-all"
+                    placeholder="Sem obs...">
+            </td>
+
+            <td class="px-4 py-2 text-center">
+                <div class="flex items-center justify-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button class="btn-edit text-blue-500 hover:bg-blue-100 p-1.5 rounded transition-colors" title="Editar Completo">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button class="btn-del text-red-400 hover:bg-red-100 p-1.5 rounded transition-colors" title="Excluir">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
                 </div>
-            </div>
-            <div class="flex gap-1">
-                <button class="btn-edit text-blue-500 p-2 hover:bg-blue-50 rounded"><i data-lucide="pencil" class="w-4 h-4"></i></button>
-                <button class="btn-del text-red-400 p-2 hover:bg-red-50 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </div>
+            </td>
         `;
 
-        div.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
-        div.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
-        fragment.appendChild(div);
+        // Ligar eventos dos botões
+        tr.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
+        tr.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
+
+        tbody.appendChild(tr);
     });
 
-    listEl.appendChild(fragment);
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+    listEl.appendChild(tableContainer);
+
     refreshIcons();
+}
+
+// Helper para gerar o texto da coluna "Detalhes"
+function generateItemSummary(item) {
+    if (item.type === 'hidrante') {
+        const parts = [];
+        if (item.tem_mangueira) parts.push(`Mangueira: ${item.lances || 0}x`);
+        else parts.push("S/ Mangueira");
+
+        if (item.tem_acionador) {
+            parts.push(item.acionador_quebrado ? "Bomba: DEFEITO" : "Bomba: OK");
+        }
+        return parts.join(' | ');
+    }
+    if (item.type === 'extintor') {
+        return `${item.tipo} ${item.peso}kg | Val: ${item.validade || '-'}`;
+    }
+    if (item.type === 'luz') {
+        return `${item.tipo} | ${item.estado}`;
+    }
+    if (item.type === 'geral') {
+        return "Item Geral";
+    }
+    return "-"; // Outros tipos
 }
 
 function atualizarBotoesModoEdicao(editando) {
@@ -706,6 +781,26 @@ function atualizarBotoesModoEdicao(editando) {
     }
     refreshIcons();
 }
+
+// --- FUNÇÃO DE EDIÇÃO RÁPIDA (PLANILHA) ---
+window.updateItemField = function (uid, field, value) {
+    const itemIndex = items.findIndex(i => i.uid === parseInt(uid));
+    if (itemIndex > -1) {
+        // Atualiza o valor no array global
+        items[itemIndex][field] = value;
+
+        // Se mudou o ID, precisamos reordenar se o filtro estiver em A-Z
+        if (field === 'id' && currentSortOrder === 'az') {
+            renderList();
+        }
+
+        // Feedback visual discreto (console ou borda)
+        console.log(`Item ${uid} atualizado: ${field} = ${value}`);
+
+        // Salva no LocalStorage (opcional, se você quiser persistência local imediata)
+        // localStorage.setItem('backup_items', JSON.stringify(items)); 
+    }
+};
 
 /* ==========================================================================
    6. FILES & IMAGENS

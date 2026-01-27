@@ -93,17 +93,18 @@
                         class="w-4 h-4"></i><span>Restaurar Backup</span><input type="file" accept=".json"
                         onchange="window.importBackup(event)" class="hidden"></label>
             </div>
-            <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Backup & Restore</div>
-            <div class="px-2 space-y-2">
-                <button onclick="window.exportToExcel()" class="nav-btn text-sm text-green-300 hover:text-green-100">
-                    <i data-lucide="sheet" class="w-4 h-4"></i> Exportar Planilha (.xlsx)
-                </button>
-
-                <label class="nav-btn cursor-pointer text-sm text-green-300 hover:text-green-100">
-                    <i data-lucide="table-2" class="w-4 h-4"></i>
-                    <span>Importar Planilha</span>
-                    <input type="file" accept=".xlsx, .xls" onchange="window.importFromExcel(event)" class="hidden">
-                </label>
+            <div style="display: none;">
+                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Backup & Restore</div>
+                <div class="px-2 space-y-2">
+                    <button onclick="window.exportToExcel()" class="nav-btn text-sm text-green-300 hover:text-green-100">
+                        <i data-lucide="sheet" class="w-4 h-4"></i> Exportar Planilha (.xlsx)
+                    </button>
+                    <label class="nav-btn cursor-pointer text-sm text-green-300 hover:text-green-100">
+                        <i data-lucide="table-2" class="w-4 h-4"></i>
+                        <span>Importar Planilha</span>
+                        <input type="file" accept=".xlsx, .xls" onchange="window.importFromExcel(event)" class="hidden">
+                    </label>
+                </div>
             </div>
 
             <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Gerenciamento</div>

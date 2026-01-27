@@ -26,6 +26,16 @@ let pendingAction = null; // Para modal de confirmação
 let currentReportId = null;
 let deferredPrompt; // PWA
 let currentSortOrder = 'newest';
+let reportNumber = localStorage.getItem('reportNumber');
+
+if (!reportNumber) {
+    reportNumber = generateUniqueId();
+    localStorage.setItem('reportNumber', reportNumber);
+}
+
+function generateUniqueId() {
+    return Date.now().toString(36).toUpperCase();
+}
 
 /* ==========================================================================
    2. INICIALIZAÇÃO DO FIREBASE
@@ -936,6 +946,7 @@ async function saveToFirebase() {
 
         const reportData = {
             id: currentReportId,
+            reportNumber: reportNumber,
             version: "2.0",
             timestamp: new Date().toISOString(),
             userId: user.uid,
@@ -1049,7 +1060,12 @@ window.loadCloudReports = async function () {
                             <i data-lucide="pen-line" class="w-3 h-3"></i> Editando Agora
                         </span>
                     </div>
-                    <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">${currentClient || 'Novo Relatório (Sem Nome)'}</h3>
+                    
+                    <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">
+                        ${currentClient || 'Novo Relatório'} 
+                        <span class="text-slate-400 text-base font-normal ml-2">#${reportNumber}</span>
+                    </h3>
+
                     <div class="text-xs text-slate-500 flex items-center gap-2 font-medium mb-1">
                         <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${currentLocation || 'Local não informado'}</span>
                         <span class="text-slate-300">|</span>
@@ -1146,6 +1162,8 @@ window.restoreCloudReport = async function (url) {
         const data = await resp.json();
 
         currentReportId = data.id || data.reportId;
+        reportNumber = data.reportNumber || generateUniqueId();
+        localStorage.setItem('reportNumber', reportNumber);
 
         if (data.lastEditorName) {
             localStorage.setItem('lastEditorName', data.lastEditorName);
@@ -1196,23 +1214,18 @@ window.exportBackup = async function () {
 
     const btn = document.getElementById('btn-backup');
     const oldText = btn.innerText;
-    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Gerando Backup Completo...`;
-
-    // Atualiza ícones imediatamente
-    if (window.lucide) window.lucide.createIcons();
+    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Gerando...`;
 
     try {
-        // 1. Processa itens E CONVERTE imagens para Base64
-        // Isso pode demorar um pouco dependendo da qtd de fotos
         const itemsFull = await Promise.all(items.map(async (item) => ({
             ...item,
-            imageFiles: [], // Remove o objeto File (não salva em JSON)
-            // Converte as imagens para string Base64
+            imageFiles: [],
             _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
         })));
 
         const backupData = {
-            version: "2.0-full",
+            version: "2.1-full", // Versão atualizada
+            reportNumber: reportNumber, // SALVA O NÚMERO NO JSON
             timestamp: new Date().toISOString(),
             header: getHeaderData(),
             items: itemsFull,
@@ -1222,25 +1235,30 @@ window.exportBackup = async function () {
             }
         };
 
-        // 2. CRIA O ARQUIVO DE FORMA SEGURA (USANDO BLOB)
-        // Isso corrige o problema do arquivo corrompido/cortado
         const jsonString = JSON.stringify(backupData);
         const blob = new Blob([jsonString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
 
+        // --- LÓGICA DO NOME DO ARQUIVO ---
+        const clienteRaw = document.getElementById('cliente').value || "Sem_Cliente";
+        // Remove caracteres especiais e espaços para o nome do arquivo
+        const clienteSafe = clienteRaw.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_');
+
+        const filename = `Relatorio_${clienteSafe}_${reportNumber}.json`;
+        // ---------------------------------
+
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Backup_FireCheck_COMPLETO_${Date.now()}.json`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
 
-        // Limpeza de memória
         setTimeout(() => {
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         }, 100);
 
-        window.showToast("Backup completo salvo no dispositivo!");
+        window.showToast("Backup salvo: " + filename);
 
     } catch (e) {
         console.error(e);
@@ -1277,6 +1295,8 @@ window.importBackup = function (event) {
             document.getElementById('sum-resumo').value = data.header.resumo || '';
             document.getElementById('sum-riscos').value = data.header.riscos || '';
             document.getElementById('sum-conclusao').value = data.header.conclusao || '';
+            reportNumber = data.reportNumber || generateUniqueId();
+            localStorage.setItem('reportNumber', reportNumber);
 
             window.toggleHeader();
 
@@ -1388,12 +1408,18 @@ window.closeConfirmModal = function () {
 };
 
 window.resetApp = function () {
-    if (items.length && !confirm("Limpar tudo?")) return;
+    if (items.length && !confirm("Limpar tudo e iniciar novo relatório?")) return;
+
     items = [];
     currentReportId = null;
+
+    // GERA UM NOVO NÚMERO ÚNICO
+    reportNumber = generateUniqueId();
+    localStorage.setItem('reportNumber', reportNumber);
+
     clearFormState(false);
     renderList();
-    window.showToast("Novo relatório iniciado");
+    window.showToast(`Novo relatório iniciado (#${reportNumber})`);
     window.toggleMenu();
 };
 
@@ -1506,7 +1532,6 @@ window.useReportAsBase = async function (sourceType, cloudUrl = null) {
         // 1. Obter dados da fonte
         if (sourceType === 'local') {
             sourceItems = [...items]; // Copia do estado atual
-            // Pega dados básicos do header atual para manter Cliente/Local
             sourceHeader = {
                 cliente: document.getElementById('cliente').value,
                 local: document.getElementById('local').value,
@@ -1534,8 +1559,13 @@ window.useReportAsBase = async function (sourceType, cloudUrl = null) {
 
         // 3. Resetar Estado Global da Aplicação
         items = newItems;
-        currentReportId = null; // Garante que será um novo relatório na nuvem
+        currentReportId = null; // Garante que será salvo como NOVO na nuvem
         currentFiles = [];
+
+        // --- ADIÇÃO IMPORTANTE PARA A NOVA LÓGICA ---
+        reportNumber = generateUniqueId(); // Gera um NOVO número para esse novo relatório
+        localStorage.setItem('reportNumber', reportNumber);
+        // --------------------------------------------
 
         // 4. Preencher Header (Mantém dados fixos, zera dados variáveis)
         document.getElementById('cliente').value = sourceHeader.cliente;
@@ -1558,7 +1588,7 @@ window.useReportAsBase = async function (sourceType, cloudUrl = null) {
         window.toggleHeader(); // Mostra header para conferência
         renderList();
         window.showFormPage();
-        window.showToast("Nova vistoria criada com base no histórico!", "success");
+        window.showToast("Base criada! Novo Relatório #" + reportNumber, "success");
 
     } catch (e) {
         console.error(e);

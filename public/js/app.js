@@ -986,39 +986,114 @@ async function saveToFirebase() {
 
 async function loadCloudReports() {
     const container = document.getElementById('reports-list-container');
-    if (!user) { container.innerHTML = '<p class="text-center text-red-400">Faça login.</p>'; return; }
 
-    container.innerHTML = '<div class="text-center"><i data-lucide="loader-2" class="animate-spin"></i></div>';
+    // 1. Mostrar Loading enquanto prepara
+    container.innerHTML = '<div class="text-center py-8"><i data-lucide="loader-2" class="animate-spin w-8 h-8 text-blue-600 mx-auto"></i><span class="text-xs text-gray-400 mt-2 block">Carregando...</span></div>';
     refreshIcons();
 
-    try {
-        const q = query(collection(db, "reports"), where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(20));
-        const snapshot = await getDocs(q);
+    // 2. CAPTURAR DADOS LOCAIS (O "Rascunho" atual)
+    // Verifica se tem cliente preenchido OU se tem itens na lista
+    const currentClient = document.getElementById('cliente').value.trim();
+    const currentLocation = document.getElementById('local').value.trim();
+    const currentCount = items.length; // Variável global 'items'
+    const hasLocalData = currentCount > 0 || currentClient !== "";
 
-        container.innerHTML = "";
-        if (snapshot.empty) { container.innerHTML = "<p class='text-center text-gray-400'>Nenhum relatório.</p>"; return; }
+    // 3. Buscar na Nuvem (se usuário estiver logado)
+    let cloudDocs = [];
+    if (user) {
+        try {
+            // Reutiliza as variáveis globais do Firebase já importadas no topo do arquivo
+            const q = query(collection(db, "reports"), where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(20));
+            const snapshot = await getDocs(q);
+            snapshot.forEach(doc => cloudDocs.push(doc.data()));
+        } catch (e) {
+            console.error("Erro ao buscar relatórios (offline?):", e);
+        }
+    }
 
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
+    // 4. LIMPAR E RENDERIZAR
+    container.innerHTML = "";
+
+    // === A. RENDERIZAR O RELATÓRIO "EM EDIÇÃO" (LOCAL) ===
+    if (hasLocalData) {
+        const localDiv = document.createElement('div');
+        localDiv.className = "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm mb-6 flex justify-between items-center animate-fade-in";
+
+        localDiv.innerHTML = `
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm flex items-center gap-1">
+                        <i data-lucide="pen-line" class="w-3 h-3"></i> Editando Agora
+                    </span>
+                </div>
+                
+                <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">${currentClient || 'Novo Relatório (Sem Nome)'}</h3>
+                
+                <div class="text-xs text-slate-500 flex items-center gap-2 font-medium">
+                    <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${currentLocation || 'Local não informado'}</span>
+                    <span class="text-slate-300">|</span>
+                    <span class="flex items-center gap-1"><i data-lucide="list-checks" class="w-3 h-3"></i> ${currentCount} itens</span>
+                </div>
+            </div>
+            
+            <button onclick="window.showFormPage()" class="bg-white text-blue-600 border border-blue-100 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center gap-2 transition-all active:scale-95">
+                Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        `;
+        container.appendChild(localDiv);
+
+        if (cloudDocs.length > 0) {
+            const divider = document.createElement('div');
+            divider.className = "flex items-center gap-4 py-3 mb-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest";
+            divider.innerHTML = `<div class="h-px bg-gray-200 flex-1"></div>Salvos na Nuvem<div class="h-px bg-gray-200 flex-1"></div>`;
+            container.appendChild(divider);
+        }
+    } else {
+        // Se não tem nada sendo editado, mostra um aviso sutil
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = "bg-gray-50 border border-dashed border-gray-200 p-4 rounded-lg text-center mb-6 opacity-75";
+        emptyDiv.innerHTML = `<p class="text-xs text-gray-400 font-medium">Nenhum rascunho em aberto no momento.</p>`;
+        container.appendChild(emptyDiv);
+    }
+
+    // === B. RENDERIZAR ITENS DA NUVEM ===
+    if (!user) {
+        const loginMsg = document.createElement('div');
+        loginMsg.className = "text-center text-gray-500 py-8 bg-gray-50 rounded border border-gray-100";
+        loginMsg.innerHTML = `
+            <i data-lucide="lock" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
+            <p class="text-sm">Faça login para acessar seu histórico na nuvem.</p>
+        `;
+        container.appendChild(loginMsg);
+    } else if (cloudDocs.length === 0) {
+        const noDocs = document.createElement('div');
+        noDocs.className = "text-center text-gray-400 py-8";
+        noDocs.innerHTML = "Nenhum relatório salvo na nuvem ainda.";
+        container.appendChild(noDocs);
+    } else {
+        cloudDocs.forEach(data => {
             const date = data.updatedAt?.seconds ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString() : '-';
 
             const div = document.createElement('div');
-            div.className = "bg-white p-4 rounded border mb-2 flex justify-between items-center hover:shadow";
+            div.className = "bg-white p-4 rounded-lg border border-gray-100 mb-3 flex justify-between items-center hover:shadow-md hover:border-blue-200 transition-all group";
+
             div.innerHTML = `
                 <div>
-                    <div class="font-bold">${data.cliente || 'Sem Cliente'}</div>
-                    <div class="text-xs text-gray-500">${data.local} • ${date}</div>
+                    <div class="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">${data.cliente || 'Sem Cliente'}</div>
+                    <div class="text-xs text-gray-400 mt-1 flex items-center gap-3">
+                         <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${date}</span>
+                         <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${data.local || 'Sem local'}</span>
+                    </div>
                 </div>
-                <button class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">Abrir</button>
+                <button onclick="window.restoreCloudReport('${data.fileUrl}')" class="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors" title="Baixar e Abrir">
+                    <i data-lucide="download-cloud" class="w-5 h-5"></i>
+                </button>
             `;
-            div.querySelector('button').onclick = () => window.restoreCloudReport(data.fileUrl);
             container.appendChild(div);
         });
-
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = "<p class='text-red-500 text-center'>Erro ao carregar lista.</p>";
     }
+
+    refreshIcons();
 }
 
 window.loadCloudReports = loadCloudReports;

@@ -969,9 +969,13 @@ async function saveToFirebase() {
             local: reportData.header.local,
             updatedAt: new Date(),
             fileUrl: downloadUrl,
-            itemCount: items.length
+            itemCount: items.length,
+            lastEditorName: user.displayName || "Usuário",
+            lastEditorPhoto: user.photoURL || ""
         }, { merge: true });
 
+        localStorage.setItem('lastEditorName', user.displayName || "Usuário");
+        localStorage.setItem('lastEditorPhoto', user.photoURL || "");
         window.showToast("Salvo na nuvem com sucesso!");
 
     } catch (e) {
@@ -1015,7 +1019,29 @@ async function loadCloudReports() {
     container.innerHTML = "";
 
     // === A. RENDERIZAR O RELATÓRIO "EM EDIÇÃO" (LOCAL) ===
+    // === A. RENDERIZAR O RELATÓRIO "EM EDIÇÃO" (LOCAL) ===
     if (hasLocalData) {
+        // Recupera dados do último editor
+        const editorName = localStorage.getItem('lastEditorName');
+        const editorPhoto = localStorage.getItem('lastEditorPhoto');
+
+        // Cria o HTML do Avatar (se existir editor)
+        let editorBadge = '';
+        if (editorName) {
+            const imgHtml = editorPhoto
+                ? `<img src="${editorPhoto}" class="w-5 h-5 rounded-full border border-white shadow-sm">`
+                : `<div class="w-5 h-5 rounded-full bg-slate-400 flex items-center justify-center text-[8px] text-white font-bold border border-white shadow-sm">${editorName.charAt(0)}</div>`;
+
+            editorBadge = `
+                <div class="flex items-center gap-2 mt-2 bg-white/50 px-2 py-1 rounded-full border border-blue-100 self-start w-fit">
+                    ${imgHtml}
+                    <span class="text-[10px] text-slate-500 font-semibold">
+                        Editado por <span class="text-slate-700">${editorName.split(' ')[0]}</span>
+                    </span>
+                </div>
+            `;
+        }
+
         const localDiv = document.createElement('div');
         localDiv.className = "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm mb-6 flex justify-between items-center animate-fade-in";
 
@@ -1029,14 +1055,16 @@ async function loadCloudReports() {
                 
                 <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">${currentClient || 'Novo Relatório (Sem Nome)'}</h3>
                 
-                <div class="text-xs text-slate-500 flex items-center gap-2 font-medium">
+                <div class="text-xs text-slate-500 flex items-center gap-2 font-medium mb-1">
                     <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${currentLocation || 'Local não informado'}</span>
                     <span class="text-slate-300">|</span>
                     <span class="flex items-center gap-1"><i data-lucide="list-checks" class="w-3 h-3"></i> ${currentCount} itens</span>
                 </div>
+
+                ${editorBadge}
             </div>
             
-            <button onclick="window.showFormPage()" class="bg-white text-blue-600 border border-blue-100 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center gap-2 transition-all active:scale-95">
+            <button onclick="window.showFormPage()" class="bg-white text-blue-600 border border-blue-100 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center gap-2 transition-all active:scale-95 h-10">
                 Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
         `;
@@ -1110,6 +1138,11 @@ window.restoreCloudReport = async function (url) {
         const data = await resp.json();
 
         currentReportId = data.id || data.reportId;
+
+        if (data.lastEditorName) {
+            localStorage.setItem('lastEditorName', data.lastEditorName);
+            localStorage.setItem('lastEditorPhoto', data.lastEditorPhoto || "");
+        }
 
         document.getElementById('cliente').value = data.header.cliente || '';
         document.getElementById('local').value = data.header.local || '';

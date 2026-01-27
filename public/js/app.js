@@ -67,6 +67,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const chkFuncional = document.getElementById('h-acionador-funcional');
     const chkQuebrado = document.getElementById('h-acionador-quebrado');
 
+    const btnModalLogin = document.getElementById('btn-modal-login-action');
+    if (btnModalLogin) {
+        btnModalLogin.addEventListener('click', () => {
+            document.getElementById('modal-login-warning').classList.add('hidden');
+        });
+    }
+
     if (chkFuncional && chkQuebrado) {
         // Se marcar "Funcional", desmarca "Quebrado"
         chkFuncional.addEventListener('change', function () {
@@ -907,7 +914,10 @@ const base64ToFile = (dataurl, filename) => {
    7. CLOUD & PERSISTÊNCIA (FIREBASE)
    ========================================================================== */
 async function saveToFirebase() {
-    if (!auth.currentUser) return alert("Faça login para salvar.");
+    if (!auth.currentUser) {
+        window.showLoginModal();
+        return;
+    }
 
     const btn = document.getElementById('btn-save');
     const oldHtml = btn.innerHTML;
@@ -1537,6 +1547,10 @@ window.deleteCurrentImage = function () {
         },
         true
     );
+};
+
+window.showLoginModal = function () {
+    document.getElementById('modal-login-warning').classList.remove('hidden');
 };
 
 window.replaceCurrentImage = async function (event) {

@@ -726,7 +726,7 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 // Mude o número aqui (?v=15) SEMPRE que mudar no sw.js
-                navigator.serviceWorker.register('./sw.js?v=15')
+                navigator.serviceWorker.register('./sw.js?v=1.2.1')
                     .then(registration => {
                         console.log('SW Registrado:', registration.scope);
 

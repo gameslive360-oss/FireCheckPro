@@ -20,6 +20,7 @@ let sigCliente = null;
 let items = [];
 let currentType = 'hidrante';
 let currentFiles = [];
+let viewingImageIndex = null;
 let backupItem = null; // Para edição
 let pendingAction = null; // Para modal de confirmação
 let currentReportId = null;
@@ -838,18 +839,19 @@ function updateImagePreview() {
 
         currentFiles.forEach((file, index) => {
             const container = document.createElement('div');
-            // Mantém o container relativo para o botão absoluto funcionar
-            container.className = "thumb-container relative w-16 h-16";
+            container.className = "thumb-container relative w-16 h-16 group cursor-pointer"; // Adicionado cursor-pointer
+
+            const imgUrl = URL.createObjectURL(file);
 
             container.innerHTML = `
-                <img src="${URL.createObjectURL(file)}" class="w-full h-full object-cover rounded border">
-                <button class="btn-remove-thumb" type="button">×</button>
+                <img src="${imgUrl}" class="w-full h-full object-cover rounded border border-slate-300 hover:border-blue-500 transition-colors" onclick="window.openImageViewer(${index})">
+                <button class="btn-remove-thumb absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-md z-10 hover:scale-110 transition-transform" onclick="event.stopPropagation(); removeImage(${index})">×</button>
             `;
 
-            // Adiciona o evento de click na classe específica
-            container.querySelector('.btn-remove-thumb').onclick = () => {
+            container.querySelector('button').onclick = (e) => {
+                e.stopPropagation(); // Impede que abra o modal ao clicar no X pequeno
                 currentFiles.splice(index, 1);
-                updateImagePreview(); // Recarrega a galeria
+                updateImagePreview();
             };
 
             gallery.appendChild(container);
@@ -1466,4 +1468,92 @@ window.importFromExcel = function (event) {
 window.handleSort = function (order) {
     currentSortOrder = order;
     renderList(); // Apenas renderiza novamente com a nova ordem
+};
+
+/* ==========================================================================
+   14. VISUALIZADOR DE IMAGENS (NOVO)
+   ========================================================================== */
+
+window.openImageViewer = function (index) {
+    if (!currentFiles[index]) return;
+
+    viewingImageIndex = index;
+    const file = currentFiles[index];
+    const imgUrl = URL.createObjectURL(file);
+
+    const modal = document.getElementById('image-viewer');
+    const imgEl = document.getElementById('viewer-img');
+
+    imgEl.src = imgUrl;
+    modal.classList.remove('hidden');
+
+    // Atualiza ícones caso necessário
+    if (window.lucide) window.lucide.createIcons();
+};
+
+window.closeImageViewer = function () {
+    const modal = document.getElementById('image-viewer');
+    modal.classList.add('hidden');
+    viewingImageIndex = null;
+
+    // Limpa src para liberar memória
+    setTimeout(() => { document.getElementById('viewer-img').src = ""; }, 200);
+};
+
+window.downloadCurrentImage = function () {
+    if (viewingImageIndex === null) return;
+
+    const file = currentFiles[viewingImageIndex];
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `FireCheck_Img_${Date.now()}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+};
+
+window.deleteCurrentImage = function () {
+    if (viewingImageIndex === null) return;
+
+    if (confirm("Tem certeza que deseja excluir esta imagem?")) {
+        currentFiles.splice(viewingImageIndex, 1);
+        updateImagePreview(); // Atualiza a galeria atrás
+        window.closeImageViewer(); // Fecha o modal
+        window.showToast("Imagem removida", "info");
+    }
+};
+
+window.replaceCurrentImage = async function (event) {
+    if (viewingImageIndex === null || !event.target.files.length) return;
+
+    const file = event.target.files[0];
+    const btnIcon = document.querySelector('#image-viewer .fa-refresh'); // Se usar font-awesome, ou apenas feedback visual
+
+    try {
+        window.showToast("Processando substituição...", "info");
+
+        // Usa a função de compressão existente importada no topo do app.js
+        const compressed = await compressImage(file);
+
+        // Substitui no array
+        currentFiles[viewingImageIndex] = compressed;
+
+        // Atualiza a visualização no modal IMEDIATAMENTE
+        const newUrl = URL.createObjectURL(compressed);
+        document.getElementById('viewer-img').src = newUrl;
+
+        // Atualiza a galeria de fundo
+        updateImagePreview();
+
+        window.showToast("Imagem substituída com sucesso!");
+
+    } catch (error) {
+        console.error(error);
+        alert("Erro ao substituir imagem.");
+    } finally {
+        // Limpa o input para permitir selecionar a mesma foto se quiser
+        event.target.value = "";
+    }
 };

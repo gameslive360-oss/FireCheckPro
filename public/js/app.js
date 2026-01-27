@@ -1517,12 +1517,17 @@ window.downloadCurrentImage = function () {
 window.deleteCurrentImage = function () {
     if (viewingImageIndex === null) return;
 
-    if (confirm("Tem certeza que deseja excluir esta imagem?")) {
-        currentFiles.splice(viewingImageIndex, 1);
-        updateImagePreview(); // Atualiza a galeria atrás
-        window.closeImageViewer(); // Fecha o modal
-        window.showToast("Imagem removida", "info");
-    }
+    window.showConfirmModal(
+        "Excluir Imagem",
+        "Tem certeza que deseja apagar esta foto permanentemente?",
+        () => {
+            currentFiles.splice(viewingImageIndex, 1);
+            updateImagePreview();
+            window.closeImageViewer();
+            window.showToast("Imagem removida", "info");
+        },
+        true
+    );
 };
 
 window.replaceCurrentImage = async function (event) {

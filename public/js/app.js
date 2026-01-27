@@ -988,30 +988,28 @@ async function saveToFirebase() {
     }
 }
 
-async function loadCloudReports() {
+window.loadCloudReports = async function () {
     const container = document.getElementById('reports-list-container');
 
-    // 1. Mostrar Loading enquanto prepara
+    // 1. Mostrar Loading
     container.innerHTML = '<div class="text-center py-8"><i data-lucide="loader-2" class="animate-spin w-8 h-8 text-blue-600 mx-auto"></i><span class="text-xs text-gray-400 mt-2 block">Carregando...</span></div>';
     refreshIcons();
 
-    // 2. CAPTURAR DADOS LOCAIS (O "Rascunho" atual)
-    // Verifica se tem cliente preenchido OU se tem itens na lista
+    // 2. CAPTURAR DADOS LOCAIS
     const currentClient = document.getElementById('cliente').value.trim();
     const currentLocation = document.getElementById('local').value.trim();
-    const currentCount = items.length; // Variável global 'items'
+    const currentCount = items.length;
     const hasLocalData = currentCount > 0 || currentClient !== "";
 
-    // 3. Buscar na Nuvem (se usuário estiver logado)
+    // 3. Buscar na Nuvem
     let cloudDocs = [];
     if (user) {
         try {
-            // Reutiliza as variáveis globais do Firebase já importadas no topo do arquivo
             const q = query(collection(db, "reports"), where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(20));
             const snapshot = await getDocs(q);
             snapshot.forEach(doc => cloudDocs.push(doc.data()));
         } catch (e) {
-            console.error("Erro ao buscar relatórios (offline?):", e);
+            console.error("Erro ao buscar relatórios:", e);
         }
     }
 
@@ -1019,13 +1017,11 @@ async function loadCloudReports() {
     container.innerHTML = "";
 
     // === A. RENDERIZAR O RELATÓRIO "EM EDIÇÃO" (LOCAL) ===
-    // === A. RENDERIZAR O RELATÓRIO "EM EDIÇÃO" (LOCAL) ===
     if (hasLocalData) {
         // Recupera dados do último editor
         const editorName = localStorage.getItem('lastEditorName');
         const editorPhoto = localStorage.getItem('lastEditorPhoto');
 
-        // Cria o HTML do Avatar (se existir editor)
         let editorBadge = '';
         if (editorName) {
             const imgHtml = editorPhoto
@@ -1043,30 +1039,35 @@ async function loadCloudReports() {
         }
 
         const localDiv = document.createElement('div');
-        localDiv.className = "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm mb-6 flex justify-between items-center animate-fade-in";
+        localDiv.className = "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm mb-6 animate-fade-in";
 
         localDiv.innerHTML = `
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm flex items-center gap-1">
-                        <i data-lucide="pen-line" class="w-3 h-3"></i> Editando Agora
-                    </span>
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm flex items-center gap-1">
+                            <i data-lucide="pen-line" class="w-3 h-3"></i> Editando Agora
+                        </span>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">${currentClient || 'Novo Relatório (Sem Nome)'}</h3>
+                    <div class="text-xs text-slate-500 flex items-center gap-2 font-medium mb-1">
+                        <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${currentLocation || 'Local não informado'}</span>
+                        <span class="text-slate-300">|</span>
+                        <span class="flex items-center gap-1"><i data-lucide="list-checks" class="w-3 h-3"></i> ${currentCount} itens</span>
+                    </div>
+                    ${editorBadge}
                 </div>
-                
-                <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">${currentClient || 'Novo Relatório (Sem Nome)'}</h3>
-                
-                <div class="text-xs text-slate-500 flex items-center gap-2 font-medium mb-1">
-                    <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${currentLocation || 'Local não informado'}</span>
-                    <span class="text-slate-300">|</span>
-                    <span class="flex items-center gap-1"><i data-lucide="list-checks" class="w-3 h-3"></i> ${currentCount} itens</span>
-                </div>
-
-                ${editorBadge}
             </div>
             
-            <button onclick="window.showFormPage()" class="bg-white text-blue-600 border border-blue-100 px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center gap-2 transition-all active:scale-95 h-10">
-                Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            </button>
+            <div class="flex gap-2 mt-2">
+                 <button onclick="window.showFormPage()" class="flex-1 bg-white text-blue-600 border border-blue-200 px-3 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95">
+                    Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+                
+                <button onclick="window.useReportAsBase('local')" class="bg-purple-50 text-purple-600 border border-purple-200 px-3 py-2 rounded-lg text-sm font-bold hover:bg-purple-600 hover:text-white shadow-sm flex items-center gap-2 transition-all active:scale-95" title="Criar novo usando este como base (Zera vistorias)">
+                    <i data-lucide="copy" class="w-4 h-4"></i> Usar Base
+                </button>
+            </div>
         `;
         container.appendChild(localDiv);
 
@@ -1077,7 +1078,6 @@ async function loadCloudReports() {
             container.appendChild(divider);
         }
     } else {
-        // Se não tem nada sendo editado, mostra um aviso sutil
         const emptyDiv = document.createElement('div');
         emptyDiv.className = "bg-gray-50 border border-dashed border-gray-200 p-4 rounded-lg text-center mb-6 opacity-75";
         emptyDiv.innerHTML = `<p class="text-xs text-gray-400 font-medium">Nenhum rascunho em aberto no momento.</p>`;
@@ -1103,26 +1103,34 @@ async function loadCloudReports() {
             const date = data.updatedAt?.seconds ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString() : '-';
 
             const div = document.createElement('div');
-            div.className = "bg-white p-4 rounded-lg border border-gray-100 mb-3 flex justify-between items-center hover:shadow-md hover:border-blue-200 transition-all group";
+            div.className = "bg-white p-4 rounded-lg border border-gray-100 mb-3 flex flex-col sm:flex-row justify-between items-center hover:shadow-md hover:border-blue-200 transition-all group gap-3";
 
             div.innerHTML = `
-                <div>
+                <div class="w-full sm:w-auto">
                     <div class="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">${data.cliente || 'Sem Cliente'}</div>
                     <div class="text-xs text-gray-400 mt-1 flex items-center gap-3">
                          <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${date}</span>
                          <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${data.local || 'Sem local'}</span>
+                         <span class="flex items-center gap-1"><i data-lucide="list" class="w-3 h-3"></i> ${data.itemCount || 0}</span>
                     </div>
                 </div>
-                <button onclick="window.restoreCloudReport('${data.fileUrl}')" class="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-full transition-colors" title="Baixar e Abrir">
-                    <i data-lucide="download-cloud" class="w-5 h-5"></i>
-                </button>
+                
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-50">
+                    <button onclick="window.useReportAsBase('cloud', '${data.fileUrl}')" class="flex items-center gap-1 text-xs font-bold text-purple-500 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-md transition-colors" title="Criar novo a partir deste (Mantém ID/Local)">
+                        <i data-lucide="copy" class="w-4 h-4"></i> Base
+                    </button>
+                    
+                    <button onclick="window.restoreCloudReport('${data.fileUrl}')" class="flex items-center gap-1 text-xs font-bold text-blue-500 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-md transition-colors" title="Abrir relatório completo">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Abrir
+                    </button>
+                </div>
             `;
             container.appendChild(div);
         });
     }
 
     refreshIcons();
-}
+};
 
 window.loadCloudReports = loadCloudReports;
 window.restoreCloudReport = async function (url) {
@@ -1391,6 +1399,173 @@ window.resetApp = function () {
 
 window.toggleAcionadorFields = function () {
     toggleFieldGroup('h-tem-acionador', 'h-acionador-container');
+};
+
+// Função auxiliar para limpar dados e manter apenas a "base" (Local e ID)
+function createCleanItemFromBase(oldItem) {
+    const base = {
+        uid: Date.now() + Math.random(), // Novo UID único
+        type: oldItem.type,
+        id: oldItem.id,
+        andar: oldItem.andar,
+        obs: '', // Zera observação
+        imageFiles: [] // Zera imagens
+    };
+
+    // Define defaults baseados no tipo (estado "zerado")
+    switch (oldItem.type) {
+        case 'hidrante':
+            return {
+                ...base,
+                check_registro: false,
+                check_adaptador: false,
+                check_chave: false,
+                check_esguicho: false,
+                tem_mangueira: true, // Assume true para abrir os campos, mas vazios
+                selo: '-',
+                validade: '',
+                lances: '1',
+                metragem: '15m',
+                tem_acionador: false,
+                acionador_funcional: false,
+                acionador_quebrado: false
+            };
+        case 'extintor':
+            return {
+                ...base,
+                tipo: 'PQS', // Default
+                peso: '',
+                recarga: '',
+                teste_hidro: '',
+                check_lacre: false,
+                check_manometro: false,
+                check_sinalizacao: false,
+                check_mangueira: false
+            };
+        case 'luz':
+            return {
+                ...base,
+                tipo: 'Aclaramento',
+                estado: 'OK',
+                autonomia: 'Nao Testado',
+                check_acendimento: false,
+                check_led: false,
+                check_fixacao: false,
+                check_lux: false
+            };
+        case 'bomba':
+            return {
+                ...base,
+                operacao: false,
+                teste_pressao: false,
+                necessita_manutencao: false
+            };
+        case 'sinalizacao':
+            return {
+                ...base,
+                existente: 'Sim',
+                tipo: 'Saida',
+                check_foto: false,
+                check_fixacao: false,
+                check_visivel: false,
+                check_legivel: false
+            };
+        case 'eletro':
+            return {
+                ...base,
+                tipo_sistema: 'Pressurizacao',
+                botoeiras: 'Nao',
+                precisa_manutencao: 'Nao',
+                check_painel: false,
+                check_piloto: false,
+                check_ruido: false,
+                check_fixacao: false
+            };
+        case 'geral':
+            return base;
+        default:
+            return base;
+    }
+}
+
+window.useReportAsBase = async function (sourceType, cloudUrl = null) {
+    if (items.length > 0 && !confirm("Isso iniciará um novo relatório substituindo o atual. Deseja continuar?")) {
+        return;
+    }
+
+    const btnMsg = document.createElement('div');
+    btnMsg.className = "fixed inset-0 bg-black/50 z-[200] flex items-center justify-center text-white font-bold";
+    btnMsg.innerHTML = '<div class="text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2"></i><br>Criando base...</div>';
+    document.body.appendChild(btnMsg);
+    refreshIcons();
+
+    try {
+        let sourceItems = [];
+        let sourceHeader = {};
+
+        // 1. Obter dados da fonte
+        if (sourceType === 'local') {
+            sourceItems = [...items]; // Copia do estado atual
+            // Pega dados básicos do header atual para manter Cliente/Local
+            sourceHeader = {
+                cliente: document.getElementById('cliente').value,
+                local: document.getElementById('local').value,
+                tecnico: document.getElementById('resp-tecnico').value,
+                classificacao: document.getElementById('classificacao').value
+            };
+        } else if (sourceType === 'cloud' && cloudUrl) {
+            const resp = await fetch(cloudUrl);
+            const data = await resp.json();
+            sourceItems = data.items || [];
+            sourceHeader = {
+                cliente: data.header.cliente || '',
+                local: data.header.local || '',
+                tecnico: data.header.tecnico || '',
+                classificacao: data.header.classificacao || ''
+            };
+        }
+
+        if (sourceItems.length === 0) {
+            throw new Error("Nenhum item encontrado na base.");
+        }
+
+        // 2. Processar itens (Zerar dados, manter ID/Local)
+        const newItems = sourceItems.map(item => createCleanItemFromBase(item));
+
+        // 3. Resetar Estado Global da Aplicação
+        items = newItems;
+        currentReportId = null; // Garante que será um novo relatório na nuvem
+        currentFiles = [];
+
+        // 4. Preencher Header (Mantém dados fixos, zera dados variáveis)
+        document.getElementById('cliente').value = sourceHeader.cliente;
+        document.getElementById('local').value = sourceHeader.local;
+        document.getElementById('resp-tecnico').value = sourceHeader.tecnico;
+        document.getElementById('classificacao').value = sourceHeader.classificacao;
+
+        // Zera dados variáveis de vistoria
+        initializeDateInput(); // Data de hoje
+        document.getElementById('sum-parecer').value = 'Aprovado';
+        document.getElementById('sum-resumo').value = '';
+        document.getElementById('sum-riscos').value = '';
+        document.getElementById('sum-conclusao').value = '';
+
+        // Limpa assinaturas
+        if (sigTecnico) sigTecnico.clear();
+        if (sigCliente) sigCliente.clear();
+
+        // 5. Atualizar UI
+        window.toggleHeader(); // Mostra header para conferência
+        renderList();
+        window.showFormPage();
+        window.showToast("Nova vistoria criada com base no histórico!", "success");
+
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao usar base: " + e.message);
+    } finally {
+        btnMsg.remove();
+    }
 };
 
 /* ==========================================================================

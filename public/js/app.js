@@ -706,9 +706,15 @@ function renderList() {
 
             <td class="px-4 py-2 text-center">
                 <div class="flex items-center justify-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    
+                    <button class="btn-save-row text-emerald-600 hover:bg-emerald-100 p-1.5 rounded transition-colors" title="Salvar na Nuvem">
+                        <i data-lucide="save" class="w-4 h-4"></i>
+                    </button>
+
                     <button class="btn-edit text-blue-500 hover:bg-blue-100 p-1.5 rounded transition-colors" title="Editar Completo">
                         <i data-lucide="pencil" class="w-4 h-4"></i>
                     </button>
+
                     <button class="btn-del text-red-400 hover:bg-red-100 p-1.5 rounded transition-colors" title="Excluir">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
@@ -719,6 +725,9 @@ function renderList() {
         // Ligar eventos dos botões
         tr.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
         tr.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
+        tr.querySelector('.btn-save-row').onclick = (e) => {
+            saveToFirebase();
+        };
 
         tbody.appendChild(tr);
     });

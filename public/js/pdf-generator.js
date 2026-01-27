@@ -410,16 +410,14 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         };
 
         itemsWithPhotos.sort((a, b) => {
-            // 1. Ordena pelo Tipo (Para agrupar Hidrantes com Hidrantes, etc.)
             const orderA = typeOrder[a.type] || 99;
             const orderB = typeOrder[b.type] || 99;
             if (orderA !== orderB) return orderA - orderB;
-
-            // 2. Ordena pelo ID de forma Crescente (Natural: H-2 vem antes de H-10)
             const idA = a.id || "";
             const idB = b.id || "";
             return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
         });
+
         if (itemsWithPhotos.length > 0) {
             doc.addPage();
             yPos = 20;
@@ -427,13 +425,19 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
             let x = 14;
             let y = yPos + 5;
-            const imgWidth = 85;
-            const imgHeight = 85;
-            const gap = 12;
+
+            // NOVAS DIMENSÕES PARA 3 COLUNAS
+            const imgWidth = 58;  // Reduzido de 85 para 58 para caber 3
+            const imgHeight = 58; // Quadrado
+            const gap = 4;        // Espaço entre as fotos
 
             for (const item of itemsWithPhotos) {
-                // Se não couber título + foto, nova página
-                if (y + imgHeight + 20 > 280) { doc.addPage(); y = 20; }
+                // Se não couber o título + uma linha de fotos, quebra página
+                if (y + imgHeight + 20 > 280) {
+                    doc.addPage();
+                    y = 20;
+                    x = 14; // Reseta o X ao mudar de página
+                }
 
                 // Faixa cinza para o item da foto
                 doc.setFillColor(241, 245, 249);
@@ -445,32 +449,44 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
                 const label = item.type === 'geral' ? "OBSERVAÇÃO GERAL" : `${item.type.toUpperCase()} - ${item.id} (${item.andar})`;
                 doc.text(label, 16, y + 4);
 
-                y += 8;
+                y += 8; // Avança para a linha das fotos
 
                 for (let i = 0; i < item.imageFiles.length; i++) {
                     try {
                         const imgData = await readFileAsDataURL(item.imageFiles[i]);
 
-                        if (y + imgHeight > 280) { doc.addPage(); y = 20; }
+                        // Checagem de quebra de página dentro do loop de imagens
+                        if (y + imgHeight > 280) {
+                            doc.addPage();
+                            y = 20;
+                            x = 14;
+                        }
 
                         doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
                         // Borda fina na foto
                         doc.setDrawColor(203, 213, 225);
                         doc.rect(x, y, imgWidth, imgHeight);
 
-                        // Grid 2 colunas
-                        if (x === 14) {
-                            x = 14 + imgWidth + gap;
-                        } else {
+                        // Lógica de Grid para 3 Colunas
+                        // Avança o X
+                        x += imgWidth + gap;
+
+                        // Se passou da margem direita (14 + 58 + 4 + 58 + 4 + 58 = 196), quebra linha
+                        // Usamos 180 como limite seguro
+                        if (x > 180) {
                             x = 14;
-                            y += imgHeight + 10;
+                            y += imgHeight + 5; // Espaço vertical entre linhas de fotos do mesmo item
                         }
+
                     } catch (err) { console.error(err); }
                 }
 
-                // Reset de linha
-                if (x > 14) { x = 14; y += imgHeight + 10; }
-                y += 5; // Espaço extra entre itens
+                if (x > 14) {
+                    x = 14;
+                    y += imgHeight + 10; // Espaço extra antes do próximo item
+                } else {
+                    y += 5;
+                }
             }
         }
 

@@ -58,16 +58,16 @@
                 <button onclick="switchTabAndClose('hidrante', 'Hidrantes')" class="nav-btn group"><i
                         data-lucide="droplets" class="w-5 h-5 text-blue-400 group-hover:text-blue-300"></i><span
                         class="font-medium">Hidrante</span></button>
-                <button onclick="switchTabAndClose('luz', 'Iluminação')" class="nav-btn group"><i
-                        data-lucide="lightbulb" class="w-5 h-5 text-amber-400 group-hover:text-amber-300"></i><span
-                        class="font-medium">Iluminação</span></button>
-                <button onclick="switchTabAndClose('sinalizacao', 'Sinalização')" class="nav-btn group"><i
-                        data-lucide="signpost" class="w-5 h-5 text-teal-400 group-hover:text-teal-300"></i><span
-                        class="font-medium">Sinalização</span></button>
                 <button onclick="switchTabAndClose('bomba', 'Bombas')" class="nav-btn group"><i data-lucide="activity"
                         class="w-5 h-5 text-purple-400 group-hover:text-purple-300"></i><span
                         class="font-medium">Bombas</span></button>
-                <button onclick="switchTabAndClose('eletro', 'Eletromecânica')" class="nav-btn group"><i
+                <button disabled onclick="switchTabAndClose('luz', 'Iluminação')" class="nav-btn group opacity-50 cursor-not-allowed"><i
+                        data-lucide="lightbulb" class="w-5 h-5 text-amber-400 group-hover:text-amber-300"></i><span
+                        class="font-medium">Iluminação</span></button>
+                <button disabled onclick="switchTabAndClose('sinalizacao', 'Sinalização')" class="nav-btn group opacity-50 cursor-not-allowed"><i
+                        data-lucide="signpost" class="w-5 h-5 text-teal-400 group-hover:text-teal-300"></i><span
+                        class="font-medium">Sinalização</span></button>
+                <button disabledonclick="switchTabAndClose('eletro', 'Eletromecânica')" class="nav-btn group opacity-50 cursor-not-allowed"><i
                         data-lucide="zap" class="w-5 h-5 text-indigo-400 group-hover:text-indigo-300"></i><span
                         class="font-medium">Eletromecânica</span></button>
             </nav>
@@ -94,9 +94,11 @@
                         onchange="window.importBackup(event)" class="hidden"></label>
             </div>
             <div style="display: none;">
-                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Backup & Restore</div>
+                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Backup & Restore
+                </div>
                 <div class="px-2 space-y-2">
-                    <button onclick="window.exportToExcel()" class="nav-btn text-sm text-green-300 hover:text-green-100">
+                    <button onclick="window.exportToExcel()"
+                        class="nav-btn text-sm text-green-300 hover:text-green-100">
                         <i data-lucide="sheet" class="w-4 h-4"></i> Exportar Planilha (.xlsx)
                     </button>
                     <label class="nav-btn cursor-pointer text-sm text-green-300 hover:text-green-100">

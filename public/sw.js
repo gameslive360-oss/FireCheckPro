@@ -1,5 +1,5 @@
 // MUDE AQUI: Suba a versão para forçar a atualização
-const CACHE_NAME = 'firecheck-v14';
+const CACHE_NAME = 'firecheck-v15';
 
 const urlsToCache = [
   './',

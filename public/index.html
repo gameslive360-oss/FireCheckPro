@@ -383,54 +383,42 @@
                 </div>
             </div>
 
-            <div id="form-alarme" class="form-section hidden">
-                <h4 class="section-title text-orange-800 border-orange-100">Alarmes e Detecção</h4>
+<div id="form-alarme" class="form-section hidden">
+    <h4 class="section-title text-orange-800 border-orange-100">Alarmes e Detecção</h4>
+    
+    <div class="mb-4">
+        <label class="label-std">Tipo de Equipamento</label>
+        <select id="a-tipo" class="input-std save-state font-bold text-slate-700">
+            <option value="Detector de Fumaça">Detector de Fumaça</option>
+            <option value="Detector Térmico">Detector Térmico</option>
+            <option value="Acionador Manual">Acionador Manual</option>
+            <option value="Sirene Audiovisual">Sirene Audiovisual</option>
+            <option value="Módulo de Entrada">Módulo de Entrada</option>
+            <option value="Módulo de Saída">Módulo de Saída</option>
+            <option value="Isolador de Linha">Isolador de Linha</option>
+            <option value="Outros">Outros</option>
+        </select>
+    </div>
 
-                <div class="grid grid-cols-2 gap-3 mb-4">
-                    <div class="col-span-2">
-                        <label class="label-std">Tipo de Equipamento</label>
-                        <select id="a-tipo" class="input-std save-state font-bold text-slate-700">
-                            <option value="Detector de Fumaça">Detector de Fumaça</option>
-                            <option value="Detector Térmico">Detector Térmico</option>
-                            <option value="Acionador Manual">Acionador Manual</option>
-                            <option value="Sirene Audiovisual">Sirene Audiovisual</option>
-                            <option value="Módulo de Entrada">Módulo de Entrada</option>
-                            <option value="Módulo de Saída">Módulo de Saída</option>
-                            <option value="Isolador de Linha">Isolador de Linha</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-                </div>
+    <div class="mb-4">
+        <label class="label-std">Status Atual</label>
+        <select id="a-status" class="input-std save-state font-bold text-slate-800 border-l-4 border-orange-400">
+            <option value="Operante">✅ Operante / Normal</option>
+            <option value="Falha">❌ Falha / Inoperante</option>
+            <option value="Avaria">⚠️ Avaria Física / Quebrado</option>
+            <option value="Sujo">⚠️ Sujo / Obstruído</option>
+            <option value="Sem Comunicação">🚫 Sem Comunicação</option>
+        </select>
+    </div>
 
-                <div class="checklist-grid mb-4">
-                    <label class="check-group">
-                        <input type="checkbox" id="a-funcional" class="save-state" checked>
-                        <span>Teste Funcional OK</span>
-                    </label>
-                    <label class="check-group">
-                        <input type="checkbox" id="a-sinalizacao" class="save-state" checked>
-                        <span>LED / Visual OK</span>
-                    </label>
-                    <label class="check-group">
-                        <input type="checkbox" id="a-fixacao" class="save-state" checked>
-                        <span>Fixação / Limpeza</span>
-                    </label>
-                    <label class="check-group">
-                        <input type="checkbox" id="a-placa" class="save-state" checked>
-                        <span>Endereço/Placa OK</span>
-                    </label>
-                </div>
-
-                <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1">
-                        <label class="label-std">Observações</label>
-                        <button onclick="window.phrases.open('a-obs', 'alarme')" class="btn-frases">Frases
-                            Prontas</button>
-                    </div>
-                    <textarea id="a-obs" class="input-std save-state" rows="2"
-                        placeholder="Falha de comunicação, led queimado, sujo..."></textarea>
-                </div>
-            </div>
+    <div class="mt-3 border-t border-gray-100 pt-3">
+        <div class="flex justify-between items-end mb-1">
+            <label class="label-std">Observações</label>
+            <button onclick="window.phrases.open('a-obs', 'alarme')" class="btn-frases">Frases Prontas</button>
+        </div>
+        <textarea id="a-obs" class="input-std save-state" rows="2" placeholder="Detalhes adicionais..."></textarea>
+    </div>
+</div>
 
             <div id="form-sinalizacao" class="form-section hidden">
                 <h4 class="section-title text-teal-800 border-teal-100">Sinalização</h4>
@@ -463,7 +451,7 @@
                     </div>
                 </div>
                 <div class="mt-3 border-t border-gray-100 pt-3">
-                    <div class="flex justify-between items-end mb-1"><label class="label-std">Observações</label><button
+                    <div class="flex justify-between items-end mb-1"><label class="label-std">Mensagem Central</label><button
                             onclick="window.phrases.open('s-obs', 'sinalizacao')" class="btn-frases">Frases
                             Prontas</button>
                     </div>

@@ -317,16 +317,57 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             i.andar, i.id, i.operacao ? 'Automático' : 'Manual/Off', i.teste_pressao ? 'OK' : 'Pend.', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
         ]), ['Local', 'ID', 'Painel', 'Pressão', 'Manut.', 'Observações'], [51, 65, 85]);
 
+        // --- BLOCO SUBSTITUTO PARA ALARMES ---
         const alarmes = sortById(items.filter(i => i.type === 'alarme'));
-        generateTable("SISTEMA DE DETECÇÃO E ALARME", alarmes.map(i => [
-            i.andar,
-            i.id,
-            i.tipo_eq,
-            i.check_funcional ? 'OK' : 'FALHA',
-            i.check_sinalizacao ? 'OK' : 'Falha LED',
-            i.check_fixacao ? 'OK' : 'Solto/Sujo',
-            i.obs || '-'
-        ]), ['Local', 'ID', 'Equipamento', 'Teste', 'Visual/LED', 'Fixação', 'Observações'], [251, 146, 60]); // Cor Laranja
+
+        if (alarmes.length > 0) {
+            // 1. Verifica se cabe na página, senão cria nova
+            if (yPos > 240) { doc.addPage(); yPos = 20; }
+
+            // 2. Desenha o Título
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setTextColor(71, 85, 105);
+            doc.text("SISTEMA DE DETECÇÃO E ALARME", 14, yPos);
+            yPos += 2;
+
+            // 3. Desenha a Tabela com larguras personalizadas
+            doc.autoTable({
+                startY: yPos,
+                head: [['ID', 'Status', 'Equipamento', 'Local/Andar', 'Mensagem Central']],
+                body: alarmes.map(i => [
+                    i.id,
+                    i.status || 'Operante',
+                    i.tipo_eq,
+                    i.andar,
+                    i.obs || '-'
+                ]),
+                theme: 'striped',
+                headStyles: {
+                    fillColor: [251, 146, 60], // Laranja
+                    fontSize: 8,
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                bodyStyles: {
+                    fontSize: 8,
+                    textColor: 50,
+                    valign: 'middle'
+                },
+                columnStyles: {
+                    0: { cellWidth: 15, halign: 'center' }, // ID
+                    1: { cellWidth: 25, halign: 'center' }, // Status
+                    2: { cellWidth: 40, halign: 'center' }, // Equipamento
+                    3: { cellWidth: 25, halign: 'center' }, // Local
+                    4: { halign: 'left' }                   // Mensagem (Auto = Resto da folha)
+                },
+                margin: { left: 14, right: 14 }
+            });
+
+            // Atualiza posição Y para o próximo item
+            yPos = doc.lastAutoTable.finalY + 12;
+        }
 
         // --- PÁGINA 3: OBSERVAÇÕES GERAIS ---
         doc.addPage();

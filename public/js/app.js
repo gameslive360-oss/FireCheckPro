@@ -433,10 +433,7 @@ function captureFormData(type) {
         case 'alarme':
             specifics = {
                 tipo_eq: document.getElementById('a-tipo').value,
-                check_funcional: document.getElementById('a-funcional').checked,
-                check_sinalizacao: document.getElementById('a-sinalizacao').checked,
-                check_fixacao: document.getElementById('a-fixacao').checked,
-                check_placa: document.getElementById('a-placa').checked,
+                status: document.getElementById('a-status').value, // Novo campo
                 obs: document.getElementById('a-obs').value
             };
             break;
@@ -594,10 +591,7 @@ window.editItem = function (uid) {
             document.getElementById('g-obs').value = item.obs || '';
         } else if (item.type === 'alarme') {
             document.getElementById('a-tipo').value = item.tipo_eq;
-            document.getElementById('a-funcional').checked = item.check_funcional;
-            document.getElementById('a-sinalizacao').checked = item.check_sinalizacao;
-            document.getElementById('a-fixacao').checked = item.check_fixacao;
-            document.getElementById('a-placa').checked = item.check_placa;
+            document.getElementById('a-status').value = item.status || 'Operante';
             document.getElementById('a-obs').value = item.obs || '';
         }
 
@@ -796,8 +790,7 @@ function generateItemSummary(item) {
         return "Item Geral";
     }
     if (item.type === 'alarme') {
-        const status = item.check_funcional ? "Funcional" : "FALHA";
-        return `${item.tipo_eq} | Status: ${status}`;
+        return `${item.tipo_eq} | ${item.status || 'Operante'}`;
     }
     return "-";
 
@@ -1513,10 +1506,7 @@ function createCleanItemFromBase(oldItem) {
             return {
                 ...base,
                 tipo_eq: 'Detector de Fumaça',
-                check_funcional: false,
-                check_sinalizacao: false,
-                check_fixacao: false,
-                check_placa: false
+                status: 'Operante'
             };
         case 'sinalizacao':
             return {

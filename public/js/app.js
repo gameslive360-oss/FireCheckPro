@@ -1932,3 +1932,82 @@ window.replaceCurrentImage = async function (event) {
         event.target.value = "";
     }
 };
+/* ==========================================================================
+   FUNÇÃO DE GPS / GEOLOCALIZAÇÃO (CORRIGIDA)
+   ========================================================================== */
+window.getLocation = function () {
+    const btn = document.querySelector('button[onclick="window.getLocation()"]');
+    const input = document.getElementById('local');
+
+    const originalContent = btn.innerHTML;
+
+    if (!navigator.geolocation) {
+        alert("Seu navegador não suporta geolocalização.");
+        return;
+    }
+
+    // Muda ícone para loading
+    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>`;
+    if (window.lucide) window.lucide.createIcons();
+    btn.disabled = true;
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        try {
+            // Usa OpenStreetMap (Nominatim) para converter
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await response.json();
+
+            if (data && data.display_name) {
+                // Tenta limpar o endereço para ficar mais curto (opcional)
+                // Pega logradouro, número, bairro e cidade
+                let address = data.display_name;
+
+                // Se quiser tentar pegar partes específicas (melhor UX):
+                if (data.address) {
+                    const rua = data.address.road || data.address.pedestrian || '';
+                    const num = data.address.house_number || '';
+                    const bairro = data.address.suburb || data.address.neighbourhood || '';
+                    const cidade = data.address.city || data.address.town || data.address.municipality || '';
+                    const estado = data.address.state_district || data.address.state || '';
+
+                    if (rua) {
+                        address = `${rua}, ${num} - ${bairro}, ${cidade} - ${estado}`;
+                    }
+                }
+
+                input.value = address;
+                input.dispatchEvent(new Event('input'));
+                window.showToast("Endereço localizado!", "success");
+            } else {
+                throw new Error("Endereço não encontrado.");
+            }
+        } catch (error) {
+            console.error(error);
+            window.showToast("Erro ao buscar endereço.", "error");
+        } finally {
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+    }, (error) => {
+        console.error(error);
+        let msg = "Erro ao obter localização.";
+        if (error.code === 1) msg = "Permissão negada. Ative o GPS no navegador.";
+        if (error.code === 2) msg = "Sinal indisponível.";
+        if (error.code === 3) msg = "Tempo esgotado. Tente novamente.";
+
+        alert(msg);
+
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        if (window.lucide) window.lucide.createIcons();
+    }, {
+        enableHighAccuracy: false, // <--- O SEGREDO: False é mais rápido e funciona indoor
+        timeout: 30000,           // <--- Aumentado para 30 segundos
+        maximumAge: 0
+    });
+};

@@ -55,7 +55,10 @@ try {
         onAuthStateChanged(auth, (currentUser) => {
             user = currentUser;
             updateUserUI();
-            if (user) loadHistory();
+            if (user) {
+                loadHistory();
+                checkUrlForReport();
+            }
         });
         console.log("🔥 Firebase Inicializado");
     }
@@ -1211,6 +1214,8 @@ window.restoreCloudReport = async function (url) {
 
         renderList();
         window.showFormPage();
+        const newUrl = `${window.location.pathname}?id=${currentReportId}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
         window.showToast("Relatório carregado!");
 
     } catch (e) {
@@ -1428,6 +1433,8 @@ window.resetApp = function () {
 
     items = [];
     currentReportId = null;
+
+    window.history.pushState({}, '', window.location.pathname);
 
     // GERA UM NOVO NÚMERO ÚNICO
     reportNumber = generateUniqueId();
@@ -1780,7 +1787,7 @@ window.importFromExcel = function (event) {
 
                 for (let i = 0; i < Math.min(rows.length, 20); i++) { // Procura nas primeiras 20 linhas
                     const row = rows[i].map(c => String(c).trim().toUpperCase()); // Normaliza
-                    
+
                     // Verifica se essa linha parece ser o cabeçalho
                     if (row.includes("END.") || row.includes("ID") || row.includes("EQUIPAMENTO")) {
                         headerRowIndex = i;
@@ -1814,16 +1821,16 @@ window.importFromExcel = function (event) {
                             type: 'alarme', // Força como alarme
                             id: idVal,
                             andar: getVal("ANDAR") || getVal("LOCAL/ANDAR") || "-",
-                            
+
                             // Mapeia STATUS -> status
                             status: capitalize(getVal("STATUS") || "Operante"),
-                            
+
                             // Mapeia EQUIPAMENTO -> tipo_eq
                             tipo_eq: capitalize(getVal("EQUIPAMENTO") || "Detector de Fumaça"),
-                            
+
                             // Mapeia MENSAGEM CENTRAL -> obs
                             obs: getVal("MENSAGEM CENTRAL") || getVal("OBSERVAÇÕES") || "",
-                            
+
                             // Define flags padrões baseadas no status
                             check_funcional: true,
                             check_sinalizacao: true,
@@ -1871,7 +1878,7 @@ window.importFromExcel = function (event) {
 // Função auxiliar para deixar Bonito (Ex: "DETECTOR FUMAÇA" -> "Detector Fumaça")
 function capitalize(str) {
     if (!str) return "";
-    return str.toLowerCase().replace(/(?:^|\s)\S/g, function(a) { return a.toUpperCase(); });
+    return str.toLowerCase().replace(/(?:^|\s)\S/g, function (a) { return a.toUpperCase(); });
 }
 
 /* ==========================================================================
@@ -2058,3 +2065,36 @@ window.getLocation = function () {
         maximumAge: 0
     });
 };
+
+// --- NOVO: BUSCA RELATÓRIO PELA URL AO RECARREGAR ---
+async function checkUrlForReport() {
+    // 1. Pega o ID da URL (ex: ?id=REL_123)
+    const urlParams = new URLSearchParams(window.location.search);
+    const reportId = urlParams.get('id');
+
+    // 2. Se tem ID e o usuário está logado
+    if (reportId && user) {
+        // Evita recarregar se já estiver com ele aberto
+        if (currentReportId === reportId && items.length > 0) return;
+
+        console.log("Buscando relatório da URL:", reportId);
+        window.showToast("Recarregando relatório...", "info");
+
+        try {
+            const docRef = doc(db, "reports", reportId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                // Chama a função que já existe para abrir o relatório
+                await window.restoreCloudReport(data.fileUrl);
+            } else {
+                console.warn("Relatório não encontrado ou sem permissão.");
+                // Limpa a URL inválida
+                window.history.pushState({}, '', window.location.pathname);
+            }
+        } catch (error) {
+            console.error("Erro ao buscar URL:", error);
+        }
+    }
+}

@@ -11,7 +11,7 @@ import { SignaturePad } from "./signature-pad.js";
 /* ==========================================================================
    1. CONFIGURAÇÃO E ESTADO GLOBAL
    ========================================================================== */
-const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'sinalizacao', 'eletro', 'geral', 'assinatura'];
+const TABS = ['sumario', 'hidrante', 'extintor', 'luz', 'bomba', 'alarme', 'sinalizacao', 'eletro', 'geral', 'assinatura'];
 
 // Estado Global
 let db, storage, auth, user = null;
@@ -430,6 +430,16 @@ function captureFormData(type) {
         case 'geral':
             specifics = { obs: document.getElementById('g-obs').value };
             break;
+        case 'alarme':
+            specifics = {
+                tipo_eq: document.getElementById('a-tipo').value,
+                check_funcional: document.getElementById('a-funcional').checked,
+                check_sinalizacao: document.getElementById('a-sinalizacao').checked,
+                check_fixacao: document.getElementById('a-fixacao').checked,
+                check_placa: document.getElementById('a-placa').checked,
+                obs: document.getElementById('a-obs').value
+            };
+            break;
     }
     return specifics;
 }
@@ -582,6 +592,13 @@ window.editItem = function (uid) {
             document.getElementById('el-obs').value = item.obs || '';
         } else if (item.type === 'geral') {
             document.getElementById('g-obs').value = item.obs || '';
+        } else if (item.type === 'alarme') {
+            document.getElementById('a-tipo').value = item.tipo_eq;
+            document.getElementById('a-funcional').checked = item.check_funcional;
+            document.getElementById('a-sinalizacao').checked = item.check_sinalizacao;
+            document.getElementById('a-fixacao').checked = item.check_fixacao;
+            document.getElementById('a-placa').checked = item.check_placa;
+            document.getElementById('a-obs').value = item.obs || '';
         }
 
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
@@ -678,6 +695,7 @@ function renderList() {
         if (item.type === 'extintor') { typeLabel = "EXT"; typeColor = "bg-red-100 text-red-700"; }
         if (item.type === 'luz') { typeLabel = "LUZ"; typeColor = "bg-amber-100 text-amber-700"; }
         if (item.type === 'bomba') { typeLabel = "BOM"; typeColor = "bg-purple-100 text-purple-700"; }
+        if (item.type === 'alarme') { typeLabel = "ALM"; typeColor = "bg-orange-100 text-orange-700"; }
 
         // Gerar Resumo Automático (Para coluna Detalhes)
         let summary = generateItemSummary(item);
@@ -777,7 +795,12 @@ function generateItemSummary(item) {
     if (item.type === 'geral') {
         return "Item Geral";
     }
-    return "-"; // Outros tipos
+    if (item.type === 'alarme') {
+        const status = item.check_funcional ? "Funcional" : "FALHA";
+        return `${item.tipo_eq} | Status: ${status}`;
+    }
+    return "-";
+
 }
 
 function atualizarBotoesModoEdicao(editando) {
@@ -1486,6 +1509,15 @@ function createCleanItemFromBase(oldItem) {
                 teste_pressao: false,
                 necessita_manutencao: false
             };
+        case 'alarme':
+            return {
+                ...base,
+                tipo_eq: 'Detector de Fumaça',
+                check_funcional: false,
+                check_sinalizacao: false,
+                check_fixacao: false,
+                check_placa: false
+            };
         case 'sinalizacao':
             return {
                 ...base,
@@ -1678,6 +1710,12 @@ window.exportToExcel = function () {
             "L-Estado": item.estado || "",
             "L-Autonomia": item.autonomia || "",
 
+            "A-Tipo": item.tipo_eq || "",
+            "A-Funcional": boolToText(item.check_funcional),
+            "A-Sinalizacao": boolToText(item.check_sinalizacao),
+            "A-Fixacao": boolToText(item.check_fixacao),
+            "A-Placa": boolToText(item.check_placa),
+
             // Identificador Único (Não edite isso na planilha)
             "_UID": item.uid
         };
@@ -1776,7 +1814,13 @@ window.importFromExcel = function (event) {
 
                         // Luz Mappers
                         estado: row["L-Estado"] || "OK",
-                        autonomia: row["L-Autonomia"] || "Nao Testado"
+                        autonomia: row["L-Autonomia"] || "Nao Testado",
+
+                        tipo_eq: row["A-Tipo"] || "Detector de Fumaça",
+                        check_funcional: textToBool(row["A-Funcional"]),
+                        check_sinalizacao: textToBool(row["A-Sinalizacao"]),
+                        check_fixacao: textToBool(row["A-Fixacao"]),
+                        check_placa: textToBool(row["A-Placa"])
                     };
                 });
 

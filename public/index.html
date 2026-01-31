@@ -61,6 +61,10 @@
                 <button onclick="switchTabAndClose('bomba', 'Bombas')" class="nav-btn group"><i data-lucide="activity"
                         class="w-5 h-5 text-purple-400 group-hover:text-purple-300"></i><span
                         class="font-medium">Bombas</span></button>
+                <button onclick="switchTabAndClose('alarme', 'Alarmes e Detecção')" class="nav-btn group">
+                    <i data-lucide="bell-ring" class="w-5 h-5 text-orange-400 group-hover:text-orange-300"></i>
+                    <span class="font-medium">Alarmes/Detecção</span>
+                </button>
                 <button disabled onclick="switchTabAndClose('luz', 'Iluminação')"
                     class="nav-btn group opacity-50 cursor-not-allowed"><i data-lucide="lightbulb"
                         class="w-5 h-5 text-amber-400 group-hover:text-amber-300"></i><span
@@ -126,7 +130,7 @@
             <div class="mt-auto px-4 py-2 border-t border-slate-800">
                 <div class="flex items-center justify-center gap-1 text-xs text-slate-500">
                     <i data-lucide="tag" class="w-3 h-3"></i>
-                    <span>Versão 1.2.1</span>
+                    <span>Versão 1.2.2</span>
                 </div>
             </div>
         </div>
@@ -376,6 +380,55 @@
                     </div>
                     <textarea id="b-obs" class="input-std save-state" rows="2"
                         placeholder="Detalhes sobre ruído, vazamentos ou painel..."></textarea>
+                </div>
+            </div>
+
+            <div id="form-alarme" class="form-section hidden">
+                <h4 class="section-title text-orange-800 border-orange-100">Alarmes e Detecção</h4>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="col-span-2">
+                        <label class="label-std">Tipo de Equipamento</label>
+                        <select id="a-tipo" class="input-std save-state font-bold text-slate-700">
+                            <option value="Detector de Fumaça">Detector de Fumaça</option>
+                            <option value="Detector Térmico">Detector Térmico</option>
+                            <option value="Acionador Manual">Acionador Manual</option>
+                            <option value="Sirene Audiovisual">Sirene Audiovisual</option>
+                            <option value="Módulo de Entrada">Módulo de Entrada</option>
+                            <option value="Módulo de Saída">Módulo de Saída</option>
+                            <option value="Isolador de Linha">Isolador de Linha</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="checklist-grid mb-4">
+                    <label class="check-group">
+                        <input type="checkbox" id="a-funcional" class="save-state" checked>
+                        <span>Teste Funcional OK</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="a-sinalizacao" class="save-state" checked>
+                        <span>LED / Visual OK</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="a-fixacao" class="save-state" checked>
+                        <span>Fixação / Limpeza</span>
+                    </label>
+                    <label class="check-group">
+                        <input type="checkbox" id="a-placa" class="save-state" checked>
+                        <span>Endereço/Placa OK</span>
+                    </label>
+                </div>
+
+                <div class="mt-3 border-t border-gray-100 pt-3">
+                    <div class="flex justify-between items-end mb-1">
+                        <label class="label-std">Observações</label>
+                        <button onclick="window.phrases.open('a-obs', 'alarme')" class="btn-frases">Frases
+                            Prontas</button>
+                    </div>
+                    <textarea id="a-obs" class="input-std save-state" rows="2"
+                        placeholder="Falha de comunicação, led queimado, sujo..."></textarea>
                 </div>
             </div>
 

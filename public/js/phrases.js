@@ -28,6 +28,17 @@ export class PhraseManager {
                 "Manômetro danificado.",
                 "Painel elétrico sem energia."
             ],
+            alarme: [
+                "Equipamento operando normalmente.",
+                "Detector não atuou no teste com spray.",
+                "Sirene com volume baixo/abafado.",
+                "LED de supervisão queimado/inoperante.",
+                "Acionador manual com vidro quebrado.",
+                "Dispositivo muito sujo/obstruído.",
+                "Módulo sem comunicação com a central.",
+                "Endereço duplicado na central.",
+                "Falta identificação/etiqueta no dispositivo."
+            ],
             extintor: [
                 "Despressurizado.",
                 "Lacre rompido.",

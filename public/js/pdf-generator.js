@@ -317,6 +317,17 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             i.andar, i.id, i.operacao ? 'Automático' : 'Manual/Off', i.teste_pressao ? 'OK' : 'Pend.', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
         ]), ['Local', 'ID', 'Painel', 'Pressão', 'Manut.', 'Observações'], [51, 65, 85]);
 
+        const alarmes = sortById(items.filter(i => i.type === 'alarme'));
+        generateTable("SISTEMA DE DETECÇÃO E ALARME", alarmes.map(i => [
+            i.andar,
+            i.id,
+            i.tipo_eq,
+            i.check_funcional ? 'OK' : 'FALHA',
+            i.check_sinalizacao ? 'OK' : 'Falha LED',
+            i.check_fixacao ? 'OK' : 'Solto/Sujo',
+            i.obs || '-'
+        ]), ['Local', 'ID', 'Equipamento', 'Teste', 'Visual/LED', 'Fixação', 'Observações'], [251, 146, 60]); // Cor Laranja
+
         // --- PÁGINA 3: OBSERVAÇÕES GERAIS ---
         doc.addPage();
         yPos = 20;
@@ -406,6 +417,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             'sinalizacao': 4,
             'eletro': 5,
             'bomba': 6,
+            'alarme': 5,
             'geral': 7
         };
 

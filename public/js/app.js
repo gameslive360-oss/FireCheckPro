@@ -1077,14 +1077,12 @@ window.loadCloudReports = async function () {
     container.innerHTML = '<div class="flex flex-col items-center justify-center py-10 text-blue-600"><i data-lucide="loader-2" class="animate-spin w-8 h-8"></i><span class="text-xs text-slate-400 mt-2 font-medium">Sincronizando...</span></div>';
     refreshIcons();
 
-    // 1. DADOS LOCAIS (Rascunho)
+    // 1. DADOS LOCAIS
     const currentClient = document.getElementById('cliente').value.trim();
-    const currentCount = items.length;
-    // Pega o número do relatório salvo na memória
+    const hasLocalData = items.length > 0 || currentClient !== "";
     const localReportNum = localStorage.getItem('reportNumber') || 'Novo';
-    const hasLocalData = currentCount > 0 || currentClient !== "";
 
-    // 2. DADOS DA NUVEM
+    // 2. DADOS NUVEM
     let cloudDocs = [];
     if (user) {
         try {
@@ -1095,44 +1093,53 @@ window.loadCloudReports = async function () {
                 data.id = data.id || doc.id;
                 cloudDocs.push(data);
             });
-            // Ordena: Mais recente primeiro
-            cloudDocs.sort((a, b) => {
-                const da = a.updatedAt?.seconds || 0;
-                const db = b.updatedAt?.seconds || 0;
-                return db - da;
-            });
+            cloudDocs.sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0));
         } catch (e) { console.error(e); }
     }
 
     container.innerHTML = "";
 
-    // === BLOCO A: RASCUNHO LOCAL (EM EDIÇÃO) ===
+    // === 3. BARRA DE PESQUISA (NOVA) ===
+    // Só mostra se tiver algum relatório (local ou nuvem)
+    if (hasLocalData || cloudDocs.length > 0) {
+        const searchDiv = document.createElement('div');
+        searchDiv.className = "sticky top-0 bg-gray-50 pt-2 pb-4 z-10 mb-2"; // Sticky para ficar fixo no topo ao rolar
+        searchDiv.innerHTML = `
+            <div class="flex items-center border border-slate-300 rounded-lg px-3 py-2 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 shadow-sm">
+                <i data-lucide="search" class="text-slate-400 w-5 h-5 mr-3 shrink-0"></i>
+                <input type="text" 
+                    oninput="window.filterReportsList(this.value)"
+                    class="w-full text-sm border-none outline-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-400 h-full bg-transparent"
+                    placeholder="Buscar cliente, local ou ID...">
+            </div>
+            <div id="no-report-result" class="hidden text-center text-slate-400 text-xs mt-4 py-4 border border-dashed rounded bg-slate-100">
+                Nenhum relatório encontrado para essa busca.
+            </div>
+        `;
+        container.appendChild(searchDiv);
+    }
+
+    // === 4. RENDERIZAR CARTÕES ===
+
+    // LOCAL
     if (hasLocalData) {
         const localDiv = document.createElement('div');
-        localDiv.className = "bg-white border-l-4 border-emerald-500 rounded-lg shadow-sm mb-6 p-4 border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all";
+        // Adicionamos a classe 'report-card' aqui
+        localDiv.className = "report-card bg-white border-l-4 border-emerald-500 rounded-lg shadow-sm mb-6 p-4 border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all";
 
         localDiv.innerHTML = `
             <div class="flex justify-between items-start mb-3">
                 <div>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                            RASCUNHO ATUAL
-                        </span>
-                        <span class="font-mono text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
-                            #${localReportNum}
-                        </span>
+                        <span class="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">RASCUNHO ATUAL</span>
+                        <span class="font-mono text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">#${localReportNum}</span>
                     </div>
-                    <h3 class="font-bold text-slate-800 text-lg leading-tight truncate pr-4">
-                        ${currentClient || 'Relatório Sem Nome'}
-                    </h3>
+                    <h3 class="font-bold text-slate-800 text-lg leading-tight truncate pr-4">${currentClient || 'Relatório Sem Nome'}</h3>
                     <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
-                        <i data-lucide="smartphone" class="w-3 h-3"></i> Memória do Dispositivo
-                        <span class="text-slate-300">|</span>
-                        ${items.length} itens
+                        <i data-lucide="smartphone" class="w-3 h-3"></i> Memória do Dispositivo <span class="text-slate-300">|</span> ${items.length} itens
                     </div>
                 </div>
             </div>
-
             <div class="flex gap-2 mt-2">
                  <button onclick="window.showFormPage()" class="flex-1 bg-white text-blue-600 border border-blue-200 px-3 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95">
                     Continuar <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-right" class="lucide lucide-arrow-right w-4 h-4"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
@@ -1146,69 +1153,45 @@ window.loadCloudReports = async function () {
         container.appendChild(localDiv);
     }
 
-    // === BLOCO B: HISTÓRICO DA NUVEM ===
-    if (cloudDocs.length === 0) {
-        container.innerHTML += `
-            <div class="text-center py-10 px-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
-                <p class="text-slate-500 text-sm font-medium">Nenhum relatório na nuvem.</p>
-            </div>`;
-    } else {
+    // NUVEM
+    if (cloudDocs.length === 0 && !hasLocalData) {
+        container.innerHTML += `<div class="text-center py-10 px-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50"><p class="text-slate-500 text-sm font-medium">Nenhum relatório na nuvem.</p></div>`;
+    } else if (cloudDocs.length > 0) {
         const title = document.createElement('div');
-        title.className = "flex items-center gap-3 mb-4 mt-8";
-        title.innerHTML = `
-            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Salvos na Nuvem (${cloudDocs.length})</h4>
-            <div class="h-px bg-slate-200 flex-1"></div>
-        `;
+        title.className = "flex items-center gap-3 mb-4 mt-8 report-card"; // report-card aqui para sumir se a busca não bater com "Nuvem"
+        title.innerHTML = `<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Salvos na Nuvem (${cloudDocs.length})</h4><div class="h-px bg-slate-200 flex-1"></div>`;
         container.appendChild(title);
 
         cloudDocs.forEach(data => {
-            let dateStr = '-';
-            if (data.updatedAt?.seconds) {
-                dateStr = new Date(data.updatedAt.seconds * 1000).toLocaleDateString('pt-BR');
-            }
-
-            // Pega o número salvo ou usa o final do ID se for antigo
+            let dateStr = data.updatedAt?.seconds ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString('pt-BR') : '-';
             const reportNum = data.reportNumber || '---';
 
             const div = document.createElement('div');
-            div.className = "bg-white p-4 rounded-xl border border-slate-200 mb-3 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 group";
+            // Adicionamos a classe 'report-card' aqui também
+            div.className = "report-card bg-white p-4 rounded-xl border border-slate-200 mb-3 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 group";
 
             div.innerHTML = `
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex-1 min-w-0 pr-3">
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                                #${reportNum}
-                            </span>
+                            <span class="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">#${reportNum}</span>
                             <span class="text-[10px] text-slate-400 font-medium">${dateStr}</span>
                         </div>
-                        
-                        <div class="font-bold text-slate-700 truncate text-base group-hover:text-blue-600 transition-colors">
-                            ${data.cliente || 'Sem Cliente'}
-                        </div>
-                        
+                        <div class="font-bold text-slate-700 truncate text-base group-hover:text-blue-600 transition-colors">${data.cliente || 'Sem Cliente'}</div>
                         <div class="flex items-center gap-1 text-xs text-slate-400 mt-1">
-                             <i data-lucide="map-pin" class="w-3 h-3"></i> 
-                             <span class="truncate max-w-[200px]">${data.local || 'Sem local'}</span>
+                             <i data-lucide="map-pin" class="w-3 h-3"></i> <span class="truncate max-w-[200px]">${data.local || 'Sem local'}</span>
                         </div>
                     </div>
-                    
                     <div class="text-center">
-                        <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200 block">
-                            ${data.itemCount || 0}
-                        </span>
+                        <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200 block">${data.itemCount || 0}</span>
                         <span class="text-[9px] text-slate-400 uppercase mt-1 block">Itens</span>
                     </div>
                 </div>
-                
                 <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-50">
-                    <button onclick="window.restoreCloudReport(null, '${data.id}')" 
-                        class="flex items-center justify-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors active:scale-95 shadow-sm">
+                    <button onclick="window.restoreCloudReport(null, '${data.id}')" class="flex items-center justify-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors active:scale-95 shadow-sm">
                         <i data-lucide="folder-open" class="w-4 h-4"></i> Abrir
                     </button>
-                    
-                    <button onclick="window.useReportAsBase('cloud', '${data.id}')" 
-                        class="flex items-center justify-center gap-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 py-2 rounded-lg transition-colors active:scale-95">
+                    <button onclick="window.useReportAsBase('cloud', '${data.id}')" class="flex items-center justify-center gap-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 py-2 rounded-lg transition-colors active:scale-95">
                         <i data-lucide="copy" class="w-4 h-4"></i> Base
                     </button>
                 </div>
@@ -2169,3 +2152,31 @@ async function checkUrlForReport() {
         }
     }
 }
+
+/* ==========================================================================
+   FILTRO DE RELATÓRIOS (NUVEM/LOCAL)
+   ========================================================================== */
+window.filterReportsList = function (query) {
+    const term = query.toLowerCase();
+    const cards = document.querySelectorAll('.report-card'); // Pega todos os cartões
+    let found = 0;
+
+    cards.forEach(card => {
+        // Busca no texto visível do cartão (Cliente, Data, ID, Local)
+        const content = card.innerText.toLowerCase();
+
+        if (content.includes(term)) {
+            card.classList.remove('hidden');
+            found++;
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+
+    // Mostra/Esconde msg de "Nenhum resultado"
+    const noResultMsg = document.getElementById('no-report-result');
+    if (noResultMsg) {
+        if (found === 0 && term.length > 0) noResultMsg.classList.remove('hidden');
+        else noResultMsg.classList.add('hidden');
+    }
+};

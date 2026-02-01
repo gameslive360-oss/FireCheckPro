@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, addDoc, setDoc, doc, query, where, getDocs, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, doc, query, where, getDocs, getDoc, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -940,7 +940,7 @@ const base64ToFile = (dataurl, filename) => {
 };
 
 /* ==========================================================================
-   7. CLOUD & PERSISTÊNCIA (FIREBASE)
+   7. CLOUD - VERSÃO DIRETA (SEM STORAGE / SÓ BANCO DE DADOS)
    ========================================================================== */
 async function saveToFirebase() {
     if (!auth.currentUser) {
@@ -950,67 +950,77 @@ async function saveToFirebase() {
 
     const btn = document.getElementById('btn-save');
     const oldHtml = btn.innerHTML;
-    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Salvando...`;
+
+    // Feedback visual
+    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Salvando no Banco...`;
     btn.disabled = true;
     refreshIcons();
 
     try {
+        // Cria ID se não existir
         if (!currentReportId) currentReportId = `REL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
 
-        const itemsReady = await Promise.all(items.map(async (item) => ({
-            ...item,
-            imageFiles: [],
-            _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
-        })));
+        console.log("Iniciando salvamento direto no Firestore:", currentReportId);
+
+        // --- LIMPEZA DOS DADOS ---
+        // Removemos qualquer dado de imagem (File objects ou Base64) para caber no Banco
+        const itemsReady = items.map(item => {
+            const clean = { ...item };
+            delete clean.imageFiles;   // Remove objeto File
+            delete clean._savedImages; // Remove Base64 antigo se houver
+            return clean;
+        });
 
         const reportData = {
             id: currentReportId,
             reportNumber: reportNumber,
-            version: "2.0",
+            version: "3.0-direct",
             timestamp: new Date().toISOString(),
             userId: user.uid,
+            // Salva os dados completos direto no documento do banco
             header: {
-                cliente: document.getElementById('cliente').value,
-                local: document.getElementById('local').value,
-                tecnico: document.getElementById('resp-tecnico').value,
-                classificacao: document.getElementById('classificacao').value,
-                data: document.getElementById('data-relatorio').value,
-                parecer: document.getElementById('sum-parecer').value,
-                resumo: document.getElementById('sum-resumo').value,
-                riscos: document.getElementById('sum-riscos').value,
-                conclusao: document.getElementById('sum-conclusao').value
+                cliente: document.getElementById('cliente').value || "",
+                local: document.getElementById('local').value || "",
+                tecnico: document.getElementById('resp-tecnico').value || "",
+                classificacao: document.getElementById('classificacao').value || "",
+                data: document.getElementById('data-relatorio').value || "",
+                parecer: document.getElementById('sum-parecer').value || "",
+                resumo: document.getElementById('sum-resumo').value || "",
+                riscos: document.getElementById('sum-riscos').value || "",
+                conclusao: document.getElementById('sum-conclusao').value || ""
             },
-            items: itemsReady,
+            items: itemsReady, // ITENS SALVOS DIRETO NO JSON DO BANCO
             signatures: {
                 tecnico: sigTecnico?.getImageData(),
                 cliente: sigCliente?.getImageData()
-            }
-        };
-
-        const blob = new Blob([JSON.stringify(reportData)], { type: "application/json" });
-        const storageRef = ref(storage, `backups/${user.uid}/${currentReportId}.json`);
-        await uploadBytes(storageRef, blob);
-        const downloadUrl = await getDownloadURL(storageRef);
-
-        await setDoc(doc(db, "reports", currentReportId), {
-            reportId: currentReportId,
-            userId: user.uid,
-            cliente: reportData.header.cliente,
-            local: reportData.header.local,
+            },
+            // Campos auxiliares para a listagem
+            cliente: document.getElementById('cliente').value || "Sem Cliente",
+            local: document.getElementById('local').value || "",
             updatedAt: new Date(),
-            fileUrl: downloadUrl,
             itemCount: items.length,
             lastEditorName: user.displayName || "Usuário",
-            lastEditorPhoto: user.photoURL || ""
-        }, { merge: true });
+            lastEditorPhoto: user.photoURL || "",
+            fileUrl: null // Não usamos mais arquivo externo
+        };
 
+        // SALVA DIRETO NO FIRESTORE (Pula a etapa de upload de arquivo)
+        const docRef = doc(db, "reports", currentReportId);
+        await setDoc(docRef, reportData, { merge: true });
+
+        console.log("Salvo com sucesso no Firestore!");
+
+        // Atualiza a URL e LocalStorage
+        const newUrl = `${window.location.pathname}?id=${currentReportId}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
         localStorage.setItem('lastEditorName', user.displayName || "Usuário");
         localStorage.setItem('lastEditorPhoto', user.photoURL || "");
-        window.showToast("Salvo na nuvem com sucesso!");
+
+        window.showToast("Salvo no banco com sucesso!");
 
     } catch (e) {
-        console.error(e);
-        alert("Erro ao salvar: " + e.message);
+        console.error("ERRO AO SALVAR:", e);
+        alert(`Erro ao salvar: ${e.message}\n(Verifique o console F12 para detalhes)`);
     } finally {
         btn.innerHTML = oldHtml;
         btn.disabled = false;
@@ -1021,142 +1031,143 @@ async function saveToFirebase() {
 window.loadCloudReports = async function () {
     const container = document.getElementById('reports-list-container');
 
-    // 1. Mostrar Loading
-    container.innerHTML = '<div class="text-center py-8"><i data-lucide="loader-2" class="animate-spin w-8 h-8 text-blue-600 mx-auto"></i><span class="text-xs text-gray-400 mt-2 block">Carregando...</span></div>';
+    // Loading
+    container.innerHTML = '<div class="flex flex-col items-center justify-center py-10 text-blue-600"><i data-lucide="loader-2" class="animate-spin w-8 h-8"></i><span class="text-xs text-slate-400 mt-2 font-medium">Sincronizando...</span></div>';
     refreshIcons();
 
-    // 2. CAPTURAR DADOS LOCAIS
+    // 1. DADOS LOCAIS (Rascunho)
     const currentClient = document.getElementById('cliente').value.trim();
-    const currentLocation = document.getElementById('local').value.trim();
     const currentCount = items.length;
+    // Pega o número do relatório salvo na memória
+    const localReportNum = localStorage.getItem('reportNumber') || 'Novo';
     const hasLocalData = currentCount > 0 || currentClient !== "";
 
-    // 3. Buscar na Nuvem
+    // 2. DADOS DA NUVEM
     let cloudDocs = [];
     if (user) {
         try {
-            const q = query(collection(db, "reports"), where("userId", "==", user.uid), orderBy("updatedAt", "desc"), limit(20));
+            const q = query(collection(db, "reports"), where("userId", "==", user.uid), limit(50));
             const snapshot = await getDocs(q);
-            snapshot.forEach(doc => cloudDocs.push(doc.data()));
-        } catch (e) {
-            console.error("Erro ao buscar relatórios:", e);
-        }
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                data.id = data.id || doc.id;
+                cloudDocs.push(data);
+            });
+            // Ordena: Mais recente primeiro
+            cloudDocs.sort((a, b) => {
+                const da = a.updatedAt?.seconds || 0;
+                const db = b.updatedAt?.seconds || 0;
+                return db - da;
+            });
+        } catch (e) { console.error(e); }
     }
 
-    // 4. LIMPAR E RENDERIZAR
     container.innerHTML = "";
 
-    // === A. RENDERIZAR O RELATÓRIO "EM EDIÇÃO" (LOCAL) ===
+    // === BLOCO A: RASCUNHO LOCAL (EM EDIÇÃO) ===
     if (hasLocalData) {
-        // Recupera dados do último editor
-        const editorName = localStorage.getItem('lastEditorName');
-        const editorPhoto = localStorage.getItem('lastEditorPhoto');
-
-        let editorBadge = '';
-        if (editorName) {
-            const imgHtml = editorPhoto
-                ? `<img src="${editorPhoto}" class="w-5 h-5 rounded-full border border-white shadow-sm">`
-                : `<div class="w-5 h-5 rounded-full bg-slate-400 flex items-center justify-center text-[8px] text-white font-bold border border-white shadow-sm">${editorName.charAt(0)}</div>`;
-
-            editorBadge = `
-                <div class="flex items-center gap-2 mt-2 bg-white/50 px-2 py-1 rounded-full border border-blue-100 self-start w-fit">
-                    ${imgHtml}
-                    <span class="text-[10px] text-slate-500 font-semibold">
-                        Editado por <span class="text-slate-700">${editorName.split(' ')[0]}</span>
-                    </span>
-                </div>
-            `;
-        }
-
         const localDiv = document.createElement('div');
-        localDiv.className = "bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm mb-6 animate-fade-in";
+        localDiv.className = "bg-white border-l-4 border-emerald-500 rounded-lg shadow-sm mb-6 p-4 border border-gray-100 relative overflow-hidden group hover:shadow-md transition-all";
 
         localDiv.innerHTML = `
             <div class="flex justify-between items-start mb-3">
                 <div>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm flex items-center gap-1">
-                            <i data-lucide="pen-line" class="w-3 h-3"></i> Editando Agora
+                        <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                            RASCUNHO ATUAL
+                        </span>
+                        <span class="font-mono text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                            #${localReportNum}
                         </span>
                     </div>
-                    
-                    <h3 class="font-bold text-slate-800 text-lg leading-tight mb-1">
-                        ${currentClient || 'Novo Relatório'} 
-                        <span class="text-slate-400 text-base font-normal ml-2">#${reportNumber}</span>
+                    <h3 class="font-bold text-slate-800 text-lg leading-tight truncate pr-4">
+                        ${currentClient || 'Relatório Sem Nome'}
                     </h3>
-
-                    <div class="text-xs text-slate-500 flex items-center gap-2 font-medium mb-1">
-                        <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${currentLocation || 'Local não informado'}</span>
+                    <div class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                        <i data-lucide="smartphone" class="w-3 h-3"></i> Memória do Dispositivo
                         <span class="text-slate-300">|</span>
-                        <span class="flex items-center gap-1"><i data-lucide="list-checks" class="w-3 h-3"></i> ${currentCount} itens</span>
+                        ${items.length} itens
                     </div>
-                    ${editorBadge}
                 </div>
             </div>
-            
+
             <div class="flex gap-2 mt-2">
                  <button onclick="window.showFormPage()" class="flex-1 bg-white text-blue-600 border border-blue-200 px-3 py-2 rounded-lg text-sm font-bold hover:bg-blue-600 hover:text-white shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95">
-                    Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    Continuar <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-right" class="lucide lucide-arrow-right w-4 h-4"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                 </button>
                 
                 <button onclick="window.useReportAsBase('local')" class="bg-purple-50 text-purple-600 border border-purple-200 px-3 py-2 rounded-lg text-sm font-bold hover:bg-purple-600 hover:text-white shadow-sm flex items-center gap-2 transition-all active:scale-95" title="Criar novo usando este como base (Zera vistorias)">
-                    <i data-lucide="copy" class="w-4 h-4"></i> Usar Base
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="copy" class="lucide lucide-copy w-4 h-4"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg> Usar Base
                 </button>
             </div>
         `;
         container.appendChild(localDiv);
-
-        if (cloudDocs.length > 0) {
-            const divider = document.createElement('div');
-            divider.className = "flex items-center gap-4 py-3 mb-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest";
-            divider.innerHTML = `<div class="h-px bg-gray-200 flex-1"></div>Salvos na Nuvem<div class="h-px bg-gray-200 flex-1"></div>`;
-            container.appendChild(divider);
-        }
-    } else {
-        const emptyDiv = document.createElement('div');
-        emptyDiv.className = "bg-gray-50 border border-dashed border-gray-200 p-4 rounded-lg text-center mb-6 opacity-75";
-        emptyDiv.innerHTML = `<p class="text-xs text-gray-400 font-medium">Nenhum rascunho em aberto no momento.</p>`;
-        container.appendChild(emptyDiv);
     }
 
-    // === B. RENDERIZAR ITENS DA NUVEM ===
-    if (!user) {
-        const loginMsg = document.createElement('div');
-        loginMsg.className = "text-center text-gray-500 py-8 bg-gray-50 rounded border border-gray-100";
-        loginMsg.innerHTML = `
-            <i data-lucide="lock" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i>
-            <p class="text-sm">Faça login para acessar seu histórico na nuvem.</p>
-        `;
-        container.appendChild(loginMsg);
-    } else if (cloudDocs.length === 0) {
-        const noDocs = document.createElement('div');
-        noDocs.className = "text-center text-gray-400 py-8";
-        noDocs.innerHTML = "Nenhum relatório salvo na nuvem ainda.";
-        container.appendChild(noDocs);
+    // === BLOCO B: HISTÓRICO DA NUVEM ===
+    if (cloudDocs.length === 0) {
+        container.innerHTML += `
+            <div class="text-center py-10 px-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                <p class="text-slate-500 text-sm font-medium">Nenhum relatório na nuvem.</p>
+            </div>`;
     } else {
+        const title = document.createElement('div');
+        title.className = "flex items-center gap-3 mb-4 mt-8";
+        title.innerHTML = `
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Salvos na Nuvem (${cloudDocs.length})</h4>
+            <div class="h-px bg-slate-200 flex-1"></div>
+        `;
+        container.appendChild(title);
+
         cloudDocs.forEach(data => {
-            const date = data.updatedAt?.seconds ? new Date(data.updatedAt.seconds * 1000).toLocaleDateString() : '-';
+            let dateStr = '-';
+            if (data.updatedAt?.seconds) {
+                dateStr = new Date(data.updatedAt.seconds * 1000).toLocaleDateString('pt-BR');
+            }
+
+            // Pega o número salvo ou usa o final do ID se for antigo
+            const reportNum = data.reportNumber || '---';
 
             const div = document.createElement('div');
-            div.className = "bg-white p-4 rounded-lg border border-gray-100 mb-3 flex flex-col sm:flex-row justify-between items-center hover:shadow-md hover:border-blue-200 transition-all group gap-3";
+            div.className = "bg-white p-4 rounded-xl border border-slate-200 mb-3 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 group";
 
             div.innerHTML = `
-                <div class="w-full sm:w-auto">
-                    <div class="font-bold text-slate-700 group-hover:text-blue-600 transition-colors">${data.cliente || 'Sem Cliente'}</div>
-                    <div class="text-xs text-gray-400 mt-1 flex items-center gap-3">
-                         <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> ${date}</span>
-                         <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${data.local || 'Sem local'}</span>
-                         <span class="flex items-center gap-1"><i data-lucide="list" class="w-3 h-3"></i> ${data.itemCount || 0}</span>
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex-1 min-w-0 pr-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                #${reportNum}
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-medium">${dateStr}</span>
+                        </div>
+                        
+                        <div class="font-bold text-slate-700 truncate text-base group-hover:text-blue-600 transition-colors">
+                            ${data.cliente || 'Sem Cliente'}
+                        </div>
+                        
+                        <div class="flex items-center gap-1 text-xs text-slate-400 mt-1">
+                             <i data-lucide="map-pin" class="w-3 h-3"></i> 
+                             <span class="truncate max-w-[200px]">${data.local || 'Sem local'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center">
+                        <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200 block">
+                            ${data.itemCount || 0}
+                        </span>
+                        <span class="text-[9px] text-slate-400 uppercase mt-1 block">Itens</span>
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-50">
-                    <button onclick="window.useReportAsBase('cloud', '${data.fileUrl}')" class="flex items-center gap-1 text-xs font-bold text-purple-500 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-md transition-colors" title="Criar novo a partir deste (Mantém ID/Local)">
-                        <i data-lucide="copy" class="w-4 h-4"></i> Base
+                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-50">
+                    <button onclick="window.restoreCloudReport(null, '${data.id}')" 
+                        class="flex items-center justify-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors active:scale-95 shadow-sm">
+                        <i data-lucide="folder-open" class="w-4 h-4"></i> Abrir
                     </button>
                     
-                    <button onclick="window.restoreCloudReport('${data.fileUrl}')" class="flex items-center gap-1 text-xs font-bold text-blue-500 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-md transition-colors" title="Abrir relatório completo">
-                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Abrir
+                    <button onclick="window.useReportAsBase('cloud', '${data.id}')" 
+                        class="flex items-center justify-center gap-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 py-2 rounded-lg transition-colors active:scale-95">
+                        <i data-lucide="copy" class="w-4 h-4"></i> Base
                     </button>
                 </div>
             `;
@@ -1168,45 +1179,65 @@ window.loadCloudReports = async function () {
 };
 
 window.loadCloudReports = loadCloudReports;
-window.restoreCloudReport = async function (url) {
+window.restoreCloudReport = async function (url, reportId) {
     if (items.length > 0 && !confirm("Substituir relatório atual?")) return;
 
     const loadMsg = document.createElement('div');
     loadMsg.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center text-white";
-    loadMsg.innerHTML = "Baixando...";
+    loadMsg.innerHTML = '<div class="text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto"></i><br>Carregando...</div>';
     document.body.appendChild(loadMsg);
+    if (window.lucide) window.lucide.createIcons();
 
     try {
-        const resp = await fetch(url);
-        const data = await resp.json();
+        let data = null;
 
-        currentReportId = data.id || data.reportId;
+        // ESTRATÉGIA 1: Tenta ler direto do objeto no Banco (Novo método)
+        if (reportId) {
+            console.log("Lendo Firestore ID:", reportId);
+            const docRef = doc(db, "reports", reportId);
+            // AGORA VAI FUNCIONAR POIS IMPORTAMOS getDoc LÁ EM CIMA
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                data = docSnap.data();
+            }
+        }
+
+        // ESTRATÉGIA 2: Se não achou e tem URL antiga, tenta baixar
+        if (!data && url) {
+            console.log("Baixando JSON legado:", url);
+            const resp = await fetch(url);
+            data = await resp.json();
+        }
+
+        if (!data) throw new Error("Relatório não encontrado ou vazio.");
+
+        // --- RESTAURAÇÃO DOS DADOS ---
+        currentReportId = data.id || data.reportId || reportId;
         reportNumber = data.reportNumber || generateUniqueId();
         localStorage.setItem('reportNumber', reportNumber);
 
-        if (data.lastEditorName) {
-            localStorage.setItem('lastEditorName', data.lastEditorName);
-            localStorage.setItem('lastEditorPhoto', data.lastEditorPhoto || "");
-        }
-
-        document.getElementById('cliente').value = data.header.cliente || '';
-        document.getElementById('local').value = data.header.local || '';
-        document.getElementById('resp-tecnico').value = data.header.tecnico || '';
-        document.getElementById('classificacao').value = data.header.classificacao || '';
-        document.getElementById('data-relatorio').value = data.header.data || '';
-        document.getElementById('sum-parecer').value = data.header.parecer || 'Aprovado';
-        document.getElementById('sum-resumo').value = data.header.resumo || '';
-        document.getElementById('sum-riscos').value = data.header.riscos || '';
-        document.getElementById('sum-conclusao').value = data.header.conclusao || '';
+        // Header
+        const h = data.header || {};
+        document.getElementById('cliente').value = h.cliente || data.cliente || '';
+        document.getElementById('local').value = h.local || data.local || '';
+        document.getElementById('resp-tecnico').value = h.tecnico || '';
+        document.getElementById('classificacao').value = h.classificacao || '';
+        document.getElementById('data-relatorio').value = h.data || '';
+        document.getElementById('sum-parecer').value = h.parecer || 'Aprovado';
+        document.getElementById('sum-resumo').value = h.resumo || '';
+        document.getElementById('sum-riscos').value = h.riscos || '';
+        document.getElementById('sum-conclusao').value = h.conclusao || '';
 
         window.toggleHeader();
 
-        items = data.items.map(item => ({
+        // Itens
+        items = (data.items || []).map(item => ({
             ...item,
-            imageFiles: item._savedImages ? item._savedImages.map((b64, i) => base64ToFile(b64, `img_${i}.jpg`)) : [],
-            _savedImages: undefined
+            imageFiles: [],
+            _savedImages: []
         }));
 
+        // Assinaturas
         if (data.signatures) {
             if (data.signatures.tecnico && sigTecnico) sigTecnico.fromDataURL(data.signatures.tecnico);
             if (data.signatures.cliente && sigCliente) sigCliente.fromDataURL(data.signatures.cliente);
@@ -1214,11 +1245,15 @@ window.restoreCloudReport = async function (url) {
 
         renderList();
         window.showFormPage();
+
+        // Atualiza URL
         const newUrl = `${window.location.pathname}?id=${currentReportId}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
+
         window.showToast("Relatório carregado!");
 
     } catch (e) {
+        console.error(e);
         alert("Erro ao abrir: " + e.message);
     } finally {
         loadMsg.remove();
@@ -1543,14 +1578,15 @@ function createCleanItemFromBase(oldItem) {
     }
 }
 
-window.useReportAsBase = async function (sourceType, cloudUrl = null) {
-    if (items.length > 0 && !confirm("Isso iniciará um novo relatório substituindo o atual. Deseja continuar?")) {
+window.useReportAsBase = async function (sourceType, reportId = null) {
+    if (items.length > 0 && !confirm("Iniciar novo relatório com esta base? (Os dados atuais não salvos serão perdidos)")) {
         return;
     }
 
+    // Modal de Loading
     const btnMsg = document.createElement('div');
-    btnMsg.className = "fixed inset-0 bg-black/50 z-[200] flex items-center justify-center text-white font-bold";
-    btnMsg.innerHTML = '<div class="text-center"><i data-lucide="loader-2" class="animate-spin w-8 h-8 mx-auto mb-2"></i><br>Criando base...</div>';
+    btnMsg.className = "fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex items-center justify-center text-white font-bold animate-fade-in";
+    btnMsg.innerHTML = '<div class="text-center"><i data-lucide="loader-2" class="animate-spin w-10 h-10 mx-auto mb-3 text-purple-400"></i><p>Clonando estrutura...</p></div>';
     document.body.appendChild(btnMsg);
     refreshIcons();
 
@@ -1558,66 +1594,71 @@ window.useReportAsBase = async function (sourceType, cloudUrl = null) {
         let sourceItems = [];
         let sourceHeader = {};
 
-        // 1. Obter dados da fonte
+        // 1. FONTE LOCAL
         if (sourceType === 'local') {
-            sourceItems = [...items]; // Copia do estado atual
+            sourceItems = [...items];
             sourceHeader = {
                 cliente: document.getElementById('cliente').value,
                 local: document.getElementById('local').value,
                 tecnico: document.getElementById('resp-tecnico').value,
                 classificacao: document.getElementById('classificacao').value
             };
-        } else if (sourceType === 'cloud' && cloudUrl) {
-            const resp = await fetch(cloudUrl);
-            const data = await resp.json();
+        }
+        // 2. FONTE NUVEM
+        else if (sourceType === 'cloud' && reportId) {
+            // Agora usa getDoc corretamente (que você importou na etapa 1)
+            const docRef = doc(db, "reports", reportId);
+            const docSnap = await getDoc(docRef);
+
+            if (!docSnap.exists()) throw new Error("Relatório base não encontrado no banco.");
+
+            const data = docSnap.data();
             sourceItems = data.items || [];
             sourceHeader = {
-                cliente: data.header.cliente || '',
-                local: data.header.local || '',
-                tecnico: data.header.tecnico || '',
-                classificacao: data.header.classificacao || ''
+                cliente: data.header?.cliente || data.cliente || '',
+                local: data.header?.local || data.local || '',
+                tecnico: data.header?.tecnico || '',
+                classificacao: data.header?.classificacao || ''
             };
         }
 
-        if (sourceItems.length === 0) {
-            throw new Error("Nenhum item encontrado na base.");
-        }
+        if (sourceItems.length === 0) throw new Error("O relatório base está vazio.");
 
-        // 2. Processar itens (Zerar dados, manter ID/Local)
+        // 3. PROCESSO DE CLONAGEM (Limpa vistorias)
         const newItems = sourceItems.map(item => createCleanItemFromBase(item));
 
-        // 3. Resetar Estado Global da Aplicação
+        // 4. RESET GLOBAL
         items = newItems;
-        currentReportId = null; // Garante que será salvo como NOVO na nuvem
+        currentReportId = null; // IMPORTANTE: Zera o ID para criar um NOVO na nuvem depois
         currentFiles = [];
 
-        // --- ADIÇÃO IMPORTANTE PARA A NOVA LÓGICA ---
-        reportNumber = generateUniqueId(); // Gera um NOVO número para esse novo relatório
+        // Novo Número
+        reportNumber = generateUniqueId();
         localStorage.setItem('reportNumber', reportNumber);
-        // --------------------------------------------
 
-        // 4. Preencher Header (Mantém dados fixos, zera dados variáveis)
+        // Preenche Cabeçalho
         document.getElementById('cliente').value = sourceHeader.cliente;
         document.getElementById('local').value = sourceHeader.local;
         document.getElementById('resp-tecnico').value = sourceHeader.tecnico;
         document.getElementById('classificacao').value = sourceHeader.classificacao;
 
-        // Zera dados variáveis de vistoria
-        initializeDateInput(); // Data de hoje
+        // Limpa Variáveis
+        initializeDateInput();
         document.getElementById('sum-parecer').value = 'Aprovado';
         document.getElementById('sum-resumo').value = '';
         document.getElementById('sum-riscos').value = '';
         document.getElementById('sum-conclusao').value = '';
-
-        // Limpa assinaturas
         if (sigTecnico) sigTecnico.clear();
         if (sigCliente) sigCliente.clear();
 
-        // 5. Atualizar UI
-        window.toggleHeader(); // Mostra header para conferência
+        // Limpa URL
+        window.history.pushState({}, '', window.location.pathname);
+
+        // UI
+        window.toggleHeader();
         renderList();
         window.showFormPage();
-        window.showToast("Base criada! Novo Relatório #" + reportNumber, "success");
+        window.showToast("Base clonada com sucesso!", "success");
 
     } catch (e) {
         console.error(e);
@@ -2068,13 +2109,10 @@ window.getLocation = function () {
 
 // --- NOVO: BUSCA RELATÓRIO PELA URL AO RECARREGAR ---
 async function checkUrlForReport() {
-    // 1. Pega o ID da URL (ex: ?id=REL_123)
     const urlParams = new URLSearchParams(window.location.search);
     const reportId = urlParams.get('id');
 
-    // 2. Se tem ID e o usuário está logado
     if (reportId && user) {
-        // Evita recarregar se já estiver com ele aberto
         if (currentReportId === reportId && items.length > 0) return;
 
         console.log("Buscando relatório da URL:", reportId);
@@ -2082,15 +2120,13 @@ async function checkUrlForReport() {
 
         try {
             const docRef = doc(db, "reports", reportId);
-            const docSnap = await getDoc(docRef);
+            const docSnap = await getDoc(docRef); // Usa getDoc aqui também
 
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                // Chama a função que já existe para abrir o relatório
-                await window.restoreCloudReport(data.fileUrl);
+                await window.restoreCloudReport(null, data.id);
             } else {
-                console.warn("Relatório não encontrado ou sem permissão.");
-                // Limpa a URL inválida
+                console.warn("Relatório da URL não encontrado.");
                 window.history.pushState({}, '', window.location.pathname);
             }
         } catch (error) {

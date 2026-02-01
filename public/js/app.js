@@ -27,6 +27,7 @@ let currentReportId = null;
 let deferredPrompt; // PWA
 let currentSortOrder = 'newest';
 let reportNumber = localStorage.getItem('reportNumber');
+let lastSavedReportNumber = null;
 
 if (!reportNumber) {
     reportNumber = generateUniqueId();
@@ -957,27 +958,36 @@ async function saveToFirebase() {
     refreshIcons();
 
     try {
-        // Cria ID se não existir
-        if (!currentReportId) currentReportId = `REL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        // --- PROTEÇÃO CONTRA SOBRESCRITA ---
+        // Se já temos um ID salvo, mas o Número do Relatório atual é diferente do último salvo/aberto...
+        // ...significa que o usuário mudou de contexto (Novo Relatório ou Clonagem) e devemos criar um NOVO arquivo.
+        if (currentReportId && lastSavedReportNumber && lastSavedReportNumber !== reportNumber) {
+            console.log(`Número mudou de ${lastSavedReportNumber} para ${reportNumber}. Criando novo ID...`);
+            currentReportId = null; // Força a criação de um novo documento
+        }
 
-        console.log("Iniciando salvamento direto no Firestore:", currentReportId);
+        // Cria ID se não existir
+        if (!currentReportId) {
+            // DICA: Incluímos o reportNumber no ID para facilitar a identificação visual no banco
+            currentReportId = `REL_${reportNumber}_${Date.now()}`;
+        }
+
+        console.log("Salvando relatório:", currentReportId, "Tag:", reportNumber);
 
         // --- LIMPEZA DOS DADOS ---
-        // Removemos qualquer dado de imagem (File objects ou Base64) para caber no Banco
         const itemsReady = items.map(item => {
             const clean = { ...item };
-            delete clean.imageFiles;   // Remove objeto File
-            delete clean._savedImages; // Remove Base64 antigo se houver
+            delete clean.imageFiles;
+            delete clean._savedImages;
             return clean;
         });
 
         const reportData = {
             id: currentReportId,
-            reportNumber: reportNumber,
-            version: "3.0-direct",
+            reportNumber: reportNumber, // A TAG ÚNICA
+            version: "3.1-safe",
             timestamp: new Date().toISOString(),
             userId: user.uid,
-            // Salva os dados completos direto no documento do banco
             header: {
                 cliente: document.getElementById('cliente').value || "",
                 local: document.getElementById('local').value || "",
@@ -989,38 +999,38 @@ async function saveToFirebase() {
                 riscos: document.getElementById('sum-riscos').value || "",
                 conclusao: document.getElementById('sum-conclusao').value || ""
             },
-            items: itemsReady, // ITENS SALVOS DIRETO NO JSON DO BANCO
+            items: itemsReady,
             signatures: {
                 tecnico: sigTecnico?.getImageData(),
                 cliente: sigCliente?.getImageData()
             },
-            // Campos auxiliares para a listagem
             cliente: document.getElementById('cliente').value || "Sem Cliente",
             local: document.getElementById('local').value || "",
             updatedAt: new Date(),
             itemCount: items.length,
             lastEditorName: user.displayName || "Usuário",
             lastEditorPhoto: user.photoURL || "",
-            fileUrl: null // Não usamos mais arquivo externo
+            fileUrl: null
         };
 
-        // SALVA DIRETO NO FIRESTORE (Pula a etapa de upload de arquivo)
         const docRef = doc(db, "reports", currentReportId);
         await setDoc(docRef, reportData, { merge: true });
 
-        console.log("Salvo com sucesso no Firestore!");
+        // --- ATUALIZA O ESTADO DE CONTROLE ---
+        lastSavedReportNumber = reportNumber; // Atualiza o "último salvo" para o atual
 
-        // Atualiza a URL e LocalStorage
+        // Atualiza a URL
         const newUrl = `${window.location.pathname}?id=${currentReportId}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
+
         localStorage.setItem('lastEditorName', user.displayName || "Usuário");
         localStorage.setItem('lastEditorPhoto', user.photoURL || "");
 
-        window.showToast("Salvo no banco com sucesso!");
+        window.showToast("Salvo com sucesso! (#" + reportNumber + ")");
 
     } catch (e) {
         console.error("ERRO AO SALVAR:", e);
-        alert(`Erro ao salvar: ${e.message}\n(Verifique o console F12 para detalhes)`);
+        alert(`Erro ao salvar: ${e.message}`);
     } finally {
         btn.innerHTML = oldHtml;
         btn.disabled = false;
@@ -1073,7 +1083,7 @@ window.loadCloudReports = async function () {
             <div class="flex justify-between items-start mb-3">
                 <div>
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                        <span class="font-mono text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
                             RASCUNHO ATUAL
                         </span>
                         <span class="font-mono text-xs font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
@@ -1191,32 +1201,28 @@ window.restoreCloudReport = async function (url, reportId) {
     try {
         let data = null;
 
-        // ESTRATÉGIA 1: Tenta ler direto do objeto no Banco (Novo método)
         if (reportId) {
-            console.log("Lendo Firestore ID:", reportId);
             const docRef = doc(db, "reports", reportId);
-            // AGORA VAI FUNCIONAR POIS IMPORTAMOS getDoc LÁ EM CIMA
             const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                data = docSnap.data();
-            }
+            if (docSnap.exists()) data = docSnap.data();
         }
 
-        // ESTRATÉGIA 2: Se não achou e tem URL antiga, tenta baixar
         if (!data && url) {
-            console.log("Baixando JSON legado:", url);
             const resp = await fetch(url);
             data = await resp.json();
         }
 
-        if (!data) throw new Error("Relatório não encontrado ou vazio.");
+        if (!data) throw new Error("Relatório não encontrado.");
 
-        // --- RESTAURAÇÃO DOS DADOS ---
         currentReportId = data.id || data.reportId || reportId;
+
+        // --- AQUI ESTÁ A CORREÇÃO ---
         reportNumber = data.reportNumber || generateUniqueId();
         localStorage.setItem('reportNumber', reportNumber);
+        lastSavedReportNumber = reportNumber; // Sincroniza a proteção
+        // -----------------------------
 
-        // Header
+        // Restaura Header
         const h = data.header || {};
         document.getElementById('cliente').value = h.cliente || data.cliente || '';
         document.getElementById('local').value = h.local || data.local || '';
@@ -1230,14 +1236,12 @@ window.restoreCloudReport = async function (url, reportId) {
 
         window.toggleHeader();
 
-        // Itens
         items = (data.items || []).map(item => ({
             ...item,
             imageFiles: [],
             _savedImages: []
         }));
 
-        // Assinaturas
         if (data.signatures) {
             if (data.signatures.tecnico && sigTecnico) sigTecnico.fromDataURL(data.signatures.tecnico);
             if (data.signatures.cliente && sigCliente) sigCliente.fromDataURL(data.signatures.cliente);
@@ -1246,11 +1250,10 @@ window.restoreCloudReport = async function (url, reportId) {
         renderList();
         window.showFormPage();
 
-        // Atualiza URL
         const newUrl = `${window.location.pathname}?id=${currentReportId}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
 
-        window.showToast("Relatório carregado!");
+        window.showToast(`Carregado: #${reportNumber}`);
 
     } catch (e) {
         console.error(e);

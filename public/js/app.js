@@ -75,6 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
     restoreFormState();
     initializeDateInput();
 
+    const searchInput = document.getElementById('search-filter');
+    const filterProblem = document.getElementById('filter-problems');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderList());
+    }
+    if (filterProblem) {
+        filterProblem.addEventListener('change', () => renderList());
+    }
+
     // Inicialização de Componentes
     const phrasesManager = new PhraseManager();
     window.phrases = phrasesManager;
@@ -631,19 +641,49 @@ function renderList() {
     const listEl = document.getElementById('lista-itens');
     const countEl = document.getElementById('count');
 
-    // Atualiza contador
-    if (countEl) countEl.innerText = items.length;
+    // 1. CAPTURA OS FILTROS
+    const searchText = document.getElementById('search-filter')?.value.toLowerCase() || "";
+    const showProblemsOnly = document.getElementById('filter-problems')?.checked || false;
 
-    // Limpa lista
+    // 2. FILTRAGEM INTELIGENTE
+    let displayItems = items.filter(item => {
+        // A. Filtro de Texto (ID ou Andar)
+        const matchText = (item.id || "").toLowerCase().includes(searchText) ||
+            (item.andar || "").toLowerCase().includes(searchText);
+
+        // B. Filtro de Problemas (Analisa o resumo em busca de palavras-chave de erro)
+        let matchProblem = true;
+        if (showProblemsOnly) {
+            const summary = generateItemSummary(item).toUpperCase();
+            // Lista de palavras que indicam problema
+            const badWords = ["DEFEITO", "FALHA", "VENCIDO", "INOPERANTE", "ROMPIDO", "OBSTRUÍDO", "SUJO", "SEM PRESSÃO", "QUEIMADA", "FALTA"];
+
+            // Verifica se tem alguma palavra ruim OU se status é "Falha" (para Alarmes)
+            const hasBadWord = badWords.some(w => summary.includes(w));
+            const isAlarmFail = item.type === 'alarme' && (item.status === 'Falha' || item.status === 'Avaria');
+
+            matchProblem = hasBadWord || isAlarmFail;
+        }
+
+        return matchText && matchProblem;
+    });
+
+    // 3. ATUALIZA CONTADOR (Mostra quantos itens sobraram no filtro)
+    if (countEl) countEl.innerText = `${displayItems.length} / ${items.length}`;
+
+    // 4. MENSAGEM SE NÃO ACHAR NADA
     listEl.innerHTML = "";
-
-    if (items.length === 0) {
-        listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia. Adicione itens acima.</div>';
+    if (displayItems.length === 0) {
+        if (items.length === 0) {
+            listEl.innerHTML = '<div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">Lista vazia. Adicione itens acima.</div>';
+        } else {
+            listEl.innerHTML = '<div class="text-center py-8 text-gray-400"><i data-lucide="filter-x" class="w-8 h-8 mx-auto mb-2 opacity-50"></i><p>Nenhum item encontrado com este filtro.</p></div>';
+            refreshIcons();
+        }
         return;
     }
 
-    // 1. Ordenação (Mantive sua lógica corrigida)
-    let displayItems = [...items];
+    // 5. ORDENAÇÃO (Mantida a lógica anterior)
     if (currentSortOrder === 'newest') {
         displayItems.sort((a, b) => Number(b.uid) - Number(a.uid));
     } else if (currentSortOrder === 'oldest') {
@@ -656,14 +696,13 @@ function renderList() {
         });
     }
 
-    // 2. Cria a Estrutura da Tabela
+    // 6. RENDERIZAÇÃO DA TABELA (Mantida a estrutura visual)
     const tableContainer = document.createElement('div');
-    tableContainer.className = "overflow-x-auto rounded-lg border border-gray-200 shadow-sm"; // Responsividade
+    tableContainer.className = "overflow-x-auto rounded-lg border border-gray-200 shadow-sm";
 
     const table = document.createElement('table');
     table.className = "w-full text-sm text-left text-gray-600 bg-white";
 
-    // Cabeçalho da Tabela
     const thead = document.createElement('thead');
     thead.className = "text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200";
     thead.innerHTML = `
@@ -678,7 +717,6 @@ function renderList() {
     `;
     table.appendChild(thead);
 
-    // Corpo da Tabela
     const tbody = document.createElement('tbody');
     tbody.className = "divide-y divide-gray-100";
 
@@ -686,7 +724,6 @@ function renderList() {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-blue-50 transition-colors group";
 
-        // Definir ícone ou sigla baseada no tipo
         let typeLabel = item.type.substring(0, 3).toUpperCase();
         let typeColor = "bg-slate-100 text-slate-600";
         if (item.type === 'hidrante') { typeLabel = "HID"; typeColor = "bg-blue-100 text-blue-700"; }
@@ -695,7 +732,6 @@ function renderList() {
         if (item.type === 'bomba') { typeLabel = "BOM"; typeColor = "bg-purple-100 text-purple-700"; }
         if (item.type === 'alarme') { typeLabel = "ALM"; typeColor = "bg-orange-100 text-orange-700"; }
 
-        // Gerar Resumo Automático (Para coluna Detalhes)
         let summary = generateItemSummary(item);
 
         // Badge de Fotos
@@ -755,12 +791,9 @@ function renderList() {
             </td>
         `;
 
-        // Ligar eventos dos botões
         tr.querySelector('.btn-edit').onclick = () => window.editItem(item.uid);
         tr.querySelector('.btn-del').onclick = () => window.removeItem(item.uid);
-        tr.querySelector('.btn-save-row').onclick = (e) => {
-            saveToFirebase();
-        };
+        tr.querySelector('.btn-save-row').onclick = (e) => saveToFirebase();
 
         tbody.appendChild(tr);
     });
@@ -768,7 +801,6 @@ function renderList() {
     table.appendChild(tbody);
     tableContainer.appendChild(table);
     listEl.appendChild(tableContainer);
-
     refreshIcons();
 }
 

@@ -16,32 +16,23 @@ const readFileAsDataURL = (file) => {
  * --- FUNÇÕES AUXILIARES DE DESIGN ---
  */
 
-// Desenha um título de seção com fundo estilizado
 const drawSectionHeader = (doc, title, y) => {
-    // Fundo Cinza Claro
     doc.setFillColor(241, 245, 249); // Slate-100
     doc.rect(14, y, 182, 8, 'F');
-
-    // Barra Lateral Azul Escuro (Accent)
-    doc.setFillColor(15, 23, 42); // Slate-900
+    doc.setFillColor(15, 23, 42); // Slate-900 (Accent fixo)
     doc.rect(14, y, 1.5, 8, 'F');
-
-    // Texto
     doc.setTextColor(30, 41, 59); // Slate-800
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text(title.toUpperCase(), 19, y + 5.5); // Texto alinhado verticalmente
-
-    return y + 14; // Retorna nova posição Y com margem
+    doc.text(title.toUpperCase(), 19, y + 5.5);
+    return y + 14;
 };
 
-// Adiciona numeração de página no final
 const addPageNumbers = (doc) => {
     const pageCount = doc.internal.getNumberOfPages();
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(150);
-
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.text(`Página ${i} de ${pageCount}`, 196, 285, { align: 'right' });
@@ -55,7 +46,6 @@ const addPageNumbers = (doc) => {
 export async function generatePDF(items, mode = 'save', signatures = {}) {
     const btn = document.getElementById('btn-pdf');
     let oldText = "";
-
     if (mode === 'save') {
         oldText = btn.innerHTML;
         btn.innerHTML = "Gerando Design...";
@@ -65,529 +55,243 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        let yPos = 20;
 
-        // --- DADOS ---
+        // --- DADOS DO FORMULÁRIO ---
         const cliente = document.getElementById('cliente').value || "CLIENTE NÃO INFORMADO";
         const local = document.getElementById('local').value || "";
         const tecnico = document.getElementById('resp-tecnico').value || "";
-        const classificacao = document.getElementById('classificacao').value || "-";
         const dataRaw = document.getElementById('data-relatorio').value;
-        let dataRelatorio = new Date().toLocaleString('pt-BR'); // Fallback padrão
+        let dataRelatorio = new Date().toLocaleString('pt-BR');
 
         if (dataRaw) {
-            // Verifica se é o formato novo com hora (YYYY-MM-DDTHH:MM)
             if (dataRaw.includes('T')) {
                 const [datePart, timePart] = dataRaw.split('T');
                 const [ano, mes, dia] = datePart.split('-');
                 dataRelatorio = `${dia}/${mes}/${ano} às ${timePart}`;
             } else {
-                // Caso seja formato antigo só data
                 dataRelatorio = dataRaw.split('-').reverse().join('/');
             }
         }
-        // --- CABEÇALHO PRINCIPAL (CAPA) ---
-        // Fundo Azul Escuro Profundo
-        doc.setFillColor(15, 23, 42); // Slate-900
-        doc.rect(0, 0, 210, 50, 'F');
 
-        // Título Principal
+        // --- CABEÇALHO (CAPA) ---
+        doc.setFillColor(15, 23, 42);
+        doc.rect(0, 0, 210, 50, 'F');
         doc.setTextColor(255);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 18, { align: 'center' });
-
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(148, 163, 184); // Slate-400
+        doc.setTextColor(148, 163, 184);
         doc.text("SISTEMAS DE PREVENÇÃO E COMBATE A INCÊNDIO", 105, 25, { align: 'center' });
 
-        // Box de Informações do Cliente (Dentro do cabeçalho escuro)
-        doc.setDrawColor(51, 65, 85); // Slate-700
-        doc.setFillColor(30, 41, 59); // Slate-800
+        doc.setFillColor(30, 41, 59);
         doc.roundedRect(14, 32, 182, 14, 1, 1, 'FD');
-
         doc.setFontSize(9);
-        doc.setTextColor(226, 232, 240); // Texto Claro
-
-        // Linha 1
-        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(226, 232, 240);
         doc.text("CLIENTE:", 18, 38);
         doc.setFont('helvetica', 'normal');
-        doc.text(cliente.substring(0, 35), 34, 38);
-
-        doc.setFont('helvetica', 'normal');
+        doc.text(cliente.substring(0, 40), 34, 38);
         doc.text(dataRelatorio, 192, 38, { align: 'right' });
-
-        const wData = doc.getTextWidth(dataRelatorio);
-
-        doc.setFont('helvetica', 'bold');
-        doc.text("DATA:", 192 - wData - 3, 38, { align: 'right' });
-
-        // Linha 2
         doc.setFont('helvetica', 'bold');
         doc.text("LOCAL:", 18, 43);
         doc.setFont('helvetica', 'normal');
-        doc.text(local.substring(0, 60), 34, 43);
+        doc.text(local.substring(0, 70), 34, 43);
 
-
-        // --- PÁGINA 1: SUMÁRIO EXECUTIVO ---
-        let yPos = 65; // Começa após o cabeçalho
-
+        // --- PÁGINA 1: SUMÁRIO ---
+        yPos = 65;
         yPos = drawSectionHeader(doc, "1. Sumário Executivo", yPos);
 
-        const parecer = document.getElementById('sum-parecer') ? document.getElementById('sum-parecer').value : '';
-        const resumo = document.getElementById('sum-resumo') ? document.getElementById('sum-resumo').value : '';
-        const riscos = document.getElementById('sum-riscos') ? document.getElementById('sum-riscos').value : '';
+        const parecer = document.getElementById('sum-parecer')?.value || '';
+        const resumo = document.getElementById('sum-resumo')?.value || '';
 
-        // Box de Parecer (Status)
-        let fillColor = [220, 252, 231]; // Verde
-        let textColor = [22, 101, 52];
-        let statusText = "SISTEMA APROVADO";
+        let statusColors = { fill: [220, 252, 231], text: [22, 101, 52], label: "SISTEMA APROVADO" };
+        if (parecer.includes("Restrições")) statusColors = { fill: [254, 249, 195], text: [133, 77, 14], label: "APROVADO COM RESTRIÇÕES" };
+        if (parecer.includes("Reprovado")) statusColors = { fill: [254, 226, 226], text: [153, 27, 27], label: "SISTEMA REPROVADO / INOPERANTE" };
 
-        if (parecer && parecer.includes("Restrições")) {
-            fillColor = [254, 249, 195]; // Amarelo
-            textColor = [133, 77, 14];
-            statusText = "APROVADO COM RESTRIÇÕES";
-        }
-        if (parecer && parecer.includes("Reprovado")) {
-            fillColor = [254, 226, 226]; // Vermelho
-            textColor = [153, 27, 27];
-            statusText = "SISTEMA REPROVADO / INOPERANTE";
-        }
-
-        doc.setFillColor(...fillColor);
-        doc.setDrawColor(...textColor); // Borda da mesma cor do texto
-        doc.roundedRect(14, yPos, 182, 12, 1, 1, 'FD');
-
+        doc.setFillColor(...statusColors.fill);
+        doc.roundedRect(14, yPos, 182, 12, 1, 1, 'F');
+        doc.setTextColor(...statusColors.text);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(...textColor);
-        doc.text(statusText, 105, yPos + 7.5, { align: 'center' });
+        doc.text(statusColors.label, 105, yPos + 7.5, { align: 'center' });
         yPos += 20;
 
-        // Textos descritivos
-        doc.setTextColor(30, 41, 59); // Slate-800
-
+        doc.setTextColor(30, 41, 59);
         if (resumo) {
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
             doc.text("Resumo das Instalações", 14, yPos);
-            yPos += 5;
-
+            yPos += 6;
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            const splitResumo = doc.splitTextToSize(resumo, 182);
-            doc.text(splitResumo, 14, yPos);
-            yPos += splitResumo.length * 5 + 10;
-        }
-
-        if (riscos) {
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(185, 28, 28); // Vermelho
-            doc.text("Principais Não Conformidades / Riscos", 14, yPos);
-            yPos += 5;
-
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(30, 41, 59);
-            const splitRiscos = doc.splitTextToSize(riscos, 182);
-            doc.text(splitRiscos, 14, yPos);
+            const lines = doc.splitTextToSize(resumo, 182);
+            doc.text(lines, 14, yPos);
+            yPos += (lines.length * 5) + 10;
         }
 
         // --- PÁGINA 2: TABELAS TÉCNICAS ---
         doc.addPage();
         yPos = 20;
-
         yPos = drawSectionHeader(doc, "2. Detalhamento Técnico (Checklists)", yPos);
 
-        // HELPER: Função para ordenar itens por ID (H-1, H-2, H-10...)
-        const sortById = (list) => {
-            return list.sort((a, b) => {
-                const idA = String(a.id || "").trim();
-                const idB = String(b.id || "").trim();
-                return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
-            });
-        };
+        const sortById = (list) => list.sort((a, b) => String(a.id || "").localeCompare(String(b.id || ""), undefined, { numeric: true }));
 
-        // Função de tabela aprimorada
-        const generateTable = (title, data, headers, headColor) => {
+        const generateTable = (title, data, headers, headColor, colStyles) => {
             if (!data || data.length === 0) return;
-
             if (yPos > 240) { doc.addPage(); yPos = 20; }
-
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
-            doc.setTextColor(71, 85, 105); // Slate-600
+            doc.setTextColor(headColor[0], headColor[1], headColor[2]); // Título na cor da tabela
             doc.text(title, 14, yPos);
-            yPos += 2;
 
             doc.autoTable({
-                startY: yPos,
+                startY: yPos + 2,
                 head: [headers],
                 body: data,
                 theme: 'striped',
-                headStyles: {
-                    fillColor: headColor,
-                    fontSize: 7,
-                    fontStyle: 'bold',
-                    halign: 'center',
-                    valign: 'middle'
-                },
-                bodyStyles: {
-                    fontSize: 7,
-                    textColor: 50,
-                    valign: 'middle'
-                },
-                columnStyles: {
-                    0: { cellWidth: 15, halign: 'center' }, // Local
-                    1: { cellWidth: 15, halign: 'center' }, // ID
-                    2: { cellWidth: 14, halign: 'center' }, // Bomba/Detalhe
-                    3: { cellWidth: 25, halign: 'center' }, // Mangueira
-                    4: { cellWidth: 18, halign: 'center' }, // Validade
-                    5: { cellWidth: 15, halign: 'center' },
-                    6: { cellWidth: 15, halign: 'center' },
-                    7: { cellWidth: 15, halign: 'center' },
-                    8: { cellWidth: 15, halign: 'center' },
-                    9: { halign: 'left' }
-                },
-                margin: { left: 10, right: 10 }
+                headStyles: { fillColor: headColor, fontSize: 7, halign: 'center' },
+                bodyStyles: { fontSize: 7, valign: 'middle' },
+                columnStyles: colStyles,
+                margin: { left: 14, right: 14 }
             });
             yPos = doc.lastAutoTable.finalY + 12;
         };
 
-        // --- AQUI APLICAMOS O SORT EM CADA CATEGORIA ---
-
-        const hid = sortById(items.filter(i => i.type === 'hidrante')); // <--- Ordenado
-        generateTable("SISTEMA DE HIDRANTES", hid.map(i => {
-            // Verifica itens faltantes
-            let faltantes = [];
-            if (!i.check_registro) faltantes.push('Reg');
-            if (!i.check_adaptador) faltantes.push('Adap');
-            if (!i.check_chave) faltantes.push('Chv');
-            if (!i.check_esguicho) faltantes.push('Esg');
-
-            let statusBomba = '-';
-            if (i.tem_acionador) {
-                if (i.acionador_quebrado) statusBomba = 'DEFEITO';
-                else if (i.acionador_funcional) statusBomba = 'OK';
-                else statusBomba = '?';
-            }
-
-            return [
-                i.andar,
-                i.id,
-                statusBomba,
-                i.tem_mangueira ? `${i.lances} lance(s)` : 'S/ Mangueira',
-                i.tem_mangueira ? i.validade : '-',
-                i.check_registro ? 'OK' : 'Falta',
-                i.check_adaptador ? 'OK' : 'Falta',
-                i.check_chave ? 'OK' : 'Falta',
-                i.check_esguicho ? 'OK' : 'Falta',
-                i.obs || '-'
-            ];
-        }),
-            ['Local', 'ID', 'Bomba', 'Mangueira', 'Validade', 'Registro', 'Adaptador', 'Chave', 'Esguicho', 'Observações'],
-            [51, 65, 85]);
-
-
-        const ext = sortById(items.filter(i => i.type === 'extintor')); // <--- Ordenado
-        generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [
-            i.andar, i.id, i.tipo, `${i.peso} kg`, i.recarga,
-            (i.check_lacre && i.check_manometro) ? 'OK' : 'Irregular', i.obs || '-'
-        ]), ['Local', 'ID', 'Tipo', 'Capac.', 'Recarga', 'Visual', 'Observações'], [51, 65, 85]);
-
-        const luz = sortById(items.filter(i => i.type === 'luz')); // <--- Ordenado
-        generateTable("ILUMINAÇÃO DE EMERGÊNCIA", luz.map(i => [
-            i.andar, i.id, i.tipo, i.estado, i.autonomia, i.obs || '-'
-        ]), ['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Observações'], [51, 65, 85]);
-
-        const sin = sortById(items.filter(i => i.type === 'sinalizacao')); // <--- Ordenado
-        generateTable("SINALIZAÇÃO DE EMERGÊNCIA", sin.map(i => {
-            let status = i.existente === 'Sim' ? 'Presente' : 'Ausente';
-            return [i.andar, i.id, i.tipo || '-', status, i.obs || '-'];
-        }), ['Local', 'ID', 'Tipo', 'Status', 'Observações'], [51, 65, 85]);
-
-        const eletro = sortById(items.filter(i => i.type === 'eletro'));
-        generateTable("ELETROMECÂNICA / ALARME", eletro.map(i => {
-            const manut = i.precisa_manutencao === 'Sim' ? 'SIM' : 'Não';
-            return [i.andar, i.tipo_sistema, i.botoeiras, manut, i.obs || '-'];
-        }), ['Local', 'Sistema', 'Acionador', 'Manut.', 'Observações'], [51, 65, 85]);
-
-        const bombas = sortById(items.filter(i => i.type === 'bomba'));
-        generateTable("CONJUNTO DE BOMBAS", bombas.map(i => [
-            i.andar, i.id, i.operacao ? 'Automático' : 'Manual/Off', i.teste_pressao ? 'OK' : 'Pend.', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
-        ]), ['Local', 'ID', 'Painel', 'Pressão', 'Manut.', 'Observações'], [51, 65, 85]);
-
-        // --- BLOCO SUBSTITUTO PARA ALARMES ---
-        const alarmes = sortById(items.filter(i => i.type === 'alarme'));
-
-        if (alarmes.length > 0) {
-            // 1. Verifica se cabe na página, senão cria nova
-            if (yPos > 240) { doc.addPage(); yPos = 20; }
-
-            // 2. Desenha o Título
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.setTextColor(71, 85, 105);
-            doc.text("SISTEMA DE DETECÇÃO E ALARME", 14, yPos);
-            yPos += 2;
-
-            // 3. Desenha a Tabela com larguras personalizadas
-            doc.autoTable({
-                startY: yPos,
-                head: [['ID', 'Status', 'Equipamento', 'Local/Andar', 'Mensagem Central']],
-                body: alarmes.map(i => [
-                    i.id,
-                    i.status || 'Operante',
-                    i.tipo_eq,
-                    i.andar,
-                    i.obs || '-'
-                ]),
-                theme: 'striped',
-                headStyles: {
-                    fillColor: [251, 146, 60], // Laranja
-                    fontSize: 8,
-                    fontStyle: 'bold',
-                    halign: 'center',
-                    valign: 'middle'
-                },
-                bodyStyles: {
-                    fontSize: 8,
-                    textColor: 50,
-                    valign: 'middle'
-                },
-                columnStyles: {
-                    0: { cellWidth: 15, halign: 'center' }, // ID
-                    1: { cellWidth: 25, halign: 'center' }, // Status
-                    2: { cellWidth: 40, halign: 'center' }, // Equipamento
-                    3: { cellWidth: 25, halign: 'center' }, // Local
-                    4: { halign: 'left' }                   // Mensagem (Auto = Resto da folha)
-                },
-                margin: { left: 14, right: 14 }
-            });
-
-            // Atualiza posição Y para o próximo item
-            yPos = doc.lastAutoTable.finalY + 12;
-        }
-
-        // --- PÁGINA 3: OBSERVAÇÕES GERAIS ---
-        doc.addPage();
-        yPos = 20;
-        yPos = drawSectionHeader(doc, "3. Observações Gerais", yPos);
-
-        const geral = items.filter(i => i.type === 'geral');
-        if (geral.length > 0) {
-            doc.autoTable({
-                startY: yPos,
-                head: [['Descrição da Ocorrência']],
-                body: geral.map(i => [i.obs]),
-                theme: 'striped',
-                headStyles: { fillColor: [71, 85, 105] },
-                margin: { left: 14, right: 14 }
-            });
-        } else {
-            doc.setFont('helvetica', 'italic');
-            doc.setTextColor(150);
-            doc.text("Nenhuma ocorrência geral registrada.", 14, yPos + 10);
-        }
-
-        // --- PÁGINA 4: CONCLUSÃO ---
-        doc.addPage();
-        yPos = 20;
-        yPos = drawSectionHeader(doc, "4. Parecer Técnico Final", yPos);
-
-        const conclusao = document.getElementById('sum-conclusao') ? document.getElementById('sum-conclusao').value : '';
-
-        if (conclusao) {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10);
-            doc.setTextColor(30, 41, 59);
-            const splitConclusao = doc.splitTextToSize(conclusao, 182);
-            doc.text(splitConclusao, 14, yPos + 5);
-        } else {
-            doc.setFont('helvetica', 'italic');
-            doc.setTextColor(150);
-            doc.text("Sem considerações finais.", 14, yPos + 5);
-        }
-
-        // --- PÁGINA 5: ASSINATURAS ---
-        doc.addPage();
-        yPos = 60;
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(14);
-        doc.setTextColor(30, 41, 59);
-        doc.text("Validação do Relatório", 105, 40, { align: 'center' });
-
-        const sigY = yPos + 40;
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(148, 163, 184);
-
-        // --- Assinatura 1: TÉCNICO ---
-        // Se tiver imagem digital, insere ela
-        if (signatures.tecnico) {
-            doc.addImage(signatures.tecnico, 'PNG', 40, sigY - 20, 40, 20);
-        }
-
-        doc.line(30, sigY, 90, sigY); // Linha
-        doc.setFontSize(10);
-        doc.text("RESPONSÁVEL TÉCNICO", 60, sigY + 5, { align: 'center' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text(tecnico.toUpperCase(), 60, sigY + 10, { align: 'center' });
-
-        // --- Assinatura 2: CLIENTE ---
-        // Se tiver imagem digital, insere ela
-        if (signatures.cliente) {
-            doc.addImage(signatures.cliente, 'PNG', 130, sigY - 20, 40, 20);
-        }
-
-        doc.line(120, sigY, 180, sigY); // Linha
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text("CLIENTE / RESPONSÁVEL", 150, sigY + 5, { align: 'center' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text(cliente.toUpperCase(), 150, sigY + 10, { align: 'center' });
-
-        // --- PÁGINA 6: FOTOS ---
-        const itemsWithPhotos = items.filter(i => i.imageFiles && i.imageFiles.length > 0);
-        const typeOrder = {
-            'hidrante': 1,
-            'extintor': 2,
-            'luz': 3,
-            'sinalizacao': 4,
-            'eletro': 5,
-            'bomba': 6,
-            'alarme': 5,
-            'geral': 7
+        // --- CONFIGURAÇÃO DE CORES PROFISSIONAIS (MUTED) ---
+        const colors = {
+            hidrantes: [30, 58, 138],   // Indigo Profundo
+            extintores: [159, 18, 57],  // Rosa/Vinho Queimado
+            bombas: [15, 23, 42],       // Slate Quase Preto
+            alarmes: [180, 83, 9],      // Âmbar Escuro
+            luz: [71, 85, 105],         // Slate Médio
+            sinalizacao: [13, 148, 136] // Teal/Verde Água Profundo
         };
 
-        itemsWithPhotos.sort((a, b) => {
-            const orderA = typeOrder[a.type] || 99;
-            const orderB = typeOrder[b.type] || 99;
-            if (orderA !== orderB) return orderA - orderB;
-            const idA = a.id || "";
-            const idB = b.id || "";
-            return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+        // HIDRANTES
+        const hid = sortById(items.filter(i => i.type === 'hidrante'));
+        generateTable("SISTEMA DE HIDRANTES", hid.map(i => [
+            i.andar, i.id, i.acionador_funcional ? 'OK' : 'N/A',
+            i.tem_mangueira ? `${i.lances} lances` : 'Falta', i.validade || '-',
+            i.check_registro ? 'OK' : 'Falta', i.check_adaptador ? 'OK' : 'Falta',
+            i.check_chave ? 'OK' : 'Falta', i.check_esguicho ? 'OK' : 'Falta', i.obs || '-'
+        ]), ['Local', 'ID', 'Acion.', 'Mang.', 'Val.', 'Reg.', 'Adap.', 'Chv.', 'Esg.', 'Obs.'], colors.hidrantes, {
+            0: { cellWidth: 15 }, 1: { cellWidth: 12 }, 2: { cellWidth: 12 }, 3: { cellWidth: 18 }, 4: { cellWidth: 18 },
+            5: { cellWidth: 12 }, 6: { cellWidth: 12 }, 7: { cellWidth: 12 }, 8: { cellWidth: 12 }, 9: { cellWidth: 'auto' }
         });
 
+        // EXTINTORES
+        const ext = sortById(items.filter(i => i.type === 'extintor'));
+        generateTable("EXTINTORES DE INCÊNDIO", ext.map(i => [
+            i.andar, i.id, i.tipo, `${i.peso}kg`, i.recarga, (i.check_lacre && i.check_manometro) ? 'OK' : 'Irreg.', i.obs || '-'
+        ]), ['Local', 'ID', 'Tipo', 'Capac.', 'Validade', 'Visual', 'Observações'], colors.extintores, {
+            0: { cellWidth: 20 }, 1: { cellWidth: 15 }, 2: { cellWidth: 20 }, 3: { cellWidth: 15 }, 4: { cellWidth: 25 }, 5: { cellWidth: 15 }, 6: { cellWidth: 'auto' }
+        });
+
+        // BOMBAS
+        const bombas = sortById(items.filter(i => i.type === 'bomba'));
+        generateTable("CONJUNTO DE BOMBAS", bombas.map(i => [
+            i.andar, i.id, i.operacao ? 'Auto' : 'Manual', i.teste_pressao ? 'OK' : 'Pend.', i.necessita_manutencao ? 'SIM' : 'Não', i.obs || '-'
+        ]), ['Local', 'ID', 'Painel', 'Pressão', 'Manut.', 'Observações'], colors.bombas, {
+            0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 25 }, 3: { cellWidth: 25 }, 4: { cellWidth: 20 }, 5: { cellWidth: 'auto' }
+        });
+
+        // ALARMES
+        const alarmes = sortById(items.filter(i => i.type === 'alarme'));
+        generateTable("SISTEMA DE DETECÇÃO E ALARME", alarmes.map(i => [
+            i.id, i.status || 'Operante', i.tipo_eq, i.andar, i.obs || '-'
+        ]), ['ID', 'Status', 'Equipamento', 'Local', 'Mensagem Central'], colors.alarmes, {
+            0: { cellWidth: 15 }, 1: { cellWidth: 25 }, 2: { cellWidth: 35 }, 3: { cellWidth: 25 }, 4: { cellWidth: 'auto' }
+        });
+
+        // ILUMINAÇÃO
+        const luz = sortById(items.filter(i => i.type === 'luz'));
+        generateTable("ILUMINAÇÃO DE EMERGÊNCIA", luz.map(i => [
+            i.andar, i.id, i.tipo, i.estado, i.autonomia, i.obs || '-'
+        ]), ['Local', 'ID', 'Tipo', 'Estado', 'Autonomia', 'Observações'], colors.luz, {
+            0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20 }, 4: { cellWidth: 25 }, 5: { cellWidth: 'auto' }
+        });
+
+        // SINALIZAÇÃO
+        const sin = sortById(items.filter(i => i.type === 'sinalizacao'));
+        generateTable("SINALIZAÇÃO DE EMERGÊNCIA", sin.map(i => [
+            i.andar, i.id, i.tipo || '-', i.existente === 'Sim' ? 'Presente' : 'Ausente', i.obs || '-'
+        ]), ['Local', 'ID', 'Tipo', 'Status', 'Observações'], colors.sinalizacao, {
+            0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 40 }, 3: { cellWidth: 25 }, 4: { cellWidth: 'auto' }
+        });
+
+        // --- PÁGINAS FINAIS ---
+        doc.addPage();
+        yPos = drawSectionHeader(doc, "3. Observações Gerais e Conclusão", 20);
+        const geral = items.filter(i => i.type === 'geral');
+        if (geral.length > 0) {
+            doc.autoTable({ startY: yPos, head: [['Relato de Ocorrências']], body: geral.map(i => [i.obs]), theme: 'striped', margin: { left: 14, right: 14 } });
+            yPos = doc.lastAutoTable.finalY + 10;
+        }
+
+        const conclusao = document.getElementById('sum-conclusao')?.value || 'Sem considerações adicionais.';
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(doc.splitTextToSize(conclusao, 182), 14, yPos);
+
+        doc.addPage();
+        doc.setFont('helvetica', 'bold');
+        doc.text("Validação do Relatório", 105, 40, { align: 'center' });
+        const sigY = 100;
+        doc.setDrawColor(148, 163, 184);
+
+        if (signatures.tecnico) doc.addImage(signatures.tecnico, 'PNG', 40, sigY - 25, 40, 20);
+        doc.line(30, sigY, 90, sigY);
+        doc.text("RESPONSÁVEL TÉCNICO", 60, sigY + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(tecnico.toUpperCase(), 60, sigY + 10, { align: 'center' });
+
+        if (signatures.cliente) doc.addImage(signatures.cliente, 'PNG', 130, sigY - 25, 40, 20);
+        doc.line(120, sigY, 180, sigY);
+        doc.setFont('helvetica', 'bold');
+        doc.text("CLIENTE / RESPONSÁVEL", 150, sigY + 5, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(cliente.toUpperCase(), 150, sigY + 10, { align: 'center' });
+
+        // --- RELATÓRIO FOTOGRÁFICO ---
+        const itemsWithPhotos = items.filter(i => i.imageFiles?.length > 0);
         if (itemsWithPhotos.length > 0) {
             doc.addPage();
-            yPos = 20;
-            yPos = drawSectionHeader(doc, "Anexo: Relatório Fotográfico", yPos);
-
-            let x = 14;
-            let y = yPos + 5;
-
-            // NOVAS DIMENSÕES PARA 3 COLUNAS
-            const imgWidth = 58;  // Reduzido de 85 para 58 para caber 3
-            const imgHeight = 58; // Quadrado
-            const gap = 4;        // Espaço entre as fotos
+            yPos = drawSectionHeader(doc, "Anexo: Relatório Fotográfico", 20);
+            let x = 14, y = yPos + 5;
+            const imgSize = 58, gap = 4;
 
             for (const item of itemsWithPhotos) {
-                // Se não couber o título + uma linha de fotos, quebra página
-                if (y + imgHeight + 20 > 280) {
-                    doc.addPage();
-                    y = 20;
-                    x = 14; // Reseta o X ao mudar de página
-                }
-
-                // Faixa cinza para o item da foto
+                if (y + imgSize > 270) { doc.addPage(); y = 20; }
                 doc.setFillColor(241, 245, 249);
                 doc.rect(14, y, 182, 6, 'F');
-
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8);
-                doc.setTextColor(71, 85, 105);
-                const label = item.type === 'geral' ? "OBSERVAÇÃO GERAL" : `${item.type.toUpperCase()} - ${item.id} (${item.andar})`;
-                doc.text(label, 16, y + 4);
+                doc.text(`${item.type.toUpperCase()} - ${item.id || ''} (${item.andar})`, 16, y + 4);
+                y += 8;
 
-                y += 8; // Avança para a linha das fotos
-
-                for (let i = 0; i < item.imageFiles.length; i++) {
+                for (const file of item.imageFiles) {
                     try {
-                        const imgData = await readFileAsDataURL(item.imageFiles[i]);
-
-                        // Checagem de quebra de página dentro do loop de imagens
-                        if (y + imgHeight > 280) {
-                            doc.addPage();
-                            y = 20;
-                            x = 14;
-                        }
-
-                        doc.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
-                        // Borda fina na foto
-                        doc.setDrawColor(203, 213, 225);
-                        doc.rect(x, y, imgWidth, imgHeight);
-
-                        // Lógica de Grid para 3 Colunas
-                        // Avança o X
-                        x += imgWidth + gap;
-
-                        // Se passou da margem direita (14 + 58 + 4 + 58 + 4 + 58 = 196), quebra linha
-                        // Usamos 180 como limite seguro
-                        if (x > 180) {
-                            x = 14;
-                            y += imgHeight + 5; // Espaço vertical entre linhas de fotos do mesmo item
-                        }
-
-                    } catch (err) { console.error(err); }
+                        const imgData = await readFileAsDataURL(file);
+                        if (y + imgSize > 280) { doc.addPage(); y = 20; x = 14; }
+                        doc.addImage(imgData, 'JPEG', x, y, imgSize, imgSize);
+                        doc.rect(x, y, imgSize, imgSize);
+                        x += imgSize + gap;
+                        if (x > 180) { x = 14; y += imgSize + 5; }
+                    } catch (e) { console.error(e); }
                 }
-
-                if (x > 14) {
-                    x = 14;
-                    y += imgHeight + 10; // Espaço extra antes do próximo item
-                } else {
-                    y += 5;
-                }
+                x = 14; y += imgSize + 10;
             }
         }
 
-        // --- FINALIZAÇÃO ---
         addPageNumbers(doc);
-
         if (mode === 'save') {
-            // Modo Salvar: Baixa direto
             doc.save(`Relatorio_${cliente.replace(/\s+/g, '_')}.pdf`);
         } else {
-            // Modo Preview: Lógica inteligente para Mobile vs PC
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 1024;
-
-            if (isMobile) {
-                // NO CELULAR: Não tenta usar iframe. Abre direto ou baixa.
-
-                // Opção A: Tenta abrir em nova aba (Funciona na maioria)
-                const blob = doc.output('blob');
-                const url = URL.createObjectURL(blob);
-                window.open(url, '_blank');
-
-                // Feedback na tela do app (para não ficar branco)
-                const iframe = document.getElementById('pdf-frame');
-                if (iframe) {
-                    iframe.srcdoc = `
-                        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;font-family:sans-serif;text-align:center;color:#475569;padding:20px;">
-                            <h3 style="margin-bottom:10px;font-weight:bold;">Visualização Externa</h3>
-                            <p>Em celulares, o PDF é aberto em uma nova aba ou baixado automaticamente.</p>
-                            <p style="font-size:12px;margin-top:10px;color:#94a3b8;">Verifique suas notificações ou a aba ao lado.</p>
-                        </div>
-                    `;
-                }
-
-                // Fallback: Se o popup falhar, forçamos o download após 1 segundo
-                setTimeout(() => {
-                    doc.save(`Relatorio_${cliente.replace(/\s+/g, '_')}_PREVIA.pdf`);
-                }, 1000);
-
-            } else {
-                // NO COMPUTADOR: Usa o iframe normalmente
-                const blob = doc.output('bloburl');
-                document.getElementById('pdf-frame').src = blob;
-            }
+            const blob = doc.output('bloburl');
+            document.getElementById('pdf-frame').src = blob;
         }
 
     } catch (e) {
         console.error(e);
-        if (mode === 'save') alert("Erro: " + e.message);
+        alert("Erro ao gerar PDF: " + e.message);
     } finally {
         if (mode === 'save') {
             btn.innerHTML = oldText;

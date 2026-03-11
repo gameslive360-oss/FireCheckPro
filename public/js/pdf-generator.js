@@ -131,6 +131,38 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         doc.text(empNome, (pageWidth - empNomeWidth) / 2, pageHeight - 30);
         // --- FIM DA CAPA ---
 
+        // --- DADOS DA EMPRESA (Canto Inferior Esquerdo) ---
+        const nomeEmpresa = localStorage.getItem('empresa_nome') || 'Empresa Não Configurada';
+        const empEnd = localStorage.getItem('empresa_endereco') || '';
+        const empCidade = localStorage.getItem('empresa_cidade') ? `Cidade: ${localStorage.getItem('empresa_cidade')}` : '';
+        const empCep = localStorage.getItem('empresa_cep') ? `CEP: ${localStorage.getItem('empresa_cep')}` : '';
+        const empTel = localStorage.getItem('empresa_telefone') ? `Telefone: ${localStorage.getItem('empresa_telefone')}` : '';
+
+        let footerY = pageHeight - 55; // Posição vertical inicial no rodapé
+        const marginX = 20; // Margem esquerda
+
+        // Nome da empresa em Negrito
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42); // Cor escura
+        doc.text(nomeEmpresa, marginX, footerY);
+
+        // Demais dados
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105); // Cor cinza
+        footerY += 6;
+
+        if (empEnd) {
+            doc.text(empEnd, marginX, footerY);
+            footerY += 10; // Dá um espaço maior depois do endereço, como no seu exemplo
+        }
+
+        if (empCidade) { doc.text(empCidade, marginX, footerY); footerY += 6; }
+        if (empCep) { doc.text(empCep, marginX, footerY); footerY += 6; }
+        if (empTel) { doc.text(empTel, marginX, footerY); }
+        // --- FIM DOS DADOS DA EMPRESA ---
+
         // --- PÁGINA 2: TABELAS TÉCNICAS ---
         doc.addPage();
         yPos = 20;

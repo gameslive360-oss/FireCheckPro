@@ -2180,3 +2180,29 @@ window.filterReportsList = function (query) {
         else noResultMsg.classList.add('hidden');
     }
 };
+
+// --- CONFIGURAÇÕES DA EMPRESA ---
+function abrirConfiguracoes() {
+    document.getElementById('config-empresa').value = localStorage.getItem('empresa_nome') || '';
+    document.getElementById('config-endereco').value = localStorage.getItem('empresa_endereco') || '';
+    document.getElementById('config-cidade').value = localStorage.getItem('empresa_cidade') || '';
+    document.getElementById('config-cep').value = localStorage.getItem('empresa_cep') || '';
+    document.getElementById('config-telefone').value = localStorage.getItem('empresa_telefone') || '';
+
+    document.getElementById('config-modal').classList.remove('hidden');
+}
+
+function fecharConfiguracoes() {
+    document.getElementById('config-modal').classList.add('hidden');
+}
+
+function salvarConfiguracoes() {
+    localStorage.setItem('empresa_nome', document.getElementById('config-empresa').value);
+    localStorage.setItem('empresa_endereco', document.getElementById('config-endereco').value);
+    localStorage.setItem('empresa_cidade', document.getElementById('config-cidade').value);
+    localStorage.setItem('empresa_cep', document.getElementById('config-cep').value);
+    localStorage.setItem('empresa_telefone', document.getElementById('config-telefone').value);
+
+    fecharConfiguracoes();
+    alert('Configurações da empresa salvas com sucesso!');
+}

@@ -60,6 +60,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         // --- DADOS DO FORMULÁRIO ---
         const cliente = document.getElementById('cliente').value || "CLIENTE NÃO INFORMADO";
         const local = document.getElementById('local').value || "";
+        const tipoSistema = document.getElementById('tipo-sistema')?.value || '';
         const tecnico = document.getElementById('resp-tecnico').value || "";
         const dataRaw = document.getElementById('data-relatorio').value;
         let dataRelatorio = new Date().toLocaleString('pt-BR');
@@ -106,6 +107,14 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             const localText = `Local: ${local}`;
             const localWidth = doc.getTextWidth(localText);
             doc.text(localText, (pageWidth - localWidth) / 2, 140);
+        }
+
+        // Tipo de Sistema
+        if (tipoSistema) {
+            doc.setFontSize(12);
+            const sistemaText = `Sistema: ${tipoSistema}`;
+            const sistemaWidth = doc.getTextWidth(sistemaText);
+            doc.text(sistemaText, (pageWidth - sistemaWidth) / 2, 150);
         }
 
         // Data

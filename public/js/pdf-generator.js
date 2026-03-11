@@ -74,63 +74,60 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
             }
         }
 
-        // --- CABEÇALHO (CAPA) ---
-        doc.setFillColor(15, 23, 42);
-        doc.rect(0, 0, 210, 50, 'F');
-        doc.setTextColor(255);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text("RELATÓRIO TÉCNICO DE VISTORIA", 105, 18, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setTextColor(148, 163, 184);
-        doc.text("SISTEMAS DE PREVENÇÃO E COMBATE A INCÊNDIO", 105, 25, { align: 'center' });
+        // CAPTURAR O NOVO CAMPO TIPO DE RELATÓRIO
+        const tipoRelatorio = document.getElementById('tipo-relatorio')?.value || 'Relatório de manutenção';
 
-        doc.setFillColor(30, 41, 59);
-        doc.roundedRect(14, 32, 182, 14, 1, 1, 'FD');
-        doc.setFontSize(9);
-        doc.setTextColor(226, 232, 240);
-        doc.text("CLIENTE:", 18, 38);
+        // --- NOVA CAPA (PÁGINA INTEIRA) ---
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // Faixa superior de design (opcional, mantém a identidade visual)
+        doc.setFillColor(15, 23, 42); // Azul escuro
+        doc.rect(0, 0, pageWidth, 15, 'F');
+
+        // Título Principal (O Tipo de Relatório selecionado)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(26);
+        doc.setTextColor(15, 23, 42);
+        const titleText = tipoRelatorio.toUpperCase();
+        const titleWidth = doc.getTextWidth(titleText);
+        doc.text(titleText, (pageWidth - titleWidth) / 2, 110);
+
+        // Cliente
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'normal');
-        doc.text(cliente.substring(0, 40), 34, 38);
-        doc.text(dataRelatorio, 192, 38, { align: 'right' });
-        doc.setFont('helvetica', 'bold');
-        doc.text("LOCAL:", 18, 43);
-        doc.setFont('helvetica', 'normal');
-        doc.text(local.substring(0, 70), 34, 43);
+        doc.setTextColor(71, 85, 105);
+        const clientText = `Cliente: ${cliente}`;
+        const clientWidth = doc.getTextWidth(clientText);
+        doc.text(clientText, (pageWidth - clientWidth) / 2, 130);
 
-        // --- PÁGINA 1: SUMÁRIO ---
-        yPos = 65;
-        yPos = drawSectionHeader(doc, "1. Sumário Executivo", yPos);
-
-        const parecer = document.getElementById('sum-parecer')?.value || '';
-        const resumo = document.getElementById('sum-resumo')?.value || '';
-
-        let statusColors = { fill: [220, 252, 231], text: [22, 101, 52], label: "SISTEMA APROVADO" };
-        if (parecer.includes("Restrições")) statusColors = { fill: [254, 249, 195], text: [133, 77, 14], label: "APROVADO COM RESTRIÇÕES" };
-        if (parecer.includes("Reprovado")) statusColors = { fill: [254, 226, 226], text: [153, 27, 27], label: "SISTEMA REPROVADO / INOPERANTE" };
-
-        doc.setFillColor(...statusColors.fill);
-        doc.roundedRect(14, yPos, 182, 12, 1, 1, 'F');
-        doc.setTextColor(...statusColors.text);
-        doc.setFont('helvetica', 'bold');
-        doc.text(statusColors.label, 105, yPos + 7.5, { align: 'center' });
-        yPos += 20;
-
-        doc.setTextColor(30, 41, 59);
-        if (resumo) {
-            doc.setFont('helvetica', 'bold');
-            doc.text("Resumo das Instalações", 14, yPos);
-            yPos += 6;
-            doc.setFont('helvetica', 'normal');
-            const lines = doc.splitTextToSize(resumo, 182);
-            doc.text(lines, 14, yPos);
-            yPos += (lines.length * 5) + 10;
+        // Local
+        if (local) {
+            const localText = `Local: ${local}`;
+            const localWidth = doc.getTextWidth(localText);
+            doc.text(localText, (pageWidth - localWidth) / 2, 140);
         }
+
+        // Data
+        doc.setFontSize(14);
+        const dateText = `Data da Vistoria: ${dataRelatorio}`;
+        const dateWidth = doc.getTextWidth(dateText);
+        doc.text(dateText, (pageWidth - dateWidth) / 2, 160);
+
+        // Rodapé da Capa (Nome da Empresa)
+        doc.setFontSize(12);
+        doc.setTextColor(100, 116, 139);
+        const empNome = "FireCheck Pro - Inspeções de Segurança";
+        const empNomeWidth = doc.getTextWidth(empNome);
+        doc.text(empNome, (pageWidth - empNomeWidth) / 2, pageHeight - 30);
+        // --- FIM DA CAPA ---
 
         // --- PÁGINA 2: TABELAS TÉCNICAS ---
         doc.addPage();
         yPos = 20;
-        yPos = drawSectionHeader(doc, "2. Detalhamento Técnico (Checklists)", yPos);
+
+        // Como removemos o Sumário (que era o item 1), as tabelas passam a ser o item 1
+        yPos = drawSectionHeader(doc, "1. Detalhamento Técnico (Checklists)", yPos);
 
         const sortById = (list) => list.sort((a, b) => String(a.id || "").localeCompare(String(b.id || ""), undefined, { numeric: true }));
 

@@ -1686,6 +1686,8 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
     }
 };
 
+
+
 /* ==========================================================================
    11. PWA INSTALL
    ========================================================================== */
@@ -2300,3 +2302,63 @@ window.salvarConfiguracoes = function () {
     fecharConfiguracoes();
     window.showToast('Configurações salvas com sucesso!', 'success'); // Usando o seu próprio sistema de avisos!
 };
+
+// ==========================================
+// 1. MÁSCARA DO TELEFONE
+// ==========================================
+document.getElementById('config-telefone').addEventListener('input', function (e) {
+    let value = e.target.value;
+
+    // Remove tudo o que não é número
+    value = value.replace(/\D/g, "");
+
+    // Formata: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    value = value.replace(/^(\d{2})(\d)/g, "($1) $2");
+    value = value.replace(/(\d)(\d{4})$/, "$1-$2");
+
+    e.target.value = value;
+});
+
+// ==========================================
+// 2. MÁSCARA DO CEP E BUSCA DA CIDADE
+// ==========================================
+document.getElementById('config-cep').addEventListener('input', async function (e) {
+    let value = e.target.value;
+
+    // Remove tudo o que não é número
+    value = value.replace(/\D/g, "");
+
+    // Formata o CEP: XXXXX-XXX (coloca o traço após o 5º número)
+    value = value.replace(/^(\d{5})(\d)/, "$1-$2");
+
+    // Atualiza o valor no input com a máscara
+    e.target.value = value;
+
+    // --- Início da busca automática da cidade ---
+
+    // Pega apenas os números do CEP para consultar na API
+    let cepLimpo = value.replace(/\D/g, "");
+
+    // Se o CEP tiver exatamente 8 números (tamanho completo)
+    if (cepLimpo.length === 8) {
+        try {
+            // Mostra indicação ao utilizador enquanto procura
+            document.getElementById('config-cidade').value = "A procurar...";
+
+            // Faz o pedido à API pública do ViaCEP
+            let resposta = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+            let dados = await resposta.json();
+
+            if (dados.erro) {
+                // Se o CEP não existir
+                document.getElementById('config-cidade').value = "CEP não encontrado";
+            } else {
+                // Preenche com "Cidade - UF"
+                document.getElementById('config-cidade').value = `${dados.localidade} - ${dados.uf}`;
+            }
+        } catch (erro) {
+            document.getElementById('config-cidade').value = "";
+            console.error("Erro ao procurar o CEP:", erro);
+        }
+    }
+});

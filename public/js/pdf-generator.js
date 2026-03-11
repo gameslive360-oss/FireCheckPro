@@ -123,12 +123,6 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         const dateWidth = doc.getTextWidth(dateText);
         doc.text(dateText, (pageWidth - dateWidth) / 2, 160);
 
-        // Rodapé da Capa (Nome da Empresa)
-        doc.setFontSize(12);
-        doc.setTextColor(100, 116, 139);
-        const empNome = "FireCheck Pro - Inspeções de Segurança";
-        const empNomeWidth = doc.getTextWidth(empNome);
-        doc.text(empNome, (pageWidth - empNomeWidth) / 2, pageHeight - 30);
         // --- FIM DA CAPA ---
 
         // --- DADOS DA EMPRESA (Canto Inferior Esquerdo) ---
@@ -155,7 +149,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         if (empEnd) {
             doc.text(empEnd, marginX, footerY);
-            footerY += 10; // Dá um espaço maior depois do endereço, como no seu exemplo
+            footerY += 6; // Dá um espaço maior depois do endereço, como no seu exemplo
         }
 
         if (empCidade) { doc.text(empCidade, marginX, footerY); footerY += 6; }

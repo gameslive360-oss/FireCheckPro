@@ -2206,3 +2206,97 @@ function salvarConfiguracoes() {
     fecharConfiguracoes();
     alert('Configurações da empresa salvas com sucesso!');
 }
+
+// --- MENU DO USUÁRIO ---
+
+// Função para abrir/fechar o menu dropdown
+function toggleUserMenu() {
+    const dropdown = document.getElementById('user-dropdown');
+    dropdown.classList.toggle('hidden');
+}
+
+// Fechar o menu automaticamente se o usuário clicar fora dele
+window.addEventListener('click', function (e) {
+    const userInfo = document.getElementById('user-info');
+    const dropdown = document.getElementById('user-dropdown');
+
+    // Se clicou fora do botão e fora do dropdown, esconde o menu
+    if (userInfo && !userInfo.contains(e.target) && dropdown && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
+
+// --- LOGOUT DO FIREBASE ---
+function fazerLogout() {
+    if (confirm('Tem certeza que deseja sair da conta?')) {
+        // Usa o objeto de autenticação do Firebase (se já estiver globalmente disponível no seu firebase-config.js)
+        if (typeof auth !== 'undefined') {
+            auth.signOut().then(() => {
+                // Redireciona para a página de login ou recarrega
+                window.location.reload();
+            }).catch((error) => {
+                console.error('Erro ao sair:', error);
+                alert('Erro ao tentar sair da conta.');
+            });
+        } else {
+            // Alternativa caso esteja usando o Firebase modular mais recente
+            console.log("Comando de logout acionado. Certifique-se de importar o signOut do Firebase Auth.");
+        }
+    }
+}
+/* ==========================================================================
+   MENU DO USUÁRIO, LOGOUT E CONFIGURAÇÕES DA EMPRESA
+   ========================================================================== */
+
+window.toggleUserMenu = function (event) {
+    if (event) event.stopPropagation(); // Evita que o clique feche na mesma hora
+    const dropdown = document.getElementById('user-dropdown');
+    if (dropdown) dropdown.classList.toggle('hidden');
+};
+
+// Fechar o menu se clicar em qualquer outro lugar da tela
+window.addEventListener('click', function (e) {
+    const dropdown = document.getElementById('user-dropdown');
+    const userInfo = document.getElementById('user-info');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+        if (userInfo && !userInfo.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    }
+});
+
+window.fazerLogout = function () {
+    if (confirm('Tem certeza que deseja sair da conta?')) {
+        signOut(auth).then(() => {
+            window.location.reload();
+        }).catch((error) => {
+            console.error('Erro ao sair:', error);
+            alert('Erro ao sair da conta.');
+        });
+    }
+};
+
+window.abrirConfiguracoes = function () {
+    document.getElementById('config-empresa').value = localStorage.getItem('empresa_nome') || '';
+    document.getElementById('config-endereco').value = localStorage.getItem('empresa_endereco') || '';
+    document.getElementById('config-cidade').value = localStorage.getItem('empresa_cidade') || '';
+    document.getElementById('config-cep').value = localStorage.getItem('empresa_cep') || '';
+    document.getElementById('config-telefone').value = localStorage.getItem('empresa_telefone') || '';
+
+    document.getElementById('config-modal').classList.remove('hidden');
+};
+
+window.fecharConfiguracoes = function () {
+    document.getElementById('config-modal').classList.add('hidden');
+};
+
+window.salvarConfiguracoes = function () {
+    localStorage.setItem('empresa_nome', document.getElementById('config-empresa').value);
+    localStorage.setItem('empresa_endereco', document.getElementById('config-endereco').value);
+    localStorage.setItem('empresa_cidade', document.getElementById('config-cidade').value);
+    localStorage.setItem('empresa_cep', document.getElementById('config-cep').value);
+    localStorage.setItem('empresa_telefone', document.getElementById('config-telefone').value);
+
+    fecharConfiguracoes();
+    window.showToast('Configurações salvas com sucesso!', 'success'); // Usando o seu próprio sistema de avisos!
+};

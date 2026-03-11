@@ -163,6 +163,13 @@
                 <div id="header-content"
                     class="p-4 border-t border-gray-200 transition-all duration-500 ease-in-out overflow-hidden max-h-[1000px] opacity-100">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div class="md:col-span-2 lg:col-span-3">
+                            <label class="label-std font-bold text-slate-700">Tipo de Relatório</label>
+                            <select id="tipo-relatorio" class="input-std save-state font-bold text-lg h-12 bg-blue-50">
+                                <option value="Relatório de manutenção">Relatório de Manutenção Preventiva</option>
+                                <option value="Relatório de entrega técnico">Relatório de Entrega Técnico</option>
+                            </select>
+                        </div>
                         <div class="md:col-span-2 lg:col-span-1"><label class="label-std">Cliente</label><input
                                 type="text" id="cliente" class="input-std save-state"
                                 placeholder="Nome completo ou Razão Social"></div>

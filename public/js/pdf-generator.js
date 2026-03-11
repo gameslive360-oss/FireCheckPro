@@ -75,7 +75,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         }
 
         // CAPTURAR O NOVO CAMPO TIPO DE RELATÓRIO
-        const tipoRelatorio = document.getElementById('tipo-relatorio')?.value || 'Relatório de manutenção';
+        const tipoRelatorio = document.getElementById('tipo-relatorio')?.value || 'Relatório de Manutenção Preventiva';
 
         // --- NOVA CAPA (PÁGINA INTEIRA) ---
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -87,14 +87,14 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         // Título Principal (O Tipo de Relatório selecionado)
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(26);
+        doc.setFontSize(14);
         doc.setTextColor(15, 23, 42);
         const titleText = tipoRelatorio.toUpperCase();
         const titleWidth = doc.getTextWidth(titleText);
         doc.text(titleText, (pageWidth - titleWidth) / 2, 110);
 
         // Cliente
-        doc.setFontSize(16);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(71, 85, 105);
         const clientText = `Cliente: ${cliente}`;
@@ -109,7 +109,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         }
 
         // Data
-        doc.setFontSize(14);
+        doc.setFontSize(10);
         const dateText = `Data da Vistoria: ${dataRelatorio}`;
         const dateWidth = doc.getTextWidth(dateText);
         doc.text(dateText, (pageWidth - dateWidth) / 2, 160);

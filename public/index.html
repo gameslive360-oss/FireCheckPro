@@ -39,21 +39,29 @@
                     </h1>
                 </div>
                 <div>
-                    <button id="btn-login" class="bg-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 transition-colors">Entrar</button>
-                    
+                    <button id="btn-login"
+                        class="bg-blue-600 px-3 py-1 rounded text-xs font-bold hover:bg-blue-500 transition-colors">Entrar</button>
+
                     <div class="relative inline-block text-left">
-                        <div id="user-info" class="items-center gap-2 flex cursor-pointer hover:opacity-80 transition-opacity" onclick="window.toggleUserMenu(event)">
+                        <div id="user-info"
+                            class="items-center gap-2 flex cursor-pointer hover:opacity-80 transition-opacity"
+                            onclick="window.toggleUserMenu(event)">
                             <span id="user-name" class="text-xs font-bold text-slate-300"></span>
                             <i data-lucide="chevron-down" class="w-3 h-3 text-slate-300"></i>
                         </div>
 
-                        <div id="user-dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg hidden z-50 border border-slate-200 overflow-hidden">
+                        <div id="user-dropdown"
+                            class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg hidden z-50 border border-slate-200 overflow-hidden">
                             <div class="py-1">
-                                <button onclick="abrirConfiguracoes(); toggleUserMenu()" class="block w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 transition-colors">
-                                    <span class="flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> Configurações</span>
+                                <button onclick="abrirConfiguracoes(); toggleUserMenu()"
+                                    class="block w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-100 transition-colors">
+                                    <span class="flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i>
+                                        Configurações</span>
                                 </button>
-                                <button onclick="fazerLogout()" class="block w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100">
-                                    <span class="flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i> Sair da conta</span>
+                                <button onclick="fazerLogout()"
+                                    class="block w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-slate-100">
+                                    <span class="flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4"></i>
+                                        Sair da conta</span>
                                 </button>
                             </div>
                         </div>
@@ -62,12 +70,14 @@
             </div>
         </nav>
 
-        <aside id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-slate-900 text-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+        <aside id="sidebar"
+            class="fixed top-0 left-0 w-72 h-full bg-slate-900 text-white z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
             <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-950">
                 <h2 class="font-bold text-lg text-white">Navegação</h2>
-                <button onclick="toggleMenu()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="toggleMenu()" class="text-slate-400 hover:text-white"><i data-lucide="x"
+                        class="w-6 h-6"></i></button>
             </div>
-            
+
             <div class="flex-1 overflow-y-auto py-2">
                 <div class="px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Formulários</div>
                 <nav class="space-y-1 px-2">
@@ -100,17 +110,21 @@
                 <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Finalização</div>
                 <nav class="space-y-1 px-2">
                     <button onclick="switchTabAndClose('geral', 'Geral / Observações')" class="nav-btn">
-                        <i data-lucide="clipboard-list" class="w-5 h-5 text-slate-400"></i><span class="font-medium">Geral</span>
+                        <i data-lucide="clipboard-list" class="w-5 h-5 text-slate-400"></i><span
+                            class="font-medium">Geral</span>
                     </button>
                     <button onclick="switchTabAndClose('sumario', 'Sumário Executivo')" class="nav-btn">
-                        <i data-lucide="file-check-2" class="w-5 h-5 text-slate-400"></i><span class="font-medium">Sumário</span>
+                        <i data-lucide="file-check-2" class="w-5 h-5 text-slate-400"></i><span
+                            class="font-medium">Sumário</span>
                     </button>
                     <button onclick="switchTabAndClose('assinatura', 'Assinaturas')" class="nav-btn">
-                        <i data-lucide="pen-tool" class="w-5 h-5 text-slate-400"></i><span class="font-medium">Assinaturas</span>
+                        <i data-lucide="pen-tool" class="w-5 h-5 text-slate-400"></i><span
+                            class="font-medium">Assinaturas</span>
                     </button>
                 </nav>
 
-                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Backup & Restore</div>
+                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Backup & Restore
+                </div>
                 <div class="px-2 space-y-2">
                     <button id="btn-backup" onclick="window.exportBackup()" class="nav-btn text-sm">
                         <i data-lucide="download" class="w-4 h-4"></i> Salvar Backup (JSON)
@@ -119,7 +133,8 @@
                         <i data-lucide="upload" class="w-4 h-4"></i><span>Restaurar Backup</span>
                         <input type="file" accept=".json" onchange="window.importBackup(event)" class="hidden">
                     </label>
-                    <button onclick="window.exportToExcel()" class="nav-btn text-sm text-green-300 hover:text-green-100">
+                    <button onclick="window.exportToExcel()"
+                        class="nav-btn text-sm text-green-300 hover:text-green-100">
                         <i data-lucide="sheet" class="w-4 h-4"></i> Exportar Planilha (.xlsx)
                     </button>
                     <label class="nav-btn cursor-pointer text-sm text-green-300 hover:text-green-100">
@@ -128,15 +143,19 @@
                     </label>
                 </div>
 
-                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Gerenciamento</div>
+                <div class="px-3 mt-6 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Gerenciamento
+                </div>
                 <nav class="space-y-1 px-2 pb-4">
                     <button onclick="window.showReportsPage()" class="nav-btn border border-slate-700 bg-slate-800/50">
-                        <i data-lucide="folder-open" class="w-5 h-5 text-yellow-500"></i><span class="font-medium">Meus Relatórios</span>
+                        <i data-lucide="folder-open" class="w-5 h-5 text-yellow-500"></i><span class="font-medium">Meus
+                            Relatórios</span>
                     </button>
                     <button onclick="window.resetApp()" class="nav-btn mt-2">
-                        <i data-lucide="plus-square" class="w-5 h-5 text-emerald-500"></i><span class="font-medium">Novo Relatório</span>
+                        <i data-lucide="plus-square" class="w-5 h-5 text-emerald-500"></i><span class="font-medium">Novo
+                            Relatório</span>
                     </button>
-                    <button id="btn-install-app" onclick="window.installPWA()" class="hidden nav-btn text-blue-400 border border-blue-900/30 bg-blue-900/10 mb-2 mt-2">
+                    <button id="btn-install-app" onclick="window.installPWA()"
+                        class="hidden nav-btn text-blue-400 border border-blue-900/30 bg-blue-900/10 mb-2 mt-2">
                         <i data-lucide="download" class="w-5 h-5"></i><span class="font-bold">Instalar App</span>
                     </button>
                 </nav>
@@ -150,26 +169,32 @@
             </div>
 
             <div class="p-4 bg-slate-950 border-t border-slate-800">
-                <button id="btn-logout-side" class="w-full flex items-center justify-center gap-2 border border-red-900/50 bg-red-900/10 text-red-500 rounded p-2 text-sm font-bold hover:bg-red-900/30 transition-colors hidden">
+                <button id="btn-logout-side"
+                    class="w-full flex items-center justify-center gap-2 border border-red-900/50 bg-red-900/10 text-red-500 rounded p-2 text-sm font-bold hover:bg-red-900/30 transition-colors hidden">
                     <i data-lucide="log-out" class="w-4 h-4"></i> Sair da Conta
                 </button>
             </div>
         </aside>
 
         <main class="container mx-auto p-4 lg:max-w-full">
-            
-            <div id="building-data-container" class="bg-white rounded-lg shadow-sm mb-4 border-l-4 border-slate-800 overflow-hidden">
-                <button onclick="toggleHeader()" class="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
+
+            <div id="building-data-container"
+                class="bg-white rounded-lg shadow-sm mb-4 border-l-4 border-slate-800 overflow-hidden">
+                <button onclick="toggleHeader()"
+                    class="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left">
                     <div class="flex items-center gap-2">
                         <i data-lucide="building-2" class="text-slate-600 w-5 h-5"></i>
                         <div>
                             <h3 class="font-bold text-slate-700 text-sm uppercase">Dados da Edificação</h3>
-                            <span id="header-summary" class="text-xs text-gray-400 font-normal hidden">Clique para expandir</span>
+                            <span id="header-summary" class="text-xs text-gray-400 font-normal hidden">Clique para
+                                expandir</span>
                         </div>
                     </div>
-                    <i id="header-chevron" data-lucide="chevron-down" class="text-slate-400 w-5 h-5 transition-transform duration-300 rotate-180"></i>
+                    <i id="header-chevron" data-lucide="chevron-down"
+                        class="text-slate-400 w-5 h-5 transition-transform duration-300 rotate-180"></i>
                 </button>
-                <div id="header-content" class="p-4 border-t border-gray-200 transition-all duration-500 ease-in-out overflow-hidden max-h-[1000px] opacity-100">
+                <div id="header-content"
+                    class="p-4 border-t border-gray-200 transition-all duration-500 ease-in-out overflow-hidden max-h-[1000px] opacity-100">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                         <div class="md:col-span-2 lg:col-span-3">
                             <label class="label-std font-bold text-slate-700">Tipo de Relatório</label>
@@ -180,28 +205,35 @@
                         </div>
                         <div class="md:col-span-2 lg:col-span-1">
                             <label class="label-std">Cliente</label>
-                            <input type="text" id="cliente" class="input-std save-state" placeholder="Nome completo ou Razão Social">
+                            <input type="text" id="cliente" class="input-std save-state"
+                                placeholder="Nome completo ou Razão Social">
                         </div>
                         <div class="md:col-span-2 lg:col-span-2">
                             <label class="label-std">Local / Endereço</label>
                             <div class="flex gap-2">
-                                <input type="text" id="local" class="input-std save-state flex-1" placeholder="Endereço completo da edificação">
-                                <button onclick="window.getLocation()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded border border-slate-300 transition-colors flex items-center justify-center" title="Preencher com GPS Atual">
+                                <input type="text" id="local" class="input-std save-state flex-1"
+                                    placeholder="Endereço completo da edificação">
+                                <button onclick="window.getLocation()"
+                                    class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 rounded border border-slate-300 transition-colors flex items-center justify-center"
+                                    title="Preencher com GPS Atual">
                                     <i data-lucide="map-pin" class="w-5 h-5"></i>
                                 </button>
                             </div>
                         </div>
                         <div>
                             <label class="label-std">Tipo de Sistema</label>
-                            <input type="text" id="tipo-sistema" class="input-std save-state" placeholder="Ex: Sistema R 102 Ansul e BKR 50">
+                            <input type="text" id="tipo-sistema" class="input-std save-state"
+                                placeholder="Ex: Sistema R 102 Ansul e BKR 50">
                         </div>
                         <div>
                             <label class="label-std">Responsável Técnico</label>
-                            <input type="text" id="resp-tecnico" class="input-std save-state" placeholder="Seu Nome Completo">
+                            <input type="text" id="resp-tecnico" class="input-std save-state"
+                                placeholder="Seu Nome Completo">
                         </div>
                         <div>
                             <label class="label-std">Classificação</label>
-                            <input type="text" id="classificacao" class="input-std save-state" placeholder="Ex: Comercial, Industrial, Residencial">
+                            <input type="text" id="classificacao" class="input-std save-state"
+                                placeholder="Ex: Comercial, Industrial, Residencial">
                         </div>
                         <div>
                             <label class="label-std">Data</label>
@@ -234,17 +266,21 @@
                             <option value="Reprovado">❌ REPROVADO</option>
                         </select>
                         <label class="label-std">Resumo</label>
-                        <textarea id="sum-resumo" class="input-std save-state mb-3" rows="3" placeholder="Breve resumo da vistoria realizada..."></textarea>
-                        
+                        <textarea id="sum-resumo" class="input-std save-state mb-3" rows="3"
+                            placeholder="Breve resumo da vistoria realizada..."></textarea>
+
                         <label class="label-std text-red-700">Riscos / Não Conformidades</label>
-                        <textarea id="sum-riscos" class="input-std save-state border-red-200 bg-red-50" rows="3" placeholder="Liste os principais riscos ou falhas críticas encontradas..."></textarea>
+                        <textarea id="sum-riscos" class="input-std save-state border-red-200 bg-red-50" rows="3"
+                            placeholder="Liste os principais riscos ou falhas críticas encontradas..."></textarea>
                     </div>
                     <div class="mt-6 border-t pt-4 border-slate-200">
                         <label class="label-std font-bold mb-2">Conclusão</label>
                         <div class="flex justify-end mb-1">
-                            <button onclick="window.phrases.open('sum-conclusao', 'sumario')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('sum-conclusao', 'sumario')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="sum-conclusao" class="input-std save-state" rows="4" placeholder="Conclusão final e recomendações..."></textarea>
+                        <textarea id="sum-conclusao" class="input-std save-state" rows="4"
+                            placeholder="Conclusão final e recomendações..."></textarea>
                     </div>
                 </div>
 
@@ -253,17 +289,23 @@
                     <div class="mb-4">
                         <label class="label-std text-blue-900">Componentes</label>
                         <div class="checklist-grid">
-                            <label class="check-group"><input type="checkbox" id="h-registro" class="save-state"><span>Registro</span></label>
-                            <label class="check-group"><input type="checkbox" id="h-adaptador" class="save-state"><span>Adaptador</span></label>
-                            <label class="check-group"><input type="checkbox" id="h-chave" class="save-state"><span>Chave Storz</span></label>
-                            <label class="check-group"><input type="checkbox" id="h-esguicho" class="save-state"><span>Esguicho</span></label>
+                            <label class="check-group"><input type="checkbox" id="h-registro"
+                                    class="save-state"><span>Registro</span></label>
+                            <label class="check-group"><input type="checkbox" id="h-adaptador"
+                                    class="save-state"><span>Adaptador</span></label>
+                            <label class="check-group"><input type="checkbox" id="h-chave"
+                                    class="save-state"><span>Chave Storz</span></label>
+                            <label class="check-group"><input type="checkbox" id="h-esguicho"
+                                    class="save-state"><span>Esguicho</span></label>
                         </div>
                     </div>
                     <div class="border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-center mb-3">
                             <label class="label-std text-blue-900 mb-0">Mangueira</label>
-                            <label class="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-1 rounded border border-blue-100">
-                                <input type="checkbox" id="h-tem-mangueira" class="save-state" onchange="toggleMangueiraFields()">
+                            <label
+                                class="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-1 rounded border border-blue-100">
+                                <input type="checkbox" id="h-tem-mangueira" class="save-state"
+                                    onchange="toggleMangueiraFields()">
                                 <span class="text-sm font-bold text-blue-800">Possui?</span>
                             </label>
                         </div>
@@ -282,7 +324,8 @@
                                 </div>
                                 <div>
                                     <label class="label-std">Lances</label>
-                                    <input type="number" id="h-lances" class="input-std save-state" value="1" placeholder="Qtd">
+                                    <input type="number" id="h-lances" class="input-std save-state" value="1"
+                                        placeholder="Qtd">
                                 </div>
                                 <div>
                                     <label class="label-std">Metragem</label>
@@ -297,21 +340,26 @@
                             <div>
                                 <div class="flex justify-between items-end mb-1">
                                     <label class="label-std">Observações</label>
-                                    <button onclick="window.phrases.open('h-obs', 'hidrante')" class="btn-frases">Frases Prontas</button>
+                                    <button onclick="window.phrases.open('h-obs', 'hidrante')" class="btn-frases">Frases
+                                        Prontas</button>
                                 </div>
-                                <textarea id="h-obs" class="input-std save-state" rows="2" placeholder="Descreva avarias na caixa, porta, vidro ou mangueiras..."></textarea>
+                                <textarea id="h-obs" class="input-std save-state" rows="2"
+                                    placeholder="Descreva avarias na caixa, porta, vidro ou mangueiras..."></textarea>
                             </div>
                         </div>
-                        
+
                         <div class="border-t border-gray-100 pt-3 mt-3">
                             <div class="flex justify-between items-center mb-3">
                                 <label class="label-std text-blue-900 mb-0">Acionador de Bomba</label>
-                                <label class="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-1 rounded border border-blue-100">
-                                    <input type="checkbox" id="h-tem-acionador" class="save-state" onchange="window.toggleAcionadorFields()">
+                                <label
+                                    class="flex items-center gap-2 cursor-pointer bg-blue-50 px-3 py-1 rounded border border-blue-100">
+                                    <input type="checkbox" id="h-tem-acionador" class="save-state"
+                                        onchange="window.toggleAcionadorFields()">
                                     <span class="text-sm font-bold text-blue-800">Possui?</span>
                                 </label>
                             </div>
-                            <div id="h-acionador-container" class="opacity-50 pointer-events-none transition-opacity duration-200">
+                            <div id="h-acionador-container"
+                                class="opacity-50 pointer-events-none transition-opacity duration-200">
                                 <div class="checklist-grid">
                                     <label class="check-group">
                                         <input type="checkbox" id="h-acionador-funcional" class="save-state">
@@ -352,17 +400,23 @@
                         </div>
                     </div>
                     <div class="checklist-grid">
-                        <label class="check-group"><input type="checkbox" id="e-lacre" class="save-state"><span>Lacre</span></label>
-                        <label class="check-group"><input type="checkbox" id="e-manometro" class="save-state"><span>Manômetro</span></label>
-                        <label class="check-group"><input type="checkbox" id="e-sinalizacao" class="save-state"><span>Sinalização</span></label>
-                        <label class="check-group"><input type="checkbox" id="e-mangueira" class="save-state"><span>Mangueira</span></label>
+                        <label class="check-group"><input type="checkbox" id="e-lacre"
+                                class="save-state"><span>Lacre</span></label>
+                        <label class="check-group"><input type="checkbox" id="e-manometro"
+                                class="save-state"><span>Manômetro</span></label>
+                        <label class="check-group"><input type="checkbox" id="e-sinalizacao"
+                                class="save-state"><span>Sinalização</span></label>
+                        <label class="check-group"><input type="checkbox" id="e-mangueira"
+                                class="save-state"><span>Mangueira</span></label>
                     </div>
                     <div class="mt-3 border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-end mb-1">
                             <label class="label-std">Observações</label>
-                            <button onclick="window.phrases.open('e-obs', 'extintor')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('e-obs', 'extintor')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="e-obs" class="input-std save-state" rows="2" placeholder="Descreva estado do cilindro, pintura ou suporte..."></textarea>
+                        <textarea id="e-obs" class="input-std save-state" rows="2"
+                            placeholder="Descreva estado do cilindro, pintura ou suporte..."></textarea>
                     </div>
                 </div>
 
@@ -394,33 +448,44 @@
                         </div>
                     </div>
                     <div class="checklist-grid">
-                        <label class="check-group"><input type="checkbox" id="l-acendimento" class="save-state"><span>Acendimento</span></label>
-                        <label class="check-group"><input type="checkbox" id="l-led" class="save-state"><span>LED de Carga</span></label>
-                        <label class="check-group"><input type="checkbox" id="l-fixacao" class="save-state"><span>Fixação</span></label>
-                        <label class="check-group"><input type="checkbox" id="l-lux" class="save-state"><span>Luminosidade (Lux) OK</span></label>
+                        <label class="check-group"><input type="checkbox" id="l-acendimento"
+                                class="save-state"><span>Acendimento</span></label>
+                        <label class="check-group"><input type="checkbox" id="l-led" class="save-state"><span>LED de
+                                Carga</span></label>
+                        <label class="check-group"><input type="checkbox" id="l-fixacao"
+                                class="save-state"><span>Fixação</span></label>
+                        <label class="check-group"><input type="checkbox" id="l-lux"
+                                class="save-state"><span>Luminosidade (Lux) OK</span></label>
                     </div>
                     <div class="mt-3 border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-end mb-1">
                             <label class="label-std">Observações</label>
-                            <button onclick="window.phrases.open('l-obs', 'luz')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('l-obs', 'luz')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="l-obs" class="input-std save-state" rows="2" placeholder="Descreva falhas de funcionamento ou estado físico..."></textarea>
+                        <textarea id="l-obs" class="input-std save-state" rows="2"
+                            placeholder="Descreva falhas de funcionamento ou estado físico..."></textarea>
                     </div>
                 </div>
 
                 <div id="form-bomba" class="form-section hidden">
                     <h4 class="section-title text-purple-800 border-purple-100">Bombas</h4>
                     <div class="checklist-grid">
-                        <label class="check-group"><input type="checkbox" id="b-operacao" class="save-state"><span>Automático</span></label>
-                        <label class="check-group"><input type="checkbox" id="b-teste" class="save-state"><span>Teste de Pressão</span></label>
-                        <label class="check-group"><input type="checkbox" id="b-manutencao" class="save-state"><span>Requer Manutenção</span></label>
+                        <label class="check-group"><input type="checkbox" id="b-operacao"
+                                class="save-state"><span>Automático</span></label>
+                        <label class="check-group"><input type="checkbox" id="b-teste" class="save-state"><span>Teste de
+                                Pressão</span></label>
+                        <label class="check-group"><input type="checkbox" id="b-manutencao"
+                                class="save-state"><span>Requer Manutenção</span></label>
                     </div>
                     <div class="mt-3 border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-end mb-1">
                             <label class="label-std">Observações</label>
-                            <button onclick="window.phrases.open('b-obs', 'bomba')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('b-obs', 'bomba')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="b-obs" class="input-std save-state" rows="2" placeholder="Detalhes sobre ruído, vazamentos ou painel..."></textarea>
+                        <textarea id="b-obs" class="input-std save-state" rows="2"
+                            placeholder="Detalhes sobre ruído, vazamentos ou painel..."></textarea>
                     </div>
                 </div>
 
@@ -441,7 +506,8 @@
                     </div>
                     <div class="mb-4">
                         <label class="label-std">Status Atual</label>
-                        <select id="a-status" class="input-std save-state font-bold text-slate-800 border-l-4 border-orange-400">
+                        <select id="a-status"
+                            class="input-std save-state font-bold text-slate-800 border-l-4 border-orange-400">
                             <option value="Operante">✅ Operante / Normal</option>
                             <option value="Falha">❌ Falha / Inoperante</option>
                             <option value="Avaria">⚠️ Avaria Física / Quebrado</option>
@@ -452,9 +518,11 @@
                     <div class="mt-3 border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-end mb-1">
                             <label class="label-std">Observações</label>
-                            <button onclick="window.phrases.open('a-obs', 'alarme')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('a-obs', 'alarme')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="a-obs" class="input-std save-state" rows="2" placeholder="Detalhes adicionais..."></textarea>
+                        <textarea id="a-obs" class="input-std save-state" rows="2"
+                            placeholder="Detalhes adicionais..."></textarea>
                     </div>
                 </div>
 
@@ -462,7 +530,8 @@
                     <h4 class="section-title text-teal-800 border-teal-100">Sinalização</h4>
                     <div class="mb-4 border-b border-gray-100 pb-4">
                         <label class="label-std text-teal-900">Existe?</label>
-                        <select id="s-existente" class="input-std save-state font-bold" onchange="window.toggleSinalizacaoFields()">
+                        <select id="s-existente" class="input-std save-state font-bold"
+                            onchange="window.toggleSinalizacaoFields()">
                             <option value="Sim">Sim</option>
                             <option value="Nao">Não</option>
                         </select>
@@ -479,18 +548,24 @@
                             </select>
                         </div>
                         <div class="checklist-grid mb-4">
-                            <label class="check-group"><input type="checkbox" id="s-foto" class="save-state"><span>Fotoluminescência</span></label>
-                            <label class="check-group"><input type="checkbox" id="s-fixacao" class="save-state"><span>Fixação</span></label>
-                            <label class="check-group"><input type="checkbox" id="s-visivel" class="save-state"><span>Visível</span></label>
-                            <label class="check-group"><input type="checkbox" id="s-legivel" class="save-state"><span>Legível</span></label>
+                            <label class="check-group"><input type="checkbox" id="s-foto"
+                                    class="save-state"><span>Fotoluminescência</span></label>
+                            <label class="check-group"><input type="checkbox" id="s-fixacao"
+                                    class="save-state"><span>Fixação</span></label>
+                            <label class="check-group"><input type="checkbox" id="s-visivel"
+                                    class="save-state"><span>Visível</span></label>
+                            <label class="check-group"><input type="checkbox" id="s-legivel"
+                                    class="save-state"><span>Legível</span></label>
                         </div>
                     </div>
                     <div class="mt-3 border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-end mb-1">
                             <label class="label-std">Mensagem Central</label>
-                            <button onclick="window.phrases.open('s-obs', 'sinalizacao')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('s-obs', 'sinalizacao')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="s-obs" class="input-std save-state" rows="2" placeholder="Descreva danos na placa ou visibilidade comprometida..."></textarea>
+                        <textarea id="s-obs" class="input-std save-state" rows="2"
+                            placeholder="Descreva danos na placa ou visibilidade comprometida..."></textarea>
                     </div>
                 </div>
 
@@ -524,18 +599,24 @@
                     </div>
                     <div class="border-t border-gray-100 pt-3 mb-3">
                         <div class="checklist-grid">
-                            <label class="check-group"><input type="checkbox" id="el-painel" class="save-state"><span>Painel Automático</span></label>
-                            <label class="check-group"><input type="checkbox" id="el-piloto" class="save-state"><span>Luzes Piloto</span></label>
-                            <label class="check-group"><input type="checkbox" id="el-ruido" class="save-state"><span>Sem Ruído Anormal</span></label>
-                            <label class="check-group"><input type="checkbox" id="el-fixacao" class="save-state"><span>Fixação</span></label>
+                            <label class="check-group"><input type="checkbox" id="el-painel"
+                                    class="save-state"><span>Painel Automático</span></label>
+                            <label class="check-group"><input type="checkbox" id="el-piloto"
+                                    class="save-state"><span>Luzes Piloto</span></label>
+                            <label class="check-group"><input type="checkbox" id="el-ruido" class="save-state"><span>Sem
+                                    Ruído Anormal</span></label>
+                            <label class="check-group"><input type="checkbox" id="el-fixacao"
+                                    class="save-state"><span>Fixação</span></label>
                         </div>
                     </div>
                     <div class="mt-3 border-t border-gray-100 pt-3">
                         <div class="flex justify-between items-end mb-1">
                             <label class="label-std">Observações</label>
-                            <button onclick="window.phrases.open('el-obs', 'eletro')" class="btn-frases">Frases Prontas</button>
+                            <button onclick="window.phrases.open('el-obs', 'eletro')" class="btn-frases">Frases
+                                Prontas</button>
                         </div>
-                        <textarea id="el-obs" class="input-std save-state" rows="2" placeholder="Detalhes técnicos adicionais..."></textarea>
+                        <textarea id="el-obs" class="input-std save-state" rows="2"
+                            placeholder="Detalhes técnicos adicionais..."></textarea>
                     </div>
                 </div>
 
@@ -543,10 +624,12 @@
                     <h4 class="section-title text-slate-700 border-slate-200">Geral / Diversos</h4>
                     <div class="mt-2">
                         <label class="label-std">Ocorrência / Relato</label>
-                        <textarea id="g-obs" class="input-std save-state" rows="4" placeholder="Descreva ocorrências gerais que não se enquadram nas categorias específicas..."></textarea>
+                        <textarea id="g-obs" class="input-std save-state" rows="4"
+                            placeholder="Descreva ocorrências gerais que não se enquadram nas categorias específicas..."></textarea>
                     </div>
                     <div class="mt-2 text-right">
-                        <button onclick="window.phrases.open('g-obs', 'geral')" class="btn-frases">Frases Prontas</button>
+                        <button onclick="window.phrases.open('g-obs', 'geral')" class="btn-frases">Frases
+                            Prontas</button>
                     </div>
                 </div>
 
@@ -579,7 +662,8 @@
                     <div class="flex gap-2 mb-3">
                         <label class="btn-secondary flex-1 cursor-pointer relative">
                             <i data-lucide="camera" class="w-4 h-4"></i> Câmera
-                            <input type="file" id="camera-input" accept="image/*" capture="environment" multiple class="hidden">
+                            <input type="file" id="camera-input" accept="image/*" capture="environment" multiple
+                                class="hidden">
                         </label>
                         <label class="btn-secondary flex-1 cursor-pointer relative">
                             <i data-lucide="paperclip" class="w-4 h-4"></i> Galeria
@@ -595,35 +679,45 @@
                         Itens <span id="count" class="bg-slate-200 text-slate-700 px-2 rounded text-xs">0</span>
                     </h3>
                     <div class="flex gap-2 flex-wrap justify-end">
-                        <button id="btn-save" class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors">
+                        <button id="btn-save"
+                            class="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors">
                             <i data-lucide="cloud-upload" class="w-3 h-3"></i> Salvar
                         </button>
-                        <button id="btn-pdf" class="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors">
+                        <button id="btn-pdf"
+                            class="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors">
                             <i data-lucide="file-text" class="w-3 h-3"></i> PDF
                         </button>
                         <div class="bg-gray-200 p-1 rounded-lg flex text-xs font-bold">
-                            <select onchange="window.handleSort(this.value)" class="bg-transparent text-slate-600 outline-none cursor-pointer px-1 uppercase text-[10px] font-bold tracking-wide hover:text-blue-600">
+                            <select onchange="window.handleSort(this.value)"
+                                class="bg-transparent text-slate-600 outline-none cursor-pointer px-1 uppercase text-[10px] font-bold tracking-wide hover:text-blue-600">
                                 <option value="newest">Recente</option>
                                 <option value="oldest">Antigo</option>
                                 <option value="az">A-Z</option>
                             </select>
                         </div>
                         <div class="bg-gray-200 p-1 rounded-lg flex text-xs font-bold">
-                            <button id="view-btn-list" onclick="window.togglePreviewMode('list')" class="px-3 py-1 rounded bg-white text-slate-800 shadow-sm transition-all">Lista</button>
-                            <button id="view-btn-pdf" onclick="window.togglePreviewMode('pdf')" class="px-3 py-1 rounded text-gray-500 hover:text-slate-800 transition-all">Prévia</button>
+                            <button id="view-btn-list" onclick="window.togglePreviewMode('list')"
+                                class="px-3 py-1 rounded bg-white text-slate-800 shadow-sm transition-all">Lista</button>
+                            <button id="view-btn-pdf" onclick="window.togglePreviewMode('pdf')"
+                                class="px-3 py-1 rounded text-gray-500 hover:text-slate-800 transition-all">Prévia</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm mb-4">
                     <div class="flex flex-col md:flex-row gap-3">
-                        <div class="flex-1 flex items-center border border-slate-200 rounded-lg px-3 py-2 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-colors">
+                        <div
+                            class="flex-1 flex items-center border border-slate-200 rounded-lg px-3 py-2 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-colors">
                             <i data-lucide="search" class="text-slate-400 w-5 h-5 mr-3 shrink-0"></i>
-                            <input type="text" id="search-filter" class="w-full text-sm border-none outline-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-400 h-full bg-transparent" placeholder="Buscar por ID (ex: H-01) ou Local...">
+                            <input type="text" id="search-filter"
+                                class="w-full text-sm border-none outline-none focus:ring-0 p-0 text-slate-700 placeholder:text-slate-400 h-full bg-transparent"
+                                placeholder="Buscar por ID (ex: H-01) ou Local...">
                         </div>
                         <div class="flex items-center gap-2">
-                            <label class="flex items-center gap-2 cursor-pointer bg-slate-50 hover:bg-red-50 px-3 py-2 rounded-lg border border-slate-200 transition-colors select-none h-full whitespace-nowrap">
-                                <input type="checkbox" id="filter-problems" class="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500">
+                            <label
+                                class="flex items-center gap-2 cursor-pointer bg-slate-50 hover:bg-red-50 px-3 py-2 rounded-lg border border-slate-200 transition-colors select-none h-full whitespace-nowrap">
+                                <input type="checkbox" id="filter-problems"
+                                    class="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500">
                                 <span class="text-sm font-bold text-slate-600">Só Pendências</span>
                             </label>
                         </div>
@@ -631,13 +725,15 @@
                 </div>
 
                 <div id="lista-itens" class="space-y-3 pb-10">
-                    <div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
+                    <div
+                        class="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
                         Sua lista está vazia. Adicione itens acima.
                     </div>
                 </div>
 
                 <div id="pdf-preview-container" class="hidden pb-10">
-                    <iframe id="pdf-frame" class="w-full h-[500px] border-2 border-slate-300 rounded-b-lg bg-gray-50"></iframe>
+                    <iframe id="pdf-frame"
+                        class="w-full h-[500px] border-2 border-slate-300 rounded-b-lg bg-gray-50"></iframe>
                 </div>
             </section>
 
@@ -646,93 +742,120 @@
                     <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                         <i data-lucide="cloud" class="text-blue-600"></i> Relatórios Salvos
                     </h2>
-                    <button onclick="window.showFormPage()" class="text-sm font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
+                    <button onclick="window.showFormPage()"
+                        class="text-sm font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 transition-colors">
                         <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
                     </button>
                 </div>
                 <div id="reports-list-container" class="space-y-4 pb-20"></div>
             </div>
         </main>
-        
+
         <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 shadow-lg flex gap-3 z-40">
-            <button id="btn-cancelar" type="button" class="hidden flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
+            <button id="btn-cancelar" type="button"
+                class="hidden flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
                 <i data-lucide="x-circle"></i> Cancelar
             </button>
-            <button id="btn-add-item" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
+            <button id="btn-add-item"
+                class="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2 shadow text-sm active:scale-95 transition-transform">
                 <i data-lucide="plus-circle"></i> <span id="btn-add-text">Adicionar Item</span>
             </button>
         </div>
 
-        <div id="modal-phrases" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="modal-phrases"
+            class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[80vh]">
                 <div class="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-lg">
                     <h3 class="font-bold text-slate-700">Frases Prontas</h3>
-                    <button onclick="window.phrases.close()" class="text-gray-400 hover:text-red-500"><i data-lucide="x"></i></button>
+                    <button onclick="window.phrases.close()" class="text-gray-400 hover:text-red-500"><i
+                            data-lucide="x"></i></button>
                 </div>
                 <div id="phrases-list" class="p-4 overflow-y-auto space-y-2 flex-1"></div>
                 <div class="p-3 border-t bg-slate-50 rounded-b-lg flex gap-2">
-                    <input type="text" id="new-phrase-input" class="input-std flex-1" placeholder="Nova frase personalizada...">
-                    <button onclick="window.phrases.addCustom()" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"><i data-lucide="plus"></i></button>
+                    <input type="text" id="new-phrase-input" class="input-std flex-1"
+                        placeholder="Nova frase personalizada...">
+                    <button onclick="window.phrases.addCustom()"
+                        class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"><i
+                            data-lucide="plus"></i></button>
                 </div>
             </div>
         </div>
 
-        <div id="modal-confirm" style="z-index: 9999;" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div id="modal-confirm" style="z-index: 9999;"
+            class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white rounded-lg shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
                 <div class="flex items-center gap-3 mb-4 text-slate-800">
-                    <div class="p-2 bg-blue-100 text-blue-600 rounded-full"><i data-lucide="alert-circle" class="w-6 h-6"></i></div>
+                    <div class="p-2 bg-blue-100 text-blue-600 rounded-full"><i data-lucide="alert-circle"
+                            class="w-6 h-6"></i></div>
                     <h3 id="modal-confirm-title" class="font-bold text-lg">Confirmação</h3>
                 </div>
                 <p id="modal-confirm-msg" class="text-slate-600 mb-6 leading-relaxed">Tem certeza?</p>
                 <div class="flex justify-end gap-3">
-                    <button onclick="window.closeConfirmModal()" class="px-4 py-2 text-slate-500 hover:bg-slate-100 font-semibold rounded-lg transition-colors">Cancelar</button>
-                    <button id="btn-confirm-action" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2">Confirmar</button>
+                    <button onclick="window.closeConfirmModal()"
+                        class="px-4 py-2 text-slate-500 hover:bg-slate-100 font-semibold rounded-lg transition-colors">Cancelar</button>
+                    <button id="btn-confirm-action"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors flex items-center gap-2">Confirmar</button>
                 </div>
             </div>
         </div>
 
-        <div id="modal-login-warning" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4 backdrop-blur-sm bg-black/50 animate-fade-in">
-            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 border-t-4 border-blue-600">
+        <div id="modal-login-warning"
+            class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4 backdrop-blur-sm bg-black/50 animate-fade-in">
+            <div
+                class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100 border-t-4 border-blue-600">
                 <div class="flex flex-col items-center text-center gap-3 mb-6">
                     <div class="p-3 bg-blue-100 text-blue-600 rounded-full">
                         <i data-lucide="user-circle-2" class="w-8 h-8"></i>
                     </div>
                     <h3 class="font-bold text-xl text-slate-800">Login Necessário</h3>
-                    <p class="text-slate-500 text-sm leading-relaxed">Para salvar seus relatórios na nuvem e acessá-los de qualquer dispositivo, você precisa entrar na sua conta.</p>
+                    <p class="text-slate-500 text-sm leading-relaxed">Para salvar seus relatórios na nuvem e acessá-los
+                        de qualquer dispositivo, você precisa entrar na sua conta.</p>
                 </div>
                 <div class="flex flex-col gap-3">
-                    <button id="btn-modal-login-action" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
+                    <button id="btn-modal-login-action"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
                         <i data-lucide="log-in" class="w-4 h-4"></i> Entrar com Google
                     </button>
-                    <button onclick="document.getElementById('modal-login-warning').classList.add('hidden')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-lg transition-colors">Cancelar</button>
+                    <button onclick="document.getElementById('modal-login-warning').classList.add('hidden')"
+                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-lg transition-colors">Cancelar</button>
                 </div>
             </div>
         </div>
 
-        <div id="image-viewer" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-            <div class="bg-slate-900 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden border border-slate-700 flex flex-col max-h-[80vh]">
+        <div id="image-viewer"
+            class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+            <div
+                class="bg-slate-900 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden border border-slate-700 flex flex-col max-h-[80vh]">
                 <div class="relative flex-1 bg-black/50 flex items-center justify-center overflow-hidden min-h-0">
-                    <button onclick="window.closeImageViewer()" class="absolute top-2 right-2 z-10 bg-black/50 hover:bg-red-600 text-white p-2 rounded-full transition-colors backdrop-blur-md">
+                    <button onclick="window.closeImageViewer()"
+                        class="absolute top-2 right-2 z-10 bg-black/50 hover:bg-red-600 text-white p-2 rounded-full transition-colors backdrop-blur-md">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                     <img id="viewer-img" src="" alt="Preview" class="max-w-full max-h-full object-contain p-2">
                 </div>
                 <div class="bg-slate-800 p-4 border-t border-slate-700 flex justify-around items-center gap-4">
-                    <button onclick="window.downloadCurrentImage()" class="flex-1 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-blue-400 transition-colors group h-full">
-                        <div class="p-2 rounded-lg bg-slate-700 group-hover:bg-blue-500/20 border border-slate-600 group-hover:border-blue-500/50 transition-all">
+                    <button onclick="window.downloadCurrentImage()"
+                        class="flex-1 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-blue-400 transition-colors group h-full">
+                        <div
+                            class="p-2 rounded-lg bg-slate-700 group-hover:bg-blue-500/20 border border-slate-600 group-hover:border-blue-500/50 transition-all">
                             <i data-lucide="download" class="w-5 h-5"></i>
                         </div>
                         <span class="text-[10px] uppercase font-bold tracking-wider">Baixar</span>
                     </button>
-                    <label class="flex-1 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-blue-400 transition-colors group h-full">
-                        <div class="p-2 rounded-lg bg-slate-700 group-hover:bg-yellow-500/20 border border-slate-600 group-hover:border-yellow-500/50 transition-all">
+                    <label
+                        class="flex-1 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-blue-400 transition-colors group h-full">
+                        <div
+                            class="p-2 rounded-lg bg-slate-700 group-hover:bg-yellow-500/20 border border-slate-600 group-hover:border-yellow-500/50 transition-all">
                             <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                         </div>
                         <span class="text-[10px] uppercase font-bold tracking-wider">Trocar</span>
-                        <input type="file" id="viewer-replace-input" accept="image/*" class="hidden" onchange="window.replaceCurrentImage(event)">
+                        <input type="file" id="viewer-replace-input" accept="image/*" class="hidden"
+                            onchange="window.replaceCurrentImage(event)">
                     </label>
-                    <button onclick="window.deleteCurrentImage()" class="flex-1 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-blue-400 transition-colors group h-full">
-                        <div class="p-2 rounded-lg bg-slate-700 group-hover:bg-red-500/20 border border-slate-600 group-hover:border-red-500/50 transition-all">
+                    <button onclick="window.deleteCurrentImage()"
+                        class="flex-1 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-blue-400 transition-colors group h-full">
+                        <div
+                            class="p-2 rounded-lg bg-slate-700 group-hover:bg-red-500/20 border border-slate-600 group-hover:border-red-500/50 transition-all">
                             <i data-lucide="trash-2" class="w-5 h-5"></i>
                         </div>
                         <span class="text-[10px] uppercase font-bold tracking-wider">Excluir</span>
@@ -769,7 +892,7 @@
                             registration.onupdatefound = () => {
                                 const installingWorker = registration.installing;
                                 if (installingWorker == null) return;
-                                
+
                                 installingWorker.onstatechange = () => {
                                     if (installingWorker.state === 'installed') {
                                         if (navigator.serviceWorker.controller) {
@@ -781,7 +904,7 @@
                         })
                         .catch(err => console.log('SW Falha:', err));
                 });
-                
+
                 let refreshing;
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     if (refreshing) return;
@@ -790,10 +913,33 @@
                 });
             }
         </script>
-    </div> <div id="config-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    </div>
+    <div id="config-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
         <div class="bg-white p-6 rounded-lg w-full max-w-md">
             <h3 class="text-xl font-bold mb-4 text-slate-800">Configurações da Empresa</h3>
             <div class="space-y-3">
+                <div>
+                    <label class="label-std">Logo da Empresa</label>
+                    <div class="flex items-center gap-3 mt-1">
+                        <div
+                            class="w-16 h-16 border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-gray-50 overflow-hidden">
+                            <img id="config-logo-preview" src="" class="max-w-full max-h-full object-contain hidden"
+                                alt="Logo">
+                            <i id="config-logo-icon" data-lucide="image" class="w-6 h-6 text-gray-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <label
+                                class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded text-xs font-bold cursor-pointer transition-colors inline-block">
+                                Escolher Imagem
+                                <input type="file" id="config-logo-input" accept="image/png, image/jpeg" class="hidden"
+                                    onchange="window.handleLogoUpload(event)">
+                            </label>
+                            <button onclick="window.removeLogo()"
+                                class="text-red-500 hover:text-red-700 text-xs font-bold ml-2">Remover</button>
+                            <p class="text-[10px] text-gray-500 mt-1">Recomendado: Fundo transparente (PNG).</p>
+                        </div>
+                    </div>
+                </div>
                 <div>
                     <label class="label-std">Nome da Empresa</label>
                     <input type="text" id="config-empresa" class="input-std" placeholder="Ex: Gifel Engenharia...">
@@ -812,12 +958,15 @@
                 </div>
                 <div>
                     <label class="label-std">Telefone</label>
-                    <input type="tel" id="config-telefone" class="input-std" placeholder="Ex: (11) 99999-9999" maxlength="15">
+                    <input type="tel" id="config-telefone" class="input-std" placeholder="Ex: (11) 99999-9999"
+                        maxlength="15">
                 </div>
             </div>
             <div class="mt-6 flex justify-end gap-3">
-                <button onclick="fecharConfiguracoes()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
-                <button onclick="salvarConfiguracoes()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Salvar</button>
+                <button onclick="fecharConfiguracoes()"
+                    class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">Cancelar</button>
+                <button onclick="salvarConfiguracoes()"
+                    class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Salvar</button>
             </div>
         </div>
     </div>

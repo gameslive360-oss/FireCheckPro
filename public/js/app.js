@@ -7,6 +7,7 @@ import { PhraseManager } from "./phrases.js";
 import { generatePDF } from "./pdf-generator.js";
 import { compressImage } from "./image-compressor.js";
 import { SignaturePad } from "./signature-pad.js";
+import { uploadToCloudinary } from "./cloudinary-manager.js";
 
 /* ==========================================================================
    1. CONFIGURAÇÃO E ESTADO GLOBAL
@@ -59,12 +60,33 @@ try {
             if (user) {
                 loadHistory();
                 checkUrlForReport();
+                loadUserSettings();
             }
         });
         console.log("🔥 Firebase Inicializado");
     }
 } catch (error) {
     console.error("Erro crítico no Firebase:", error);
+}
+
+async function loadUserSettings() {
+    if (!user) return;
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(userRef);
+
+        if (docSnap.exists() && docSnap.data().empresa) {
+            const empresa = docSnap.data().empresa;
+            // Atualiza o armazenamento local com os dados salvos na nuvem
+            localStorage.setItem('empresa_nome', empresa.nome || '');
+            localStorage.setItem('empresa_endereco', empresa.endereco || '');
+            localStorage.setItem('empresa_cidade', empresa.cidade || '');
+            localStorage.setItem('empresa_cep', empresa.cep || '');
+            localStorage.setItem('empresa_telefone', empresa.telefone || '');
+        }
+    } catch (e) {
+        console.error("Erro ao buscar configurações da empresa:", e);
+    }
 }
 
 /* ==========================================================================
@@ -985,52 +1007,54 @@ async function saveToFirebase() {
     const oldHtml = btn.innerHTML;
 
     // Feedback visual
-    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Salvando no Banco...`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Salvando dados e fotos...`;
     btn.disabled = true;
     refreshIcons();
 
     try {
-        // --- PROTEÇÃO CONTRA SOBRESCRITA ---
-        // Se já temos um ID salvo, mas o Número do Relatório atual é diferente do último salvo/aberto...
-        // ...significa que o usuário mudou de contexto (Novo Relatório ou Clonagem) e devemos criar um NOVO arquivo.
         if (currentReportId && lastSavedReportNumber && lastSavedReportNumber !== reportNumber) {
-            console.log(`Número mudou de ${lastSavedReportNumber} para ${reportNumber}. Criando novo ID...`);
-            currentReportId = null; // Força a criação de um novo documento
+            currentReportId = null;
         }
 
-        // Cria ID se não existir
         if (!currentReportId) {
-            // DICA: Incluímos o reportNumber no ID para facilitar a identificação visual no banco
             currentReportId = `REL_${reportNumber}_${Date.now()}`;
         }
 
-        console.log("Salvando relatório:", currentReportId, "Tag:", reportNumber);
+        // --- PREPARAÇÃO DOS ITENS E UPLOAD DE FOTOS ---
+        const itemsReady = [];
 
-        // --- LIMPEZA DOS DADOS ---
-        const itemsReady = items.map(item => {
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
             const clean = { ...item };
-            delete clean.imageFiles;
+
+            // Se o item tem fotos, envia pro Cloudinary
+            if (clean.imageFiles && clean.imageFiles.length > 0) {
+                const urls = await Promise.all(clean.imageFiles.map(async (file) => {
+                    // Se já é uma string (URL antiga), ignora. Se é arquivo novo, faz upload.
+                    if (file instanceof File || file instanceof Blob) {
+                        return await uploadToCloudinary(file);
+                    }
+                    return file;
+                }));
+
+                const linksValidos = urls.filter(url => url !== null);
+                clean.imageFiles = linksValidos;
+                item.imageFiles = linksValidos; // Atualiza local para não dar re-upload duplo
+            } else {
+                clean.imageFiles = [];
+            }
+
             delete clean._savedImages;
-            return clean;
-        });
+            itemsReady.push(clean);
+        }
 
         const reportData = {
             id: currentReportId,
-            reportNumber: reportNumber, // A TAG ÚNICA
-            version: "3.1-safe",
+            reportNumber: reportNumber,
+            version: "3.2-cloudinary",
             timestamp: new Date().toISOString(),
             userId: user.uid,
-            header: {
-                cliente: document.getElementById('cliente').value || "",
-                local: document.getElementById('local').value || "",
-                tecnico: document.getElementById('resp-tecnico').value || "",
-                classificacao: document.getElementById('classificacao').value || "",
-                data: document.getElementById('data-relatorio').value || "",
-                parecer: document.getElementById('sum-parecer').value || "",
-                resumo: document.getElementById('sum-resumo').value || "",
-                riscos: document.getElementById('sum-riscos').value || "",
-                conclusao: document.getElementById('sum-conclusao').value || ""
-            },
+            header: getHeaderData(),
             items: itemsReady,
             signatures: {
                 tecnico: sigTecnico?.getImageData(),
@@ -1048,10 +1072,7 @@ async function saveToFirebase() {
         const docRef = doc(db, "reports", currentReportId);
         await setDoc(docRef, reportData, { merge: true });
 
-        // --- ATUALIZA O ESTADO DE CONTROLE ---
-        lastSavedReportNumber = reportNumber; // Atualiza o "último salvo" para o atual
-
-        // Atualiza a URL
+        lastSavedReportNumber = reportNumber;
         const newUrl = `${window.location.pathname}?id=${currentReportId}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
 
@@ -2292,15 +2313,42 @@ window.fecharConfiguracoes = function () {
     document.getElementById('config-modal').classList.add('hidden');
 };
 
-window.salvarConfiguracoes = function () {
-    localStorage.setItem('empresa_nome', document.getElementById('config-empresa').value);
-    localStorage.setItem('empresa_endereco', document.getElementById('config-endereco').value);
-    localStorage.setItem('empresa_cidade', document.getElementById('config-cidade').value);
-    localStorage.setItem('empresa_cep', document.getElementById('config-cep').value);
-    localStorage.setItem('empresa_telefone', document.getElementById('config-telefone').value);
+window.salvarConfiguracoes = async function () {
+    const empresa_nome = document.getElementById('config-empresa').value;
+    const empresa_endereco = document.getElementById('config-endereco').value;
+    const empresa_cidade = document.getElementById('config-cidade').value;
+    const empresa_cep = document.getElementById('config-cep').value;
+    const empresa_telefone = document.getElementById('config-telefone').value;
+
+    // 1. Mantém salvando no LocalStorage (necessário para o gerador de PDF)
+    localStorage.setItem('empresa_nome', empresa_nome);
+    localStorage.setItem('empresa_endereco', empresa_endereco);
+    localStorage.setItem('empresa_cidade', empresa_cidade);
+    localStorage.setItem('empresa_cep', empresa_cep);
+    localStorage.setItem('empresa_telefone', empresa_telefone);
+
+    // 2. Salva no Banco de Dados (Firestore) vinculado ao ID do usuário
+    if (user) {
+        try {
+            const userRef = doc(db, "users", user.uid);
+            // setDoc com { merge: true } garante que não apagará outros dados do usuário
+            await setDoc(userRef, {
+                empresa: {
+                    nome: empresa_nome,
+                    endereco: empresa_endereco,
+                    cidade: empresa_cidade,
+                    cep: empresa_cep,
+                    telefone: empresa_telefone
+                }
+            }, { merge: true });
+        } catch (error) {
+            console.error("Erro ao salvar configurações na nuvem:", error);
+            window.showToast('As configurações foram salvas no dispositivo, mas houve um erro ao enviar para a nuvem.', 'error');
+        }
+    }
 
     fecharConfiguracoes();
-    window.showToast('Configurações salvas com sucesso!', 'success'); // Usando o seu próprio sistema de avisos!
+    window.showToast('Configurações salvas com sucesso!', 'success');
 };
 
 // ==========================================
@@ -2362,3 +2410,109 @@ document.getElementById('config-cep').addEventListener('input', async function (
         }
     }
 });
+
+// ATUALIZAR E ADICIONAR NO FINAL DO app.js
+
+window.handleLogoUpload = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+            // Cria um canvas para redimensionar a imagem
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 400; // Largura máxima ideal para logo
+            const MAX_HEIGHT = 400; // Altura máxima ideal para logo
+            let width = img.width;
+            let height = img.height;
+
+            // Calcula a nova proporção mantendo o aspecto da imagem
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            // Desenha a imagem redimensionada no canvas
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Exporta a imagem muito mais leve (mantendo transparência do PNG)
+            const compressedBase64 = canvas.toDataURL('image/png');
+
+            // Atualiza a interface
+            const logoPreview = document.getElementById('config-logo-preview');
+            const logoIcon = document.getElementById('config-logo-icon');
+
+            logoPreview.src = compressedBase64;
+            logoPreview.classList.remove('hidden');
+            logoIcon.classList.add('hidden');
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.removeLogo = function () {
+    const logoPreview = document.getElementById('config-logo-preview');
+    const logoIcon = document.getElementById('config-logo-icon');
+    const logoInput = document.getElementById('config-logo-input');
+
+    logoPreview.src = '';
+    logoPreview.classList.add('hidden');
+    logoIcon.classList.remove('hidden');
+    logoInput.value = '';
+};
+
+window.abrirConfiguracoes = function () {
+    document.getElementById('config-empresa').value = localStorage.getItem('empresa_nome') || '';
+    document.getElementById('config-endereco').value = localStorage.getItem('empresa_endereco') || '';
+    document.getElementById('config-cidade').value = localStorage.getItem('empresa_cidade') || '';
+    document.getElementById('config-cep').value = localStorage.getItem('empresa_cep') || '';
+    document.getElementById('config-telefone').value = localStorage.getItem('empresa_telefone') || '';
+
+    // Carregar a logo salva
+    const savedLogo = localStorage.getItem('empresa_logo');
+    const logoPreview = document.getElementById('config-logo-preview');
+    const logoIcon = document.getElementById('config-logo-icon');
+
+    if (savedLogo) {
+        logoPreview.src = savedLogo;
+        logoPreview.classList.remove('hidden');
+        logoIcon.classList.add('hidden');
+    } else {
+        window.removeLogo();
+    }
+
+    document.getElementById('config-modal').classList.remove('hidden');
+};
+
+window.salvarConfiguracoes = function () {
+    localStorage.setItem('empresa_nome', document.getElementById('config-empresa').value);
+    localStorage.setItem('empresa_endereco', document.getElementById('config-endereco').value);
+    localStorage.setItem('empresa_cidade', document.getElementById('config-cidade').value);
+    localStorage.setItem('empresa_cep', document.getElementById('config-cep').value);
+    localStorage.setItem('empresa_telefone', document.getElementById('config-telefone').value);
+
+    // Salvar a logo
+    const logoPreview = document.getElementById('config-logo-preview');
+    if (logoPreview.src && !logoPreview.classList.contains('hidden')) {
+        localStorage.setItem('empresa_logo', logoPreview.src);
+    } else {
+        localStorage.removeItem('empresa_logo');
+    }
+
+    window.fecharConfiguracoes();
+    window.showToast('Configurações salvas com sucesso!', 'success');
+};

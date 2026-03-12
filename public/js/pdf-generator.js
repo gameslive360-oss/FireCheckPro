@@ -30,13 +30,26 @@ const drawSectionHeader = (doc, title, y) => {
 
 const addPageNumbers = (doc) => {
     const pageCount = doc.internal.getNumberOfPages();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoData = localStorage.getItem('empresa_logo');
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(150);
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
+
         doc.text(`Página ${i} de ${pageCount}`, 196, 285, { align: 'right' });
         doc.text("FireCheck Pro - Relatório Digital", 14, 285, { align: 'left' });
+
+        // Só coloca a logo se a página for maior que 1 (tira da capa)
+        if (i > 1 && logoData) {
+            const logoWidth = 25;
+            const logoHeight = 12;
+            const xPos = pageWidth - logoWidth - 14;
+            const yPos = 5;
+            doc.addImage(logoData, 'PNG', xPos, yPos, logoWidth, logoHeight);
+        }
     }
 };
 
@@ -86,10 +99,27 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         doc.setFillColor(15, 23, 42); // Azul escuro
         doc.rect(0, 0, pageWidth, 15, 'F');
 
+        // ==== NOVO CÓDIGO: INSERIR LOGO DA EMPRESA ====
+        const savedLogo = localStorage.getItem('empresa_logo');
+        if (savedLogo) {
+            try {
+                const maxLogoWidth = 40;  // Largura máxima da logo no PDF
+                const maxLogoHeight = 20; // Altura máxima
+                const logoX = pageWidth - maxLogoWidth - 14; // Posição X (Canto superior direito, respeitando margem)
+                const logoY = 20; // Posição Y (Logo abaixo da faixa azul superior)
+
+                // O jsPDF detecta automaticamente o Base64
+                doc.addImage(savedLogo, 'PNG', logoX, logoY, maxLogoWidth, maxLogoHeight, undefined, 'FAST');
+            } catch (err) {
+                console.error("Erro ao renderizar a logo no PDF:", err);
+            }
+        }
+        // ===============================================
+
         // Título Principal (O Tipo de Relatório selecionado)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
-        doc.setTextColor(15, 23, 42);
+        doc.setTextColor(15, 23, 42); // GARANTE QUE A COR DO TEXTO VOLTOU
         const titleText = tipoRelatorio.toUpperCase();
         const titleWidth = doc.getTextWidth(titleText);
         doc.text(titleText, (pageWidth - titleWidth) / 2, 110);
@@ -122,8 +152,6 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         const dateText = `Data da Vistoria: ${dataRelatorio}`;
         const dateWidth = doc.getTextWidth(dateText);
         doc.text(dateText, (pageWidth - dateWidth) / 2, 160);
-
-        // --- FIM DA CAPA ---
 
         // --- DADOS DA EMPRESA (Canto Inferior Esquerdo) ---
         const nomeEmpresa = localStorage.getItem('empresa_nome') || 'Empresa Não Configurada';
@@ -159,7 +187,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         // --- PÁGINA 2: TABELAS TÉCNICAS ---
         doc.addPage();
-        yPos = 20;
+        yPos = 25;
 
         // Como removemos o Sumário (que era o item 1), as tabelas passam a ser o item 1
         yPos = drawSectionHeader(doc, "1. Detalhamento Técnico (Checklists)", yPos);
@@ -168,10 +196,10 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         const generateTable = (title, data, headers, headColor, colStyles) => {
             if (!data || data.length === 0) return;
-            if (yPos > 240) { doc.addPage(); yPos = 20; }
+            if (yPos > 240) { doc.addPage(); yPos = 25; }
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9);
-            doc.setTextColor(headColor[0], headColor[1], headColor[2]); // Título na cor da tabela
+            doc.setTextColor(headColor[0], headColor[1], headColor[2]);
             doc.text(title, 14, yPos);
 
             doc.autoTable({
@@ -182,7 +210,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
                 headStyles: { fillColor: headColor, fontSize: 7, halign: 'center' },
                 bodyStyles: { fontSize: 7, valign: 'middle' },
                 columnStyles: colStyles,
-                margin: { left: 14, right: 14 }
+                margin: { top: 25, left: 14, right: 14 } // <-- MARGEM TOP ADICIONADA AQUI
             });
             yPos = doc.lastAutoTable.finalY + 12;
         };
@@ -251,7 +279,7 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
         // --- PÁGINAS FINAIS ---
         doc.addPage();
-        yPos = drawSectionHeader(doc, "3. Observações Gerais e Conclusão", 20);
+        yPos = drawSectionHeader(doc, "3. Observações Gerais e Conclusão", 25);
         const geral = items.filter(i => i.type === 'geral');
         if (geral.length > 0) {
             doc.autoTable({ startY: yPos, head: [['Relato de Ocorrências']], body: geral.map(i => [i.obs]), theme: 'striped', margin: { left: 14, right: 14 } });
@@ -286,12 +314,12 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
         const itemsWithPhotos = items.filter(i => i.imageFiles?.length > 0);
         if (itemsWithPhotos.length > 0) {
             doc.addPage();
-            yPos = drawSectionHeader(doc, "Anexo: Relatório Fotográfico", 20);
+            yPos = drawSectionHeader(doc, "Anexo: Relatório Fotográfico", 25);
             let x = 14, y = yPos + 5;
             const imgSize = 58, gap = 4;
 
             for (const item of itemsWithPhotos) {
-                if (y + imgSize > 270) { doc.addPage(); y = 20; }
+                if (y + imgSize > 270) { doc.addPage(); y = 25; }
                 doc.setFillColor(241, 245, 249);
                 doc.rect(14, y, 182, 6, 'F');
                 doc.setFont('helvetica', 'bold');

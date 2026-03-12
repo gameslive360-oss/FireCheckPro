@@ -972,8 +972,10 @@ const fileToBase64 = file => new Promise((resolve, reject) => {
 
 function getHeaderData() {
     return {
+        tipo_relatorio: document.getElementById('tipo-relatorio') ? document.getElementById('tipo-relatorio').value : "Relatório de manutenção",
         cliente: document.getElementById('cliente').value || "Sem Cliente",
         local: document.getElementById('local').value || "Sem Local",
+        tipo_sistema: document.getElementById('tipo-sistema') ? document.getElementById('tipo-sistema').value : "", // Campo adicionado aqui
         tecnico: document.getElementById('resp-tecnico').value,
         classificacao: document.getElementById('classificacao').value,
         data: document.getElementById('data-relatorio').value,
@@ -1259,16 +1261,17 @@ window.restoreCloudReport = async function (url, reportId) {
         // -----------------------------
 
         // Restaura Header
-        const h = data.header || {};
-        document.getElementById('cliente').value = h.cliente || data.cliente || '';
-        document.getElementById('local').value = h.local || data.local || '';
-        document.getElementById('resp-tecnico').value = h.tecnico || '';
-        document.getElementById('classificacao').value = h.classificacao || '';
-        document.getElementById('data-relatorio').value = h.data || '';
-        document.getElementById('sum-parecer').value = h.parecer || 'Aprovado';
-        document.getElementById('sum-resumo').value = h.resumo || '';
-        document.getElementById('sum-riscos').value = h.riscos || '';
-        document.getElementById('sum-conclusao').value = h.conclusao || '';
+        if (document.getElementById('tipo-relatorio')) document.getElementById('tipo-relatorio').value = data.header.tipo_relatorio || 'Relatório de manutenção';
+        if (document.getElementById('tipo-sistema')) document.getElementById('tipo-sistema').value = data.header.tipo_sistema || '';
+        document.getElementById('cliente').value = data.header.cliente || '';
+        document.getElementById('local').value = data.header.local || '';
+        document.getElementById('resp-tecnico').value = data.header.tecnico || '';
+        document.getElementById('classificacao').value = data.header.classificacao || '';
+        document.getElementById('data-relatorio').value = data.header.data || '';
+        document.getElementById('sum-parecer').value = data.header.parecer || 'Aprovado';
+        document.getElementById('sum-resumo').value = data.header.resumo || '';
+        document.getElementById('sum-riscos').value = data.header.riscos || '';
+        document.getElementById('sum-conclusao').value = data.header.conclusao || '';
 
         window.toggleHeader();
 
@@ -1637,15 +1640,16 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
         if (sourceType === 'local') {
             sourceItems = [...items];
             sourceHeader = {
+                tipo_relatorio: document.getElementById('tipo-relatorio').value,
                 cliente: document.getElementById('cliente').value,
                 local: document.getElementById('local').value,
+                tipo_sistema: document.getElementById('tipo-sistema').value,
                 tecnico: document.getElementById('resp-tecnico').value,
                 classificacao: document.getElementById('classificacao').value
             };
         }
         // 2. FONTE NUVEM
         else if (sourceType === 'cloud' && reportId) {
-            // Agora usa getDoc corretamente (que você importou na etapa 1)
             const docRef = doc(db, "reports", reportId);
             const docSnap = await getDoc(docRef);
 
@@ -1654,8 +1658,10 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
             const data = docSnap.data();
             sourceItems = data.items || [];
             sourceHeader = {
+                tipo_relatorio: data.header?.tipo_relatorio || 'Relatório de manutenção',
                 cliente: data.header?.cliente || data.cliente || '',
                 local: data.header?.local || data.local || '',
+                tipo_sistema: data.header?.tipo_sistema || '',
                 tecnico: data.header?.tecnico || '',
                 classificacao: data.header?.classificacao || ''
             };
@@ -1676,6 +1682,8 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
         localStorage.setItem('reportNumber', reportNumber);
 
         // Preenche Cabeçalho
+        if (document.getElementById('tipo-relatorio')) document.getElementById('tipo-relatorio').value = sourceHeader.tipo_relatorio;
+        if (document.getElementById('tipo-sistema')) document.getElementById('tipo-sistema').value = sourceHeader.tipo_sistema;
         document.getElementById('cliente').value = sourceHeader.cliente;
         document.getElementById('local').value = sourceHeader.local;
         document.getElementById('resp-tecnico').value = sourceHeader.tecnico;

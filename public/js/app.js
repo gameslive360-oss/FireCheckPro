@@ -83,6 +83,13 @@ async function loadUserSettings() {
             localStorage.setItem('empresa_cidade', empresa.cidade || '');
             localStorage.setItem('empresa_cep', empresa.cep || '');
             localStorage.setItem('empresa_telefone', empresa.telefone || '');
+
+            // Carrega a logo da nuvem (se existir)
+            if (empresa.logo) {
+                localStorage.setItem('empresa_logo', empresa.logo);
+            } else {
+                localStorage.removeItem('empresa_logo');
+            }
         }
     } catch (e) {
         console.error("Erro ao buscar configurações da empresa:", e);
@@ -2328,37 +2335,51 @@ window.salvarConfiguracoes = async function () {
     const empresa_cep = document.getElementById('config-cep').value;
     const empresa_telefone = document.getElementById('config-telefone').value;
 
-    // 1. Mantém salvando no LocalStorage (necessário para o gerador de PDF)
+    // Trata a logo
+    const logoPreview = document.getElementById('config-logo-preview');
+    let empresa_logo = null;
+    if (logoPreview.src && !logoPreview.classList.contains('hidden')) {
+        empresa_logo = logoPreview.src;
+        localStorage.setItem('empresa_logo', empresa_logo);
+    } else {
+        localStorage.removeItem('empresa_logo');
+    }
+
+    // 1. Salva no LocalStorage (memória do navegador)
     localStorage.setItem('empresa_nome', empresa_nome);
     localStorage.setItem('empresa_endereco', empresa_endereco);
     localStorage.setItem('empresa_cidade', empresa_cidade);
     localStorage.setItem('empresa_cep', empresa_cep);
     localStorage.setItem('empresa_telefone', empresa_telefone);
 
-    // 2. Salva no Banco de Dados (Firestore) vinculado ao ID do usuário
+    // 2. Salva no Banco de Dados (Firestore) vinculado ao ID do usuário logado
     if (user) {
         try {
             const userRef = doc(db, "users", user.uid);
-            // setDoc com { merge: true } garante que não apagará outros dados do usuário
+            // setDoc com { merge: true } garante que criará se não existir, ou mesclará
             await setDoc(userRef, {
                 empresa: {
                     nome: empresa_nome,
                     endereco: empresa_endereco,
                     cidade: empresa_cidade,
                     cep: empresa_cep,
-                    telefone: empresa_telefone
+                    telefone: empresa_telefone,
+                    logo: empresa_logo // Salva a string da imagem
                 }
             }, { merge: true });
+
+            window.showToast('Configurações salvas na nuvem com sucesso!', 'success');
         } catch (error) {
             console.error("Erro ao salvar configurações na nuvem:", error);
-            window.showToast('As configurações foram salvas no dispositivo, mas houve um erro ao enviar para a nuvem.', 'error');
+            window.showToast('Salvo localmente, mas houve um erro ao enviar para a nuvem.', 'error');
         }
+    } else {
+        // Se não estiver logado, avisa que salvou apenas no dispositivo
+        window.showToast('Configurações salvas apenas no dispositivo. Faça login para salvar na nuvem.', 'info');
     }
 
-    fecharConfiguracoes();
-    window.showToast('Configurações salvas com sucesso!', 'success');
+    window.fecharConfiguracoes();
 };
-
 // ==========================================
 // 1. MÁSCARA DO TELEFONE
 // ==========================================

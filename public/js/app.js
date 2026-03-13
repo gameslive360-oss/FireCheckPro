@@ -974,7 +974,7 @@ function updateImagePreview() {
             const container = document.createElement('div');
             container.className = "thumb-container relative w-16 h-16 group cursor-pointer"; // Adicionado cursor-pointer
 
-            const imgUrl = URL.createObjectURL(file);
+            const imgUrl = (typeof file === 'string') ? file : URL.createObjectURL(file);
 
             container.innerHTML = `
                 <img src="${imgUrl}" class="w-full h-full object-cover rounded border border-slate-300 hover:border-blue-500 transition-colors" onclick="window.openImageViewer(${index})">
@@ -1348,19 +1348,42 @@ window.exportBackup = async function () {
     btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin"></i> Gerando...`;
 
     try {
-        const itemsFull = await Promise.all(items.map(async (item) => ({
-            ...item,
-            imageFiles: [],
-            // AQUI ESTÁ A CORREÇÃO: Verifica se o arquivo já é uma URL do Cloudinary (string) ou um arquivo real
-            _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(async (file) => {
-                if (typeof file === 'string') return file; // Se for URL, mantém a URL
-                return await fileToBase64(file);           // Se for arquivo (File/Blob), converte
-            })) : []
-        })));
+        const itemsFull = await Promise.all(items.map(async (item) => {
+            // 1. Processar imagens: Enviar para Cloudinary e guardar os links
+            let linksProcessados = [];
+
+            if (item.imageFiles && item.imageFiles.length > 0) {
+                linksProcessados = await Promise.all(item.imageFiles.map(async (file) => {
+                    // Se já for uma URL (String), mantém
+                    if (typeof file === 'string') return file;
+
+                    // Se for um arquivo novo, faz upload para o Cloudinary
+                    const urlCloudinary = await uploadToCloudinary(file);
+
+                    // Se o upload falhar (ex: sem internet), usa Base64 como plano B de segurança
+                    if (urlCloudinary) {
+                        return urlCloudinary;
+                    } else {
+                        console.warn("Falha no Cloudinary. A usar Base64 como plano B.");
+                        return await fileToBase64(file);
+                    }
+                }));
+            }
+
+            // Atualiza a lista de ficheiros do item atual para que não volte a fazer upload
+            item.imageFiles = linksProcessados;
+
+            // 2. Retorna a estrutura final para o JSON
+            return {
+                ...item,
+                imageFiles: [], // O sistema antigo pedia este campo vazio
+                _savedImages: linksProcessados // Aqui ficam guardados os links gerados!
+            };
+        }));
 
         const backupData = {
-            version: "2.1-full", // Versão atualizada
-            reportNumber: reportNumber, // SALVA O NÚMERO NO JSON
+            version: "2.2-cloudinary", // Versão atualizada
+            reportNumber: reportNumber,
             timestamp: new Date().toISOString(),
             header: getHeaderData(),
             items: itemsFull,
@@ -1376,11 +1399,8 @@ window.exportBackup = async function () {
 
         // --- LÓGICA DO NOME DO ARQUIVO ---
         const clienteRaw = document.getElementById('cliente').value || "Sem_Cliente";
-        // Remove caracteres especiais e espaços para o nome do arquivo
         const clienteSafe = clienteRaw.replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_');
-
         const filename = `Relatorio_${clienteSafe}_${reportNumber}.json`;
-        // ---------------------------------
 
         const a = document.createElement('a');
         a.href = url;
@@ -1435,10 +1455,15 @@ window.importBackup = function (event) {
 
             window.toggleHeader();
 
-            // Restaura Itens e Imagens
+            // Restaura Itens e Imagens (Suporta Base64 antigo e Links Cloudinary novos)
             items = data.items.map(item => ({
                 ...item,
-                imageFiles: (item._savedImages || []).map((b64, i) => base64ToFile(b64, `restored_${i}.jpg`)),
+                imageFiles: (item._savedImages || []).map((imgData, i) => {
+                    if (typeof imgData === 'string' && imgData.startsWith('http')) {
+                        return imgData; // Se for link do Cloudinary, mantém o link
+                    }
+                    return base64ToFile(imgData, `restored_${i}.jpg`); // Se for Base64 antigo, converte
+                }),
                 _savedImages: undefined
             }));
 
@@ -2026,7 +2051,7 @@ window.openImageViewer = function (index) {
 
     viewingImageIndex = index;
     const file = currentFiles[index];
-    const imgUrl = URL.createObjectURL(file);
+    const imgUrl = (typeof file === 'string') ? file : URL.createObjectURL(file);
 
     const modal = document.getElementById('image-viewer');
     const imgEl = document.getElementById('viewer-img');
@@ -2051,6 +2076,14 @@ window.downloadCurrentImage = function () {
     if (viewingImageIndex === null) return;
 
     const file = currentFiles[viewingImageIndex];
+
+    // Se for link do Cloudinary, abre em nova aba para o usuário salvar
+    if (typeof file === 'string') {
+        window.open(file, '_blank');
+        return;
+    }
+
+    // Se for arquivo local
     const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;

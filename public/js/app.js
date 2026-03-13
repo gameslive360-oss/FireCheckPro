@@ -527,7 +527,6 @@ function addItem() {
     }
 
     // 2. NOVA LOGICA: BLOQUEIO DE ID DUPLICADO
-    // Só verifica se não for edição (ou seja, se o ID mudou ou é novo)
     if (currentType !== 'geral') {
         const duplicado = items.some(item =>
             item.id && item.id.toUpperCase() === idInput
@@ -557,7 +556,7 @@ function addItem() {
         uid: Date.now(),
         type: currentType,
         andar: currentType === 'geral' ? '-' : andarInput,
-        id: currentType === 'geral' ? 'Geral' : rawIdInput, // Salva como o usuário digitou (ex: h-01 ou H-01)
+        id: currentType === 'geral' ? 'Geral' : rawIdInput,
         imageFiles: [...currentFiles],
         ...specificData
     };
@@ -571,7 +570,14 @@ function addItem() {
     clearFiles();
 
     if (currentType !== 'geral') document.getElementById('item-id').focus();
-    window.showToast("Item adicionado!", "success");
+
+    // Mostra o toast de sucesso do item na tela
+    window.showToast("Item processado na lista!", "success");
+
+    // ==========================================
+    // DISPARA O SALVAMENTO AUTOMÁTICO NA NUVEM
+    // ==========================================
+    saveToFirebase();
 }
 
 window.editItem = function (uid) {

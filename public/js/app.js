@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, collection, addDoc, setDoc, doc, query, where, getDocs, getDoc, orderBy, limit, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, setDoc, doc, query, where, getDocs, getDoc, orderBy, limit, enableIndexedDbPersistence, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -1256,10 +1256,17 @@ window.loadCloudReports = async function () {
                              <i data-lucide="map-pin" class="w-3 h-3"></i> <span class="truncate max-w-[200px]">${data.local || 'Sem local'}</span>
                         </div>
                     </div>
-                    <div class="text-center">
-                        <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200 block">${data.itemCount || 0}</span>
-                        <span class="text-[9px] text-slate-400 uppercase mt-1 block">Itens</span>
+                    
+                    <div class="flex flex-col items-end gap-2">
+                        <button onclick="window.deleteCloudReport('${data.id}')" class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded transition-colors" title="Excluir Relatório da Nuvem">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                        <div class="text-center">
+                            <span class="text-xs font-bold bg-slate-100 text-slate-600 px-2 py-1 rounded-full border border-slate-200 block">${data.itemCount || 0}</span>
+                            <span class="text-[9px] text-slate-400 uppercase mt-1 block">Itens</span>
+                        </div>
                     </div>
+
                 </div>
                 <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-50">
                     <button onclick="window.restoreCloudReport(null, '${data.id}')" class="flex items-center justify-center gap-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 py-2 rounded-lg transition-colors active:scale-95 shadow-sm">
@@ -1326,11 +1333,28 @@ window.restoreCloudReport = async function (url, reportId) {
 
         window.toggleHeader();
 
-        items = (data.items || []).map(item => ({
-            ...item,
-            imageFiles: [],
-            _savedImages: []
-        }));
+        // Restaura Itens e Imagens direto da Nuvem (Mantendo os links do Cloudinary)
+        items = (data.items || []).map(item => {
+            const imagensFonte = item.imageFiles || item._savedImages || [];
+
+            const linksProcessados = imagensFonte.map((imgData, i) => {
+                // Se for um link do Cloudinary, carrega ele!
+                if (typeof imgData === 'string' && imgData.startsWith('http')) {
+                    return imgData;
+                }
+                // Se for um relatório muito antigo com Base64 salvo na nuvem, converte para arquivo
+                if (typeof imgData === 'string' && imgData.startsWith('data:image')) {
+                    return base64ToFile(imgData, `restored_${i}.jpg`);
+                }
+                return imgData;
+            }).filter(img => img != null);
+
+            return {
+                ...item,
+                imageFiles: linksProcessados, // Devolve os links para a tela
+                _savedImages: undefined
+            };
+        });
 
         if (data.signatures) {
             if (data.signatures.tecnico && sigTecnico) sigTecnico.fromDataURL(data.signatures.tecnico);
@@ -2570,4 +2594,55 @@ window.salvarConfiguracoes = function () {
 
     window.fecharConfiguracoes();
     window.showToast('Configurações salvas com sucesso!', 'success');
+};
+
+/* ==========================================================================
+   FUNÇÃO DE EXCLUIR DA NUVEM COM SENHA
+   ========================================================================== */
+window.deleteCloudReport = async function (reportId) {
+    // 1. Pede a senha
+    const senha = prompt("🔒 Acesso Restrito: Digite a senha de administrador para excluir este relatório:");
+
+    // Se o usuário clicar em Cancelar, para a função
+    if (senha === null) return;
+
+    // === DEFINA SUA SENHA AQUI ===
+    const SENHA_CORRETA = "123456";
+    // =============================
+
+    // 2. Verifica a senha
+    if (senha !== SENHA_CORRETA) {
+        window.showToast("Senha incorreta! Acesso negado.", "error");
+        return;
+    }
+
+    // 3. Pede uma última confirmação por segurança
+    if (!confirm("Tem certeza absoluta? O relatório será apagado definitivamente da nuvem.")) {
+        return;
+    }
+
+    try {
+        window.showToast("Excluindo relatório...", "info");
+
+        // Deleta do Firestore
+        const docRef = doc(db, "reports", reportId);
+        await deleteDoc(docRef);
+
+        // Se o relatório que acabou de ser excluído era o que estava aberto na tela, limpa a tela
+        if (currentReportId === reportId) {
+            currentReportId = null;
+            items = [];
+            clearFormState(false);
+            window.history.pushState({}, '', window.location.pathname);
+        }
+
+        window.showToast("Relatório excluído com sucesso!", "success");
+
+        // Recarrega a lista de relatórios para sumir com o cartão
+        window.loadCloudReports();
+
+    } catch (error) {
+        console.error("Erro ao excluir:", error);
+        window.showToast("Erro ao excluir: " + error.message, "error");
+    }
 };

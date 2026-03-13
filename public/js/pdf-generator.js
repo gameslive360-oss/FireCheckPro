@@ -329,13 +329,24 @@ export async function generatePDF(items, mode = 'save', signatures = {}) {
 
                 for (const file of item.imageFiles) {
                     try {
-                        const imgData = await readFileAsDataURL(file);
+                        let imgData;
+                        // CORREÇÃO AQUI: Verifica se a imagem é uma URL da nuvem ou um arquivo local
+                        if (typeof file === 'string') {
+                            const res = await fetch(file);
+                            const blob = await res.blob();
+                            imgData = await readFileAsDataURL(blob);
+                        } else {
+                            imgData = await readFileAsDataURL(file);
+                        }
+
                         if (y + imgSize > 280) { doc.addPage(); y = 20; x = 14; }
                         doc.addImage(imgData, 'JPEG', x, y, imgSize, imgSize);
                         doc.rect(x, y, imgSize, imgSize);
                         x += imgSize + gap;
                         if (x > 180) { x = 14; y += imgSize + 5; }
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                        console.error("Erro ao processar imagem para o PDF:", e);
+                    }
                 }
                 x = 14; y += imgSize + 10;
             }

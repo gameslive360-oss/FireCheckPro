@@ -107,6 +107,10 @@ export class PhraseManager {
     close() {
         document.getElementById(this.modalId).classList.add('hidden');
         this.currentTargetInputId = null;
+
+        // CORREÇÃO: Limpa o campo de adicionar nova frase ao fechar
+        const input = document.getElementById(this.inputId);
+        if (input) input.value = '';
     }
 
     /**

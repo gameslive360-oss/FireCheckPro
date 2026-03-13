@@ -34,6 +34,12 @@ export async function compressImage(file, quality = 0.7, maxWidth = 1200) {
             canvas.height = height;
 
             const ctx = canvas.getContext('2d');
+
+            // CORREÇÃO: Pinta o fundo de branco para evitar fundo preto em PNGs transparentes convertidos para JPEG
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, width, height);
+
+            // Desenha a imagem por cima do fundo branco
             ctx.drawImage(img, 0, 0, width, height);
 
             // 3. Converter Canvas para Blob (JPEG)

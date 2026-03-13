@@ -638,21 +638,29 @@
                     <div class="space-y-6">
                         <div>
                             <label class="label-std">Técnico Responsável</label>
-                            <div class="border-2 border-dashed border-slate-300 rounded bg-slate-50 relative">
+                            <div
+                                class="border-2 border-dashed border-b-0 border-slate-300 rounded-t-lg bg-slate-50 relative">
                                 <canvas id="sig-tecnico" class="w-full h-[200px] cursor-crosshair"></canvas>
                                 <div class="absolute top-2 right-2">
                                     <button id="btn-clear-tecnico" class="btn-clear-sig">Limpar</button>
                                 </div>
                             </div>
+                            <input type="text" id="sig-nome-tecnico"
+                                class="w-full p-3 bg-white border-2 border-dashed border-slate-300 rounded-b-lg text-center font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-blue-50 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                placeholder="Digite o nome do Técnico aqui...">
                         </div>
                         <div>
                             <label class="label-std">Cliente / Responsável Local</label>
-                            <div class="border-2 border-dashed border-slate-300 rounded bg-slate-50 relative">
+                            <div
+                                class="border-2 border-dashed border-b-0 border-slate-300 rounded-t-lg bg-slate-50 relative">
                                 <canvas id="sig-cliente" class="w-full h-[200px] cursor-crosshair"></canvas>
                                 <div class="absolute top-2 right-2">
                                     <button id="btn-clear-cliente" class="btn-clear-sig">Limpar</button>
                                 </div>
                             </div>
+                            <input type="text" id="sig-nome-cliente"
+                                class="w-full p-3 bg-white border-2 border-dashed border-slate-300 rounded-b-lg text-center font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-blue-50 transition-all placeholder:text-slate-400 placeholder:font-normal"
+                                placeholder="Digite o nome do Cliente aqui...">
                         </div>
                     </div>
                 </div>

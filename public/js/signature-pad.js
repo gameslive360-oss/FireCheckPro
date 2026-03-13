@@ -20,12 +20,12 @@ export class SignaturePad {
         // Eventos de Toque (Celular)
         this.canvas.addEventListener('touchstart', (e) => {
             e.preventDefault(); // Impede rolagem da tela
-            this.startDrawing(e.touches[0]);
+            this.startDrawing(e);
         }, { passive: false });
 
         this.canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            this.draw(e.touches[0]);
+            this.draw(e);
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', () => this.stopDrawing());
@@ -37,7 +37,6 @@ export class SignaturePad {
     }
 
     resizeCanvas() {
-        // Salva o desenho atual antes de redimensionar (opcional, aqui limpamos para simplificar)
         const rect = this.canvas.parentElement.getBoundingClientRect();
         this.canvas.width = rect.width;
         this.canvas.height = 200; // Altura fixa
@@ -46,11 +45,15 @@ export class SignaturePad {
         this.ctx.strokeStyle = '#000';
     }
 
+    // CORREÇÃO AQUI: Pega a posição correta tanto do mouse quanto do toque na tela
     getPos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
+            x: clientX - rect.left,
+            y: clientY - rect.top
         };
     }
 

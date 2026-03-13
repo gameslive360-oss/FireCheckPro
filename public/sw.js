@@ -1,5 +1,5 @@
 // MUDE AQUI: Suba a versão para forçar a atualização
-const CACHE_NAME = 'firecheck-v1.3.1';
+const CACHE_NAME = 'firecheck-v1.3.2';
 
 const urlsToCache = [
   './',
@@ -46,15 +46,30 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// 3. FETCH
+// 3. FETCH (Estratégia: Stale-While-Revalidate)
 self.addEventListener('fetch', event => {
+  // Ignora requisições de outras origens (como APIs do Firebase e Cloudinary)
+  if (!event.request.url.startsWith(self.location.origin)) return;
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
+    // ignoreSearch: true garante que URLs com ?id=123 funcionem offline pegando o index.html
+    caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+
+      const fetchPromise = fetch(event.request).then(networkResponse => {
+        // Atualiza o cache silenciosamente com a versão mais nova
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        return fetch(event.request);
-      })
+        return networkResponse;
+      }).catch((err) => {
+        console.log("Modo Offline ativado", err);
+      });
+
+      // Retorna o cache IMEDIATAMENTE se existir. Se não, espera a rede.
+      return cachedResponse || fetchPromise;
+    })
   );
 });

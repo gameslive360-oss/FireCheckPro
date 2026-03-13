@@ -103,6 +103,28 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshIcons();
     restoreFormState();
     initializeDateInput();
+    // Sincronizar nomes das assinaturas com os dados do cabeçalho
+    const syncInputs = (id1, id2, storageKey) => {
+        const el1 = document.getElementById(id1);
+        const el2 = document.getElementById(id2);
+        if (!el1 || !el2) return;
+
+        // Quando digita no cabeçalho, atualiza a assinatura
+        el1.addEventListener('input', (e) => el2.value = e.target.value);
+
+        // Quando digita na assinatura, atualiza o cabeçalho e salva
+        el2.addEventListener('input', (e) => {
+            el1.value = e.target.value;
+            localStorage.setItem(storageKey, e.target.value);
+            // Se for o cliente, atualiza também a barra azul do topo
+            if (id1 === 'cliente') {
+                document.getElementById('header-summary').innerText = e.target.value || "Clique para expandir";
+            }
+        });
+    };
+
+    syncInputs('resp-tecnico', 'sig-nome-tecnico', 'resp-tecnico');
+    syncInputs('cliente', 'sig-nome-cliente', 'cliente');
 
     const searchInput = document.getElementById('search-filter');
     const filterProblem = document.getElementById('filter-problems');
@@ -205,6 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // Alterna entre abas do formulário
 window.switchTab = function (type) {
     currentType = type;
+    if (type === 'assinatura') {
+        document.getElementById('sig-nome-tecnico').value = document.getElementById('resp-tecnico').value;
+        document.getElementById('sig-nome-cliente').value = document.getElementById('cliente').value;
+    }
 
     // Lógica para esconder inputs globais (ID/Andar) em abas específicas
     const inputAndar = document.getElementById('andar');
@@ -1325,7 +1351,11 @@ window.exportBackup = async function () {
         const itemsFull = await Promise.all(items.map(async (item) => ({
             ...item,
             imageFiles: [],
-            _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(fileToBase64)) : []
+            // AQUI ESTÁ A CORREÇÃO: Verifica se o arquivo já é uma URL do Cloudinary (string) ou um arquivo real
+            _savedImages: item.imageFiles ? await Promise.all(item.imageFiles.map(async (file) => {
+                if (typeof file === 'string') return file; // Se for URL, mantém a URL
+                return await fileToBase64(file);           // Se for arquivo (File/Blob), converte
+            })) : []
         })));
 
         const backupData = {
@@ -2219,69 +2249,6 @@ window.filterReportsList = function (query) {
     }
 };
 
-// --- CONFIGURAÇÕES DA EMPRESA ---
-function abrirConfiguracoes() {
-    document.getElementById('config-empresa').value = localStorage.getItem('empresa_nome') || '';
-    document.getElementById('config-endereco').value = localStorage.getItem('empresa_endereco') || '';
-    document.getElementById('config-cidade').value = localStorage.getItem('empresa_cidade') || '';
-    document.getElementById('config-cep').value = localStorage.getItem('empresa_cep') || '';
-    document.getElementById('config-telefone').value = localStorage.getItem('empresa_telefone') || '';
-
-    document.getElementById('config-modal').classList.remove('hidden');
-}
-
-function fecharConfiguracoes() {
-    document.getElementById('config-modal').classList.add('hidden');
-}
-
-function salvarConfiguracoes() {
-    localStorage.setItem('empresa_nome', document.getElementById('config-empresa').value);
-    localStorage.setItem('empresa_endereco', document.getElementById('config-endereco').value);
-    localStorage.setItem('empresa_cidade', document.getElementById('config-cidade').value);
-    localStorage.setItem('empresa_cep', document.getElementById('config-cep').value);
-    localStorage.setItem('empresa_telefone', document.getElementById('config-telefone').value);
-
-    fecharConfiguracoes();
-    alert('Configurações da empresa salvas com sucesso!');
-}
-
-// --- MENU DO USUÁRIO ---
-
-// Função para abrir/fechar o menu dropdown
-function toggleUserMenu() {
-    const dropdown = document.getElementById('user-dropdown');
-    dropdown.classList.toggle('hidden');
-}
-
-// Fechar o menu automaticamente se o usuário clicar fora dele
-window.addEventListener('click', function (e) {
-    const userInfo = document.getElementById('user-info');
-    const dropdown = document.getElementById('user-dropdown');
-
-    // Se clicou fora do botão e fora do dropdown, esconde o menu
-    if (userInfo && !userInfo.contains(e.target) && dropdown && !dropdown.contains(e.target)) {
-        dropdown.classList.add('hidden');
-    }
-});
-
-// --- LOGOUT DO FIREBASE ---
-function fazerLogout() {
-    if (confirm('Tem certeza que deseja sair da conta?')) {
-        // Usa o objeto de autenticação do Firebase (se já estiver globalmente disponível no seu firebase-config.js)
-        if (typeof auth !== 'undefined') {
-            auth.signOut().then(() => {
-                // Redireciona para a página de login ou recarrega
-                window.location.reload();
-            }).catch((error) => {
-                console.error('Erro ao sair:', error);
-                alert('Erro ao tentar sair da conta.');
-            });
-        } else {
-            // Alternativa caso esteja usando o Firebase modular mais recente
-            console.log("Comando de logout acionado. Certifique-se de importar o signOut do Firebase Auth.");
-        }
-    }
-}
 /* ==========================================================================
    MENU DO USUÁRIO, LOGOUT E CONFIGURAÇÕES DA EMPRESA
    ========================================================================== */

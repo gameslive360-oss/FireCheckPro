@@ -311,3 +311,9 @@
     background-color: #b91c1c;
 }
 
+/* Opção 1: Alinhado à Direita (Não vaza o ecrã) */
+.dropdown-direita {
+    position: absolute;
+    right: 0;
+    transform-origin: top right;
+}

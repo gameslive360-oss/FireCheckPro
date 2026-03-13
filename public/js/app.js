@@ -376,23 +376,40 @@ function toggleFieldGroup(triggerId, containerId, isSelect = false) {
         inputs.forEach(el => el.disabled = true);
     }
 }
-
-// Toast Notification
+// Toast Notification - AGORA NO TOPO E CENTRALIZADO
 window.showToast = function (message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
+    let container = document.getElementById('toast-container');
+
+    // Se o container não existir no HTML, cria um dinamicamente
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // Força a posição do container para o TOPO e CENTRALIZADO usando Tailwind
+    // O z-[9999] garante que fique por cima de qualquer menu ou modal
+    container.className = "fixed top-5 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none w-[90%] max-w-sm items-center";
 
     const toast = document.createElement('div');
     const bgColor = type === 'error' ? 'bg-red-500' : (type === 'info' ? 'bg-blue-500' : 'bg-emerald-600');
 
-    toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in transition-all transform translate-x-0`;
-    toast.innerHTML = `<span class="font-bold text-sm">${message}</span>`;
+    // Deixa o visual mais chamativo (arredondado como uma pílula e com sombra mais forte)
+    toast.className = `${bgColor} text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-fade-in transition-all transform translate-y-0 pointer-events-auto border border-white/20`;
+
+    // Adiciona um ícone dependendo do tipo de aviso
+    let icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'alert-circle' : 'info');
+    toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5 shrink-0"></i> <span class="font-bold text-sm tracking-wide text-center">${message}</span>`;
 
     container.appendChild(toast);
 
+    // Renderiza o ícone do Lucide que acabamos de adicionar
+    if (window.lucide) window.lucide.createIcons();
+
+    // Faz o Toast sumir depois de 3 segundos
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-10px)';
+        toast.style.transform = 'translateY(-20px)'; // Sobe de forma suave ao sumir
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 };
@@ -1053,13 +1070,8 @@ async function saveToFirebase() {
     refreshIcons();
 
     try {
-        if (currentReportId && lastSavedReportNumber && lastSavedReportNumber !== reportNumber) {
-            currentReportId = null;
-        }
-
-        if (!currentReportId) {
-            currentReportId = `REL_${reportNumber}_${Date.now()}`;
-        }
+        currentReportId = `REL_${reportNumber}`;
+        lastSavedReportNumber = reportNumber;
 
         // --- PREPARAÇÃO DOS ITENS E UPLOAD DE FOTOS ---
         const itemsReady = [];
@@ -1456,7 +1468,10 @@ window.importBackup = function (event) {
             document.getElementById('sum-resumo').value = data.header.resumo || '';
             document.getElementById('sum-riscos').value = data.header.riscos || '';
             document.getElementById('sum-conclusao').value = data.header.conclusao || '';
+
+            // Restaura o número e já avisa o sistema que o ID atual é este
             reportNumber = data.reportNumber || generateUniqueId();
+            currentReportId = `REL_${reportNumber}`; // Trava o ID para evitar duplicação!
             localStorage.setItem('reportNumber', reportNumber);
 
             window.toggleHeader();

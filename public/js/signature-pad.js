@@ -90,4 +90,17 @@ export class SignaturePad {
     getImageData() {
         return this.isEmpty() ? null : this.canvas.toDataURL('image/png');
     }
+
+    // NOVO MÉTODO: Carrega uma imagem Base64 de volta para o canvas
+    fromDataURL(dataUrl) {
+        if (!dataUrl) return;
+
+        const img = new Image();
+        img.onload = () => {
+            this.clear(); // Limpa o canvas antes de desenhar a nova assinatura
+            // Desenha a imagem restaurada no tamanho atual do canvas
+            this.ctx.drawImage(img, 0, 0, this.canvas.width, this.canvas.height);
+        };
+        img.src = dataUrl;
+    }
 }

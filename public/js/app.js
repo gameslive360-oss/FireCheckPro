@@ -521,6 +521,14 @@ function captureFormData(type) {
         case 'geral':
             specifics = { obs: document.getElementById('g-obs').value };
             break;
+        case 'assinatura':
+            specifics = {
+                nome_tecnico: document.getElementById('sig-nome-tecnico').value,
+                nome_cliente: document.getElementById('sig-nome-cliente').value,
+                sig_tecnico: sigTecnico && !sigTecnico.isEmpty() ? sigTecnico.getImageData() : null,
+                sig_cliente: sigCliente && !sigCliente.isEmpty() ? sigCliente.getImageData() : null
+            };
+            break;
         case 'alarme':
             specifics = {
                 tipo_eq: document.getElementById('a-tipo').value,
@@ -539,28 +547,25 @@ function addItem() {
     }
 
     const andarInput = document.getElementById('andar').value;
-    const rawIdInput = document.getElementById('item-id').value; // Pega o valor bruto
-    const idInput = rawIdInput.trim().toUpperCase(); // Limpa espaços e põe em maiúsculo
+    const rawIdInput = document.getElementById('item-id').value;
+    const idInput = rawIdInput.trim().toUpperCase();
 
-    // 1. Validação de Campos Vazios
-    if (currentType !== 'geral' && (!andarInput || !idInput)) {
+    // 1. Validação de Campos Vazios (Geral e Assinatura não precisam)
+    if (currentType !== 'geral' && currentType !== 'assinatura' && (!andarInput || !idInput)) {
         window.showToast("Preencha o Local e a Identificação", "error");
         return;
     }
 
-    // 2. NOVA LOGICA: BLOQUEIO DE ID DUPLICADO
-    if (currentType !== 'geral') {
+    // 2. BLOQUEIO DE ID DUPLICADO
+    if (currentType !== 'geral' && currentType !== 'assinatura') {
         const duplicado = items.some(item =>
             item.id && item.id.toUpperCase() === idInput
         );
 
         if (duplicado) {
-            // Toca um efeito visual no campo para alertar
             const inputEl = document.getElementById('item-id');
             inputEl.classList.add('border-red-500', 'ring-2', 'ring-red-200');
             setTimeout(() => inputEl.classList.remove('border-red-500', 'ring-2', 'ring-red-200'), 2000);
-
-            // Mostra aviso e para a função
             window.showToast(`O ID "${idInput}" já existe na lista!`, "error");
             return;
         }
@@ -574,11 +579,23 @@ function addItem() {
 
     const specificData = captureFormData(currentType);
 
+    // Nomes automáticos para Geral e Assinaturas
+    let finalId = rawIdInput;
+    let finalAndar = andarInput;
+
+    if (currentType === 'geral') {
+        finalId = 'Geral';
+        finalAndar = '-';
+    } else if (currentType === 'assinatura') {
+        finalId = 'Assinaturas';
+        finalAndar = '-';
+    }
+
     const newItem = {
         uid: Date.now(),
         type: currentType,
-        andar: currentType === 'geral' ? '-' : andarInput,
-        id: currentType === 'geral' ? 'Geral' : rawIdInput,
+        andar: finalAndar,
+        id: finalId,
         imageFiles: [...currentFiles],
         ...specificData
     };
@@ -591,17 +608,11 @@ function addItem() {
     clearFormState();
     clearFiles();
 
-    if (currentType !== 'geral') document.getElementById('item-id').focus();
+    if (currentType !== 'geral' && currentType !== 'assinatura') document.getElementById('item-id').focus();
 
-    // Mostra o toast de sucesso do item na tela
     window.showToast("Item processado na lista!", "success");
-
-    // ==========================================
-    // DISPARA O SALVAMENTO AUTOMÁTICO NA NUVEM
-    // ==========================================
     saveToFirebase();
 }
-
 window.editItem = function (uid) {
     const index = items.findIndex(i => i.uid === uid);
     if (index === -1) return;
@@ -690,6 +701,18 @@ window.editItem = function (uid) {
             document.getElementById('a-tipo').value = item.tipo_eq;
             document.getElementById('a-status').value = item.status || 'Operante';
             document.getElementById('a-obs').value = item.obs || '';
+        } else if (item.type === 'assinatura') {
+            document.getElementById('sig-nome-tecnico').value = item.nome_tecnico || '';
+            document.getElementById('sig-nome-cliente').value = item.nome_cliente || '';
+
+            // Usamos um pequeno timeout para dar tempo da interface renderizar os canvas
+            setTimeout(() => {
+                if (item.sig_tecnico && sigTecnico) sigTecnico.fromDataURL(item.sig_tecnico);
+                else if (sigTecnico) sigTecnico.clear();
+
+                if (item.sig_cliente && sigCliente) sigCliente.fromDataURL(item.sig_cliente);
+                else if (sigCliente) sigCliente.clear();
+            }, 150);
         }
 
         currentFiles = item.imageFiles ? [...item.imageFiles] : [];
@@ -910,6 +933,12 @@ function generateItemSummary(item) {
     }
     if (item.type === 'alarme') {
         return `${item.tipo_eq} | ${item.status || 'Operante'}`;
+    }
+    if (item.type === 'assinatura') {
+        let assinantes = [];
+        if (item.sig_tecnico) assinantes.push("Técnico");
+        if (item.sig_cliente) assinantes.push("Cliente");
+        return assinantes.length > 0 ? `Assinado por: ${assinantes.join(' e ')}` : "Assinaturas em branco";
     }
     return "-";
 
@@ -2454,7 +2483,13 @@ window.salvarConfiguracoes = async function () {
             }, { merge: true });
 
             window.showToast('Configurações da empresa salvas com sucesso!', 'success');
-            window.fecharConfiguracoes();
+            window.fecharConfiguracoes = function () {
+                // Esconde o modal
+                document.getElementById('config-modal').classList.add('hidden');
+
+                // Limpa a memória caso tenha escolhido uma foto mas cancelou antes de salvar
+                window.currentLogoFile = null;
+            };
 
         } catch (error) {
             console.error("Erro ao guardar na nuvem:", error);

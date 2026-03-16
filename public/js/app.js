@@ -109,19 +109,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const el2 = document.getElementById(id2);
         if (!el1 || !el2) return;
 
-        // Quando digita no cabeçalho, atualiza a assinatura
+        // Sempre que digitar no cabeçalho (el1), preenche a assinatura (el2)
         el1.addEventListener('input', (e) => el2.value = e.target.value);
 
-        // Quando digita na assinatura, atualiza o cabeçalho e salva
+        // Comportamento ao digitar no campo de assinatura (el2)
         el2.addEventListener('input', (e) => {
-            el1.value = e.target.value;
-            localStorage.setItem(storageKey, e.target.value);
-            // Se for o cliente, atualiza também a barra azul do topo
-            if (id1 === 'cliente') {
-                document.getElementById('header-summary').innerText = e.target.value || "Clique para expandir";
+            if (id1 === 'resp-tecnico') {
+                // Mantém a sincronização de mão dupla para o Responsável Técnico
+                el1.value = e.target.value;
+                localStorage.setItem(storageKey, e.target.value);
+            } else if (id1 === 'cliente') {
+                // Para o cliente, NÃO altera o cabeçalho (el1). Salva apenas localmente.
+                localStorage.setItem(`custom_sig_${id2}`, e.target.value);
             }
         });
     };
+
+    syncInputs('resp-tecnico', 'sig-nome-tecnico', 'resp-tecnico');
+    syncInputs('cliente', 'sig-nome-cliente', 'cliente');
 
     syncInputs('resp-tecnico', 'sig-nome-tecnico', 'resp-tecnico');
     syncInputs('cliente', 'sig-nome-cliente', 'cliente');
@@ -1822,7 +1827,13 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
     }
 };
 
-
+// Auto-expandir Textareas no mobile
+document.querySelectorAll('textarea.input-std').forEach(textarea => {
+    textarea.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight + 2) + 'px';
+    });
+});
 
 /* ==========================================================================
    11. PWA INSTALL

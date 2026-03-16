@@ -317,3 +317,18 @@
     right: 0;
     transform-origin: top right;
 }
+
+/* Força a permissão de redimensionamento vertical e melhora o scroll no mobile */
+textarea.input-std {
+    resize: vertical !important;
+    overflow-y: auto;
+    min-height: 60px;
+    transition: height 0.2s ease;
+}
+
+@media (max-width: 768px) {
+    textarea.input-std {
+        min-height: 100px;
+        /* Deixa um pouco maior por padrão no celular */
+    }
+}

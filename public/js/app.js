@@ -2507,45 +2507,37 @@ window.handleLogoUpload = function (event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Guarda o ficheiro real na memória para fazer o upload na hora de guardar
+    window.currentLogoFile = file;
+
     const reader = new FileReader();
     reader.onload = function (e) {
         const img = new Image();
         img.onload = function () {
-            // Cria um canvas para redimensionar a imagem
+            // Cria um canvas para o preview ficar leve na interface
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 400; // Largura máxima ideal para logo
-            const MAX_HEIGHT = 400; // Altura máxima ideal para logo
+            const MAX_WIDTH = 400;
+            const MAX_HEIGHT = 400;
             let width = img.width;
             let height = img.height;
 
-            // Calcula a nova proporção mantendo o aspecto da imagem
             if (width > height) {
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
+                if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
             } else {
-                if (height > MAX_HEIGHT) {
-                    width *= MAX_HEIGHT / height;
-                    height = MAX_HEIGHT;
-                }
+                if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
             }
 
             canvas.width = width;
             canvas.height = height;
-
             const ctx = canvas.getContext('2d');
-            // Desenha a imagem redimensionada no canvas
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Exporta a imagem muito mais leve (mantendo transparência do PNG)
-            const compressedBase64 = canvas.toDataURL('image/png');
-
-            // Atualiza a interface
+            // Apenas para mostrar no ecrã (Preview)
+            const previewBase64 = canvas.toDataURL('image/png');
             const logoPreview = document.getElementById('config-logo-preview');
             const logoIcon = document.getElementById('config-logo-icon');
 
-            logoPreview.src = compressedBase64;
+            logoPreview.src = previewBase64;
             logoPreview.classList.remove('hidden');
             logoIcon.classList.add('hidden');
         };
@@ -2563,48 +2555,79 @@ window.removeLogo = function () {
     logoPreview.classList.add('hidden');
     logoIcon.classList.remove('hidden');
     logoInput.value = '';
+
+    window.currentLogoFile = null; // Limpa da memória
+    localStorage.removeItem('empresa_logo'); // Limpa do cache
 };
 
-window.abrirConfiguracoes = function () {
-    document.getElementById('config-empresa').value = localStorage.getItem('empresa_nome') || '';
-    document.getElementById('config-endereco').value = localStorage.getItem('empresa_endereco') || '';
-    document.getElementById('config-cidade').value = localStorage.getItem('empresa_cidade') || '';
-    document.getElementById('config-cep').value = localStorage.getItem('empresa_cep') || '';
-    document.getElementById('config-telefone').value = localStorage.getItem('empresa_telefone') || '';
+window.salvarConfiguracoes = async function () {
+    // 1. Recolhe os valores dos campos
+    const empresa_nome = document.getElementById('config-empresa').value;
+    const empresa_endereco = document.getElementById('config-endereco').value;
+    const empresa_cidade = document.getElementById('config-cidade').value;
+    const empresa_cep = document.getElementById('config-cep').value;
+    const empresa_telefone = document.getElementById('config-telefone').value;
 
-    // Carregar a logo salva
-    const savedLogo = localStorage.getItem('empresa_logo');
-    const logoPreview = document.getElementById('config-logo-preview');
-    const logoIcon = document.getElementById('config-logo-icon');
+    // 2. Guarda os textos localmente para carregamento rápido
+    localStorage.setItem('empresa_nome', empresa_nome);
+    localStorage.setItem('empresa_endereco', empresa_endereco);
+    localStorage.setItem('empresa_cidade', empresa_cidade);
+    localStorage.setItem('empresa_cep', empresa_cep);
+    localStorage.setItem('empresa_telefone', empresa_telefone);
 
-    if (savedLogo) {
-        logoPreview.src = savedLogo;
-        logoPreview.classList.remove('hidden');
-        logoIcon.classList.add('hidden');
+    let empresa_logo_url = localStorage.getItem('empresa_logo') || null;
+
+    // 3. Verifica se o utilizador está autenticado para guardar na nuvem
+    if (user) {
+        try {
+            window.showToast('A processar as informações...', 'info');
+
+            // 3.1 Transforma a Logo num URL real (Cloudinary) se houver um novo ficheiro
+            if (window.currentLogoFile) {
+                window.showToast('A enviar o logótipo para a nuvem...', 'info');
+                // Utilizamos a função uploadToCloudinary que já existe no seu sistema
+                const uploadUrl = await uploadToCloudinary(window.currentLogoFile);
+                if (uploadUrl) {
+                    empresa_logo_url = uploadUrl;
+                    localStorage.setItem('empresa_logo', empresa_logo_url);
+                    window.currentLogoFile = null; // Limpa a memória após sucesso
+                } else {
+                    throw new Error("Falha no upload da imagem");
+                }
+            }
+
+            // Garante que se a pessoa removeu a imagem, isso reflita na nuvem
+            const logoPreview = document.getElementById('config-logo-preview');
+            if (!logoPreview.src || logoPreview.classList.contains('hidden')) {
+                empresa_logo_url = null;
+                localStorage.removeItem('empresa_logo');
+            }
+
+            // 3.2 Guarda na base de dados (Coleção "users") vinculado ao ID e E-mail
+            const userRef = doc(db, "users", user.uid);
+            await setDoc(userRef, {
+                email: user.email, // Guarda separadamente por email de cadastro
+                empresa: {
+                    nome: empresa_nome,
+                    endereco: empresa_endereco,
+                    cidade: empresa_cidade,
+                    cep: empresa_cep,
+                    telefone: empresa_telefone,
+                    logo: empresa_logo_url // Agora envia o URL real
+                },
+                updatedAt: new Date()
+            }, { merge: true });
+
+            window.showToast('Configurações guardadas na nuvem com sucesso!', 'success');
+            window.fecharConfiguracoes();
+
+        } catch (error) {
+            console.error("Erro ao guardar na nuvem:", error);
+            window.showToast('Erro ao guardar configurações. Tente novamente.', 'error');
+        }
     } else {
-        window.removeLogo();
+        window.showToast('Por favor, faça login para guardar os dados da empresa.', 'error');
     }
-
-    document.getElementById('config-modal').classList.remove('hidden');
-};
-
-window.salvarConfiguracoes = function () {
-    localStorage.setItem('empresa_nome', document.getElementById('config-empresa').value);
-    localStorage.setItem('empresa_endereco', document.getElementById('config-endereco').value);
-    localStorage.setItem('empresa_cidade', document.getElementById('config-cidade').value);
-    localStorage.setItem('empresa_cep', document.getElementById('config-cep').value);
-    localStorage.setItem('empresa_telefone', document.getElementById('config-telefone').value);
-
-    // Salvar a logo
-    const logoPreview = document.getElementById('config-logo-preview');
-    if (logoPreview.src && !logoPreview.classList.contains('hidden')) {
-        localStorage.setItem('empresa_logo', logoPreview.src);
-    } else {
-        localStorage.removeItem('empresa_logo');
-    }
-
-    window.fecharConfiguracoes();
-    window.showToast('Configurações salvas com sucesso!', 'success');
 };
 
 /* ==========================================================================

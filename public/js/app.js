@@ -1827,12 +1827,11 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
     }
 };
 
-// Auto-expandir Textareas no mobile
-document.querySelectorAll('textarea.input-std').forEach(textarea => {
-    textarea.addEventListener('input', function () {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight + 2) + 'px';
-    });
+document.addEventListener('input', function (e) {
+    if (e.target.tagName.toLowerCase() === 'textarea') {
+        e.target.style.height = 'auto'; // Reseta a altura
+        e.target.style.height = (e.target.scrollHeight + 2) + 'px'; // Ajusta para o novo tamanho
+    }
 });
 
 /* ==========================================================================
@@ -2371,17 +2370,99 @@ window.fazerLogout = function () {
 };
 
 window.abrirConfiguracoes = function () {
+    // Carrega os textos
     document.getElementById('config-empresa').value = localStorage.getItem('empresa_nome') || '';
     document.getElementById('config-endereco').value = localStorage.getItem('empresa_endereco') || '';
     document.getElementById('config-cidade').value = localStorage.getItem('empresa_cidade') || '';
     document.getElementById('config-cep').value = localStorage.getItem('empresa_cep') || '';
     document.getElementById('config-telefone').value = localStorage.getItem('empresa_telefone') || '';
 
+    // NOVO: Carrega a Logo salva visualmente no modal
+    const logoUrl = localStorage.getItem('empresa_logo');
+    const logoPreview = document.getElementById('config-logo-preview');
+    const logoIcon = document.getElementById('config-logo-icon');
+
+    if (logoUrl) {
+        logoPreview.src = logoUrl;
+        logoPreview.classList.remove('hidden');
+        logoIcon.classList.add('hidden');
+    } else {
+        logoPreview.src = '';
+        logoPreview.classList.add('hidden');
+        logoIcon.classList.remove('hidden');
+    }
+
     document.getElementById('config-modal').classList.remove('hidden');
 };
 
-window.fecharConfiguracoes = function () {
-    document.getElementById('config-modal').classList.add('hidden');
+window.salvarConfiguracoes = async function () {
+    const empresa_nome = document.getElementById('config-empresa').value;
+    const empresa_endereco = document.getElementById('config-endereco').value;
+    const empresa_cidade = document.getElementById('config-cidade').value;
+    const empresa_cep = document.getElementById('config-cep').value;
+    const empresa_telefone = document.getElementById('config-telefone').value;
+
+    localStorage.setItem('empresa_nome', empresa_nome);
+    localStorage.setItem('empresa_endereco', empresa_endereco);
+    localStorage.setItem('empresa_cidade', empresa_cidade);
+    localStorage.setItem('empresa_cep', empresa_cep);
+    localStorage.setItem('empresa_telefone', empresa_telefone);
+
+    let empresa_logo_url = localStorage.getItem('empresa_logo') || null;
+    const logoPreview = document.getElementById('config-logo-preview');
+
+    if (user) {
+        try {
+            window.showToast('A salvar informações...', 'info');
+
+            // 1. Se o usuário deletou a imagem clicando em "Remover"
+            if (!logoPreview.src || logoPreview.classList.contains('hidden')) {
+                empresa_logo_url = null;
+                localStorage.removeItem('empresa_logo');
+            }
+            // 2. Se o usuário escolheu uma imagem NOVA
+            else if (window.currentLogoFile) {
+                window.showToast('A enviar logótipo para a nuvem...', 'info');
+                try {
+                    const uploadUrl = await uploadToCloudinary(window.currentLogoFile);
+                    if (uploadUrl) {
+                        empresa_logo_url = uploadUrl;
+                        localStorage.setItem('empresa_logo', empresa_logo_url);
+                        window.currentLogoFile = null; // Limpa após o sucesso
+                    }
+                } catch (e) {
+                    console.error("Erro no Cloudinary. Salvando localmente como fallback.", e);
+                    // Plano B: Se a internet falhar no Cloudinary, salva como Base64 para não perder
+                    empresa_logo_url = logoPreview.src;
+                    localStorage.setItem('empresa_logo', empresa_logo_url);
+                }
+            }
+
+            // 3. Salva no banco de dados (Firestore) na pasta do usuário
+            const userRef = doc(db, "users", user.uid);
+            await setDoc(userRef, {
+                email: user.email,
+                empresa: {
+                    nome: empresa_nome,
+                    endereco: empresa_endereco,
+                    cidade: empresa_cidade,
+                    cep: empresa_cep,
+                    telefone: empresa_telefone,
+                    logo: empresa_logo_url // Agora envia corretamente
+                },
+                updatedAt: new Date()
+            }, { merge: true });
+
+            window.showToast('Configurações da empresa salvas com sucesso!', 'success');
+            window.fecharConfiguracoes();
+
+        } catch (error) {
+            console.error("Erro ao guardar na nuvem:", error);
+            window.showToast('Erro ao guardar configurações.', 'error');
+        }
+    } else {
+        window.showToast('Faça login para salvar na nuvem.', 'error');
+    }
 };
 
 window.salvarConfiguracoes = async function () {
@@ -2503,18 +2584,32 @@ document.getElementById('config-cep').addEventListener('input', async function (
 
 // ATUALIZAR E ADICIONAR NO FINAL DO app.js
 
-window.handleLogoUpload = function (event) {
+window.handleLogoUpload = async function (event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Guarda o ficheiro real na memória para fazer o upload na hora de guardar
-    window.currentLogoFile = file;
+    // 1. Limite de tamanho: 2MB (previne travamentos)
+    const MAX_SIZE_MB = 2;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        window.showToast(`A imagem é muito grande. O limite é ${MAX_SIZE_MB}MB.`, 'error');
+        event.target.value = ''; // Limpa o campo
+        return;
+    }
 
+    try {
+        window.showToast("Processando imagem...", "info");
+        // 2. Comprime a imagem antes de guardar na memória usando a função do seu sistema
+        window.currentLogoFile = await compressImage(file);
+    } catch (e) {
+        console.error("Erro ao comprimir logo", e);
+        window.currentLogoFile = file; // Se falhar a compressão, tenta com a original
+    }
+
+    // 3. Mostra o Preview (miniatura) na tela
     const reader = new FileReader();
     reader.onload = function (e) {
         const img = new Image();
         img.onload = function () {
-            // Cria um canvas para o preview ficar leve na interface
             const canvas = document.createElement('canvas');
             const MAX_WIDTH = 400;
             const MAX_HEIGHT = 400;
@@ -2532,7 +2627,6 @@ window.handleLogoUpload = function (event) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Apenas para mostrar no ecrã (Preview)
             const previewBase64 = canvas.toDataURL('image/png');
             const logoPreview = document.getElementById('config-logo-preview');
             const logoIcon = document.getElementById('config-logo-icon');
@@ -2543,7 +2637,81 @@ window.handleLogoUpload = function (event) {
         };
         img.src = e.target.result;
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(window.currentLogoFile);
+};
+
+window.salvarConfiguracoes = async function () {
+    // Busca o botão de salvar pela ação (onclick)
+    const btnSalvar = document.querySelector('button[onclick="salvarConfiguracoes()"]');
+    const originalHtml = btnSalvar.innerHTML;
+
+    // Animação de Loading no botão
+    btnSalvar.innerHTML = `<i data-lucide="loader-2" class="animate-spin inline-block w-4 h-4 mr-2"></i> Salvando...`;
+    btnSalvar.disabled = true;
+    if (window.lucide) window.lucide.createIcons();
+
+    try {
+        const empresa_nome = document.getElementById('config-empresa').value;
+        const empresa_endereco = document.getElementById('config-endereco').value;
+        const empresa_cidade = document.getElementById('config-cidade').value;
+        const empresa_cep = document.getElementById('config-cep').value;
+        const empresa_telefone = document.getElementById('config-telefone').value;
+
+        localStorage.setItem('empresa_nome', empresa_nome);
+        localStorage.setItem('empresa_endereco', empresa_endereco);
+        localStorage.setItem('empresa_cidade', empresa_cidade);
+        localStorage.setItem('empresa_cep', empresa_cep);
+        localStorage.setItem('empresa_telefone', empresa_telefone);
+
+        let empresa_logo_url = localStorage.getItem('empresa_logo') || null;
+        const logoPreview = document.getElementById('config-logo-preview');
+
+        if (user) {
+            // Se o usuário removeu a imagem pelo botão "Remover"
+            if (!logoPreview.src || logoPreview.classList.contains('hidden')) {
+                empresa_logo_url = null;
+                localStorage.removeItem('empresa_logo');
+            }
+            // Se tem uma NOVA logo na memória aguardando upload
+            else if (window.currentLogoFile) {
+                const uploadUrl = await uploadToCloudinary(window.currentLogoFile);
+                if (uploadUrl) {
+                    empresa_logo_url = uploadUrl; // Salva apenas o link
+                    localStorage.setItem('empresa_logo', empresa_logo_url);
+                    window.currentLogoFile = null; // Limpa a memória
+                } else {
+                    throw new Error("Falha no upload para o servidor de imagens");
+                }
+            }
+
+            // Salva todas as informações na coleção "users" na nuvem
+            const userRef = doc(db, "users", user.uid);
+            await setDoc(userRef, {
+                email: user.email,
+                empresa: {
+                    nome: empresa_nome,
+                    endereco: empresa_endereco,
+                    cidade: empresa_cidade,
+                    cep: empresa_cep,
+                    telefone: empresa_telefone,
+                    logo: empresa_logo_url // URL da nuvem gerada!
+                },
+                updatedAt: new Date()
+            }, { merge: true });
+
+            window.showToast('Configurações salvas com sucesso!', 'success');
+            window.fecharConfiguracoes();
+        } else {
+            window.showToast('Faça login para salvar na nuvem.', 'error');
+        }
+    } catch (error) {
+        console.error("Erro ao guardar na nuvem:", error);
+        window.showToast('Erro ao salvar configurações.', 'error');
+    } finally {
+        // Restaura o botão ao estado original
+        btnSalvar.innerHTML = originalHtml;
+        btnSalvar.disabled = false;
+    }
 };
 
 window.removeLogo = function () {
@@ -2560,75 +2728,6 @@ window.removeLogo = function () {
     localStorage.removeItem('empresa_logo'); // Limpa do cache
 };
 
-window.salvarConfiguracoes = async function () {
-    // 1. Recolhe os valores dos campos
-    const empresa_nome = document.getElementById('config-empresa').value;
-    const empresa_endereco = document.getElementById('config-endereco').value;
-    const empresa_cidade = document.getElementById('config-cidade').value;
-    const empresa_cep = document.getElementById('config-cep').value;
-    const empresa_telefone = document.getElementById('config-telefone').value;
-
-    // 2. Guarda os textos localmente para carregamento rápido
-    localStorage.setItem('empresa_nome', empresa_nome);
-    localStorage.setItem('empresa_endereco', empresa_endereco);
-    localStorage.setItem('empresa_cidade', empresa_cidade);
-    localStorage.setItem('empresa_cep', empresa_cep);
-    localStorage.setItem('empresa_telefone', empresa_telefone);
-
-    let empresa_logo_url = localStorage.getItem('empresa_logo') || null;
-
-    // 3. Verifica se o utilizador está autenticado para guardar na nuvem
-    if (user) {
-        try {
-            window.showToast('A processar as informações...', 'info');
-
-            // 3.1 Transforma a Logo num URL real (Cloudinary) se houver um novo ficheiro
-            if (window.currentLogoFile) {
-                window.showToast('A enviar o logótipo para a nuvem...', 'info');
-                // Utilizamos a função uploadToCloudinary que já existe no seu sistema
-                const uploadUrl = await uploadToCloudinary(window.currentLogoFile);
-                if (uploadUrl) {
-                    empresa_logo_url = uploadUrl;
-                    localStorage.setItem('empresa_logo', empresa_logo_url);
-                    window.currentLogoFile = null; // Limpa a memória após sucesso
-                } else {
-                    throw new Error("Falha no upload da imagem");
-                }
-            }
-
-            // Garante que se a pessoa removeu a imagem, isso reflita na nuvem
-            const logoPreview = document.getElementById('config-logo-preview');
-            if (!logoPreview.src || logoPreview.classList.contains('hidden')) {
-                empresa_logo_url = null;
-                localStorage.removeItem('empresa_logo');
-            }
-
-            // 3.2 Guarda na base de dados (Coleção "users") vinculado ao ID e E-mail
-            const userRef = doc(db, "users", user.uid);
-            await setDoc(userRef, {
-                email: user.email, // Guarda separadamente por email de cadastro
-                empresa: {
-                    nome: empresa_nome,
-                    endereco: empresa_endereco,
-                    cidade: empresa_cidade,
-                    cep: empresa_cep,
-                    telefone: empresa_telefone,
-                    logo: empresa_logo_url // Agora envia o URL real
-                },
-                updatedAt: new Date()
-            }, { merge: true });
-
-            window.showToast('Configurações guardadas na nuvem com sucesso!', 'success');
-            window.fecharConfiguracoes();
-
-        } catch (error) {
-            console.error("Erro ao guardar na nuvem:", error);
-            window.showToast('Erro ao guardar configurações. Tente novamente.', 'error');
-        }
-    } else {
-        window.showToast('Por favor, faça login para guardar os dados da empresa.', 'error');
-    }
-};
 
 /* ==========================================================================
    FUNÇÃO DE EXCLUIR DA NUVEM COM SENHA

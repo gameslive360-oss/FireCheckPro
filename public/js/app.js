@@ -185,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('h-tem-mangueira')) window.toggleMangueiraFields();
     if (document.getElementById('h-tem-acionador')) window.toggleAcionadorFields();
     if (document.getElementById('s-existente')) window.toggleSinalizacaoFields();
+    if (document.getElementById('a-tipo')) window.toggleAlarmeOutros();
 
     // --- EVENT LISTENERS ---
     // Auth
@@ -365,6 +366,19 @@ function toggleMainInterface(show) {
 window.toggleMangueiraFields = function () { toggleFieldGroup('h-tem-mangueira', 'h-detalhes-container'); };
 window.toggleSinalizacaoFields = function () { toggleFieldGroup('s-existente', 's-detalhes-container', true); };
 
+window.toggleAlarmeOutros = function () {
+    const select = document.getElementById('a-tipo');
+    const container = document.getElementById('a-tipo-outros-container');
+    if (select && container) {
+        if (select.value === 'Outros') {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+            document.getElementById('a-tipo-outros').value = ''; // Limpa se esconder
+        }
+    }
+};
+
 function toggleFieldGroup(triggerId, containerId, isSelect = false) {
     const trigger = document.getElementById(triggerId);
     const container = document.getElementById(containerId);
@@ -530,9 +544,18 @@ function captureFormData(type) {
             };
             break;
         case 'alarme':
+            let tipoEq = document.getElementById('a-tipo').value;
+            // Se escolheu 'Outros' e digitou algo, pega o que foi digitado
+            if (tipoEq === 'Outros') {
+                const customTipo = document.getElementById('a-tipo-outros').value.trim();
+                if (customTipo !== '') {
+                    tipoEq = customTipo;
+                }
+            }
+
             specifics = {
-                tipo_eq: document.getElementById('a-tipo').value,
-                status: document.getElementById('a-status').value, // Novo campo
+                tipo_eq: tipoEq,
+                status: document.getElementById('a-status').value,
                 obs: document.getElementById('a-obs').value
             };
             break;
@@ -698,9 +721,25 @@ window.editItem = function (uid) {
         } else if (item.type === 'geral') {
             document.getElementById('g-obs').value = item.obs || '';
         } else if (item.type === 'alarme') {
-            document.getElementById('a-tipo').value = item.tipo_eq;
+            const selectTipo = document.getElementById('a-tipo');
+            
+            // Verifica se a opção salva já existe na lista padrão
+            const optionExists = Array.from(selectTipo.options).some(opt => opt.value === item.tipo_eq);
+            
+            if (optionExists) {
+                // Se existe (ex: Detector de Fumaça), seleciona normal
+                selectTipo.value = item.tipo_eq;
+                document.getElementById('a-tipo-outros').value = '';
+            } else {
+                // Se não existe, marca como "Outros" e preenche o input com o nome salvo
+                selectTipo.value = 'Outros';
+                document.getElementById('a-tipo-outros').value = item.tipo_eq;
+            }
+            
+            window.toggleAlarmeOutros(); // Mostra o campo se for o caso
             document.getElementById('a-status').value = item.status || 'Operante';
             document.getElementById('a-obs').value = item.obs || '';
+    
         } else if (item.type === 'assinatura') {
             document.getElementById('sig-nome-tecnico').value = item.nome_tecnico || '';
             document.getElementById('sig-nome-cliente').value = item.nome_cliente || '';
@@ -837,6 +876,7 @@ function renderList() {
         if (item.type === 'luz') { typeLabel = "LUZ"; typeColor = "bg-amber-100 text-amber-700"; }
         if (item.type === 'bomba') { typeLabel = "BOM"; typeColor = "bg-purple-100 text-purple-700"; }
         if (item.type === 'alarme') { typeLabel = "ALM"; typeColor = "bg-orange-100 text-orange-700"; }
+        if (item.type === 'assinatura') { typeLabel = "ASS"; typeColor = "bg-slate-800 text-white"; } // Nova cor!
 
         let summary = generateItemSummary(item);
 
@@ -1616,6 +1656,10 @@ function clearFormState(keepHeader = true) {
         localStorage.removeItem(el.id);
     });
     document.querySelectorAll('select.save-state').forEach(el => el.selectedIndex = 0);
+
+    // NOVO: Limpa as assinaturas para o próximo item
+    if (sigTecnico) sigTecnico.clear();
+    if (sigCliente) sigCliente.clear();
 
     if (!keepHeader) {
         document.getElementById('cliente').value = '';
@@ -2483,13 +2527,6 @@ window.salvarConfiguracoes = async function () {
             }, { merge: true });
 
             window.showToast('Configurações da empresa salvas com sucesso!', 'success');
-            window.fecharConfiguracoes = function () {
-                // Esconde o modal
-                document.getElementById('config-modal').classList.add('hidden');
-
-                // Limpa a memória caso tenha escolhido uma foto mas cancelou antes de salvar
-                window.currentLogoFile = null;
-            };
 
         } catch (error) {
             console.error("Erro ao guardar na nuvem:", error);
@@ -2498,6 +2535,16 @@ window.salvarConfiguracoes = async function () {
     } else {
         window.showToast('Faça login para salvar na nuvem.', 'error');
     }
+};
+
+window.fecharConfiguracoes = function () {
+    const modal = document.getElementById('config-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    // Limpa a memória caso tenha escolhido uma foto mas cancelou antes de salvar
+    window.currentLogoFile = null;
 };
 
 window.salvarConfiguracoes = async function () {

@@ -318,7 +318,7 @@
     transform-origin: top right;
 }
 
-//* Força a permissão de redimensionamento vertical e melhora o scroll no mobile/tablet */
+/* Força a permissão de redimensionamento vertical e melhora o scroll no mobile/tablet */
 textarea.input-std {
     resize: vertical !important;
     overflow-y: hidden;

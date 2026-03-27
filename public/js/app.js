@@ -722,10 +722,10 @@ window.editItem = function (uid) {
             document.getElementById('g-obs').value = item.obs || '';
         } else if (item.type === 'alarme') {
             const selectTipo = document.getElementById('a-tipo');
-            
+
             // Verifica se a opção salva já existe na lista padrão
             const optionExists = Array.from(selectTipo.options).some(opt => opt.value === item.tipo_eq);
-            
+
             if (optionExists) {
                 // Se existe (ex: Detector de Fumaça), seleciona normal
                 selectTipo.value = item.tipo_eq;
@@ -735,11 +735,11 @@ window.editItem = function (uid) {
                 selectTipo.value = 'Outros';
                 document.getElementById('a-tipo-outros').value = item.tipo_eq;
             }
-            
+
             window.toggleAlarmeOutros(); // Mostra o campo se for o caso
             document.getElementById('a-status').value = item.status || 'Operante';
             document.getElementById('a-obs').value = item.obs || '';
-    
+
         } else if (item.type === 'assinatura') {
             document.getElementById('sig-nome-tecnico').value = item.nome_tecnico || '';
             document.getElementById('sig-nome-cliente').value = item.nome_cliente || '';
@@ -1205,6 +1205,21 @@ async function saveToFirebase() {
 
         localStorage.setItem('lastEditorName', user.displayName || "Usuário");
         localStorage.setItem('lastEditorPhoto', user.photoURL || "");
+
+        try {
+            await addDoc(collection(db, "report_logs"), {
+                action: "SALVO/CRIADO",
+                reportId: currentReportId,
+                reportNumber: reportNumber,
+                reportName: document.getElementById('cliente').value || "Sem Cliente",
+                userName: user.displayName || user.email || "Usuário Desconhecido",
+                userId: user.uid,
+                timestamp: new Date().toISOString()
+            });
+        } catch (logErr) {
+            console.error("Erro ao gravar log de salvamento:", logErr);
+        }
+        // --- FIM DA ADIÇÃO DO LOG ---
 
         window.showToast("Salvo com sucesso! (#" + reportNumber + ")");
 
@@ -2841,7 +2856,31 @@ window.deleteCloudReport = async function (reportId) {
 
         // Deleta do Firestore
         const docRef = doc(db, "reports", reportId);
+
+        let clienteNome = "Relatório Desconhecido";
+        let numRelatorio = "N/A";
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            clienteNome = docSnap.data().cliente || "Sem Cliente";
+            numRelatorio = docSnap.data().reportNumber || "N/A";
+        }
+
         await deleteDoc(docRef);
+
+        try {
+            await addDoc(collection(db, "report_logs"), {
+                action: "DELETADO",
+                reportId: reportId,
+                reportNumber: numRelatorio,
+                reportName: clienteNome,
+                userName: auth.currentUser?.displayName || auth.currentUser?.email || "Usuário Desconhecido",
+                userId: auth.currentUser?.uid || "UID_Desconhecido",
+                timestamp: new Date().toISOString()
+            });
+        } catch (logErr) {
+            console.error("Erro ao gravar log de deleção:", logErr);
+        }
 
         // Se o relatório que acabou de ser excluído era o que estava aberto na tela, limpa a tela
         if (currentReportId === reportId) {

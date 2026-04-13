@@ -236,9 +236,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Modal Confirmação
-    document.getElementById('btn-confirm-action').addEventListener('click', () => {
-        if (pendingAction) pendingAction();
+    document.getElementById('btn-confirm-action').addEventListener('click', async () => {
+        // Guarda a ação e limpa a memória
+        const action = pendingAction;
+
+        // FECHA O MODAL PRIMEIRO (garante que não trave a tela)
         window.closeConfirmModal();
+
+        // Executa a ação (excluir ou editar)
+        if (action) {
+            try {
+                await action();
+            } catch (error) {
+                console.error("❌ Erro na ação do modal:", error);
+                window.showToast("Ocorreu um erro ao processar a ação.", "error");
+            }
+        }
     });
 
     // Auto-Save em Inputs
@@ -1511,6 +1524,8 @@ window.restoreCloudReport = async function (url, reportId) {
         renderList();
         window.showFormPage();
 
+        saveStateOffline();
+
         const newUrl = `${window.location.pathname}?id=${currentReportId}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
 
@@ -1666,6 +1681,7 @@ window.importBackup = function (event) {
             }
 
             renderList();
+            saveStateOffline();
             window.showToast("Backup restaurado!");
 
         } catch (err) {
@@ -1756,10 +1772,13 @@ window.showConfirmModal = function (title, msg, callback, isDestructive = false)
 
     pendingAction = callback;
     modal.classList.remove('hidden');
+    modal.classList.add('flex'); // Garante que ele apareça corretamente
 };
 
 window.closeConfirmModal = function () {
-    document.getElementById('modal-confirm').classList.add('hidden');
+    const modal = document.getElementById('modal-confirm');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex'); // Força a remoção do flex para o hidden funcionar
     pendingAction = null;
 };
 
@@ -1964,6 +1983,7 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
         window.toggleHeader();
         renderList();
         window.showFormPage();
+        saveStateOffline();
         window.showToast("Base clonada com sucesso!", "success");
 
     } catch (e) {

@@ -8,6 +8,7 @@ import { generatePDF } from "./pdf-generator.js";
 import { compressImage } from "./image-compressor.js";
 import { SignaturePad } from "./signature-pad.js";
 import { uploadToCloudinary } from "./cloudinary-manager.js";
+import { DraftManager } from "./data-manager.js";
 
 /* ==========================================================================
    1. CONFIGURAÇÃO E ESTADO GLOBAL
@@ -29,6 +30,16 @@ let deferredPrompt; // PWA
 let currentSortOrder = 'newest';
 let reportNumber = localStorage.getItem('reportNumber');
 let lastSavedReportNumber = null;
+
+const draftManager = new DraftManager();
+
+async function saveStateOffiline() {
+    if (items.lenght > 0) {
+        await draftManager.saveDraft(items, reportNumber);
+    } else {
+        await draftManager.clearDraft();
+    }
+}
 
 if (!reportNumber) {
     reportNumber = generateUniqueId();
@@ -99,10 +110,22 @@ async function loadUserSettings() {
 /* ==========================================================================
    3. LISTENERS E DOM READY
    ========================================================================== */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     refreshIcons();
     restoreFormState();
     initializeDateInput();
+
+    // Tenta carregar rascunho offline se o navegador tiver crashado
+    const draft = await draftManager.loadDraft();
+    if (draft && draft.items && draft.items.length > 0) {
+        items = draft.items;
+        if (draft.reportNumber) {
+            reportNumber = draft.reportNumber;
+            localStorage.setItem('reportNumber', reportNumber);
+        }
+        renderList();
+        window.showToast("Rascunho recuperado com sucesso!", "info");
+    }
     // Sincronizar nomes das assinaturas com os dados do cabeçalho
     const syncInputs = (id1, id2, storageKey) => {
         const el1 = document.getElementById(id1);
@@ -587,9 +610,38 @@ function addItem() {
 
         if (duplicado) {
             const inputEl = document.getElementById('item-id');
-            inputEl.classList.add('border-red-500', 'ring-2', 'ring-red-200');
-            setTimeout(() => inputEl.classList.remove('border-red-500', 'ring-2', 'ring-red-200'), 2000);
-            window.showToast(`O ID "${idInput}" já existe na lista!`, "error");
+
+            // 1. Deixa o campo com aspecto de erro (Fundo, borda e texto vermelhos)
+            inputEl.classList.add('border-red-500', 'ring-2', 'ring-red-200', 'bg-red-50', 'text-red-700');
+
+            // 2. Aplica o efeito de "tremer" (Vibração)
+            inputEl.classList.remove('animate-shake'); // Remove a classe caso o usuário clique várias vezes
+            void inputEl.offsetWidth; // Truque do JavaScript para forçar o reinício da animação
+            inputEl.classList.add('animate-shake');
+
+            // 3. Cria a mensagem de erro em texto logo abaixo do campo
+            let errorText = document.getElementById('id-error-msg');
+            if (!errorText) {
+                errorText = document.createElement('p');
+                errorText.id = 'id-error-msg';
+                errorText.className = 'text-red-500 text-xs mt-1 font-bold flex items-center gap-1';
+                // Insere o texto exatamente após o input do ID
+                inputEl.parentNode.insertBefore(errorText, inputEl.nextSibling);
+            }
+            errorText.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i> O ID "${idInput}" já existe nesta vistoria!`;
+            if (window.lucide) window.lucide.createIcons();
+
+            // 4. Limpa o erro visual após 3 segundos para o usuário tentar novamente
+            setTimeout(() => {
+                inputEl.classList.remove('border-red-500', 'ring-2', 'ring-red-200', 'bg-red-50', 'text-red-700', 'animate-shake');
+                if (errorText) errorText.remove();
+            }, 3000);
+
+            // Mantém o Toast no topo para garantir a visibilidade
+            window.showToast(`Erro: ID Duplicado!`, "error");
+
+            // Retorna o foco (cursor) para o campo, facilitando a correção
+            inputEl.focus();
             return;
         }
     }
@@ -635,6 +687,7 @@ function addItem() {
 
     window.showToast("Item processado na lista!", "success");
     saveToFirebase();
+    saveStateOffline();
 }
 window.editItem = function (uid) {
     const index = items.findIndex(i => i.uid === uid);
@@ -760,6 +813,8 @@ window.editItem = function (uid) {
         items.splice(index, 1);
         renderList();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        saveStateOffline();
+
     });
 };
 
@@ -779,6 +834,7 @@ window.removeItem = function (uid) {
         items = items.filter(i => i.uid !== uid);
         renderList();
         window.showToast("Item removido", "info");
+        saveStateOffline();
     }, true);
 };
 
@@ -1030,6 +1086,7 @@ window.updateItemField = function (uid, field, value) {
 
         // Salva no LocalStorage (opcional, se você quiser persistência local imediata)
         // localStorage.setItem('backup_items', JSON.stringify(items)); 
+        saveStateOffline();
     }
 };
 
@@ -1222,6 +1279,7 @@ async function saveToFirebase() {
         // --- FIM DA ADIÇÃO DO LOG ---
 
         window.showToast("Salvo com sucesso! (#" + reportNumber + ")");
+        draftManager.clearDraft();
 
     } catch (e) {
         console.error("ERRO AO SALVAR:", e);
@@ -1720,6 +1778,7 @@ window.resetApp = function () {
     clearFormState(false);
     renderList();
     window.showToast(`Novo relatório iniciado (#${reportNumber})`);
+    draftManager.clearDraft();
     window.toggleMenu();
 };
 

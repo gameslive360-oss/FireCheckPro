@@ -134,38 +134,66 @@ export class ExcelManager {
 
 export class DraftManager {
     constructor() {
-        // Configura e inicializa o banco de dados offline
         localforage.config({
             name: 'FireCheckPro',
-            storeName: 'offline_drafts', // Nome da tabela
+            storeName: 'offline_drafts',
             description: 'Armazena rascunhos de relatórios e fotos offline'
         });
     }
 
-    // Salva a lista completa de itens (incluindo as fotos/blobs)
+    // Salva a lista convertendo as imagens para Base64 (Texto)
     async saveDraft(items, reportNumber) {
         try {
-            await localforage.setItem('draft_items', items);
+            // Criamos uma cópia da lista para não alterar o que está na tela
+            const itemsToSave = await Promise.all(items.map(async (item) => {
+                const clonedItem = { ...item };
+
+                // Se o item tem fotos, converte os arquivos físicos para Base64
+                if (clonedItem.imageFiles && clonedItem.imageFiles.length > 0) {
+                    clonedItem.imageFiles = await Promise.all(clonedItem.imageFiles.map(async (file) => {
+                        if (typeof file === 'string') return file; // Já é link ou texto
+                        return await this._fileToBase64(file); // Converte o arquivo
+                    }));
+                }
+                return clonedItem;
+            }));
+
+            await localforage.setItem('draft_items', itemsToSave);
             await localforage.setItem('draft_report_number', reportNumber);
-            console.log('✅ Rascunho blindado offline com sucesso!');
+            console.log('✅ Rascunho blindado com imagens offline!');
         } catch (err) {
             console.error('❌ Erro ao salvar rascunho offline:', err);
         }
     }
 
-    // Carrega o rascunho quando o app for aberto ou a página recarregar
+    // Carrega o rascunho e converte o Base64 de volta para Arquivo
     async loadDraft() {
         try {
             const items = await localforage.getItem('draft_items');
             const reportNumber = await localforage.getItem('draft_report_number');
-            return { items, reportNumber };
+
+            if (items && items.length > 0) {
+                const parsedItems = items.map(item => {
+                    if (item.imageFiles && item.imageFiles.length > 0) {
+                        item.imageFiles = item.imageFiles.map((imgData, i) => {
+                            // Se for um texto de imagem (Base64), converte de volta para Arquivo
+                            if (typeof imgData === 'string' && imgData.startsWith('data:image')) {
+                                return this._base64ToFile(imgData, `draft_img_${Date.now()}_${i}.jpg`);
+                            }
+                            return imgData;
+                        });
+                    }
+                    return item;
+                });
+                return { items: parsedItems, reportNumber };
+            }
+            return null;
         } catch (err) {
             console.error('❌ Erro ao carregar rascunho:', err);
             return null;
         }
     }
 
-    // Limpa o banco de dados quando um relatório novo for iniciado ou salvo na nuvem
     async clearDraft() {
         try {
             await localforage.removeItem('draft_items');
@@ -173,5 +201,25 @@ export class DraftManager {
         } catch (err) {
             console.error('❌ Erro ao limpar rascunho:', err);
         }
+    }
+
+    // --- FUNÇÕES AUXILIARES DE CONVERSÃO ---
+    _fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    _base64ToFile(dataurl, filename) {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) u8arr[n] = bstr.charCodeAt(n);
+        return new File([u8arr], filename, { type: mime });
     }
 }

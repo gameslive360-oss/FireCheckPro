@@ -131,3 +131,47 @@ export class ExcelManager {
         };
     }
 }
+
+export class DraftManager {
+    constructor() {
+        // Configura e inicializa o banco de dados offline
+        localforage.config({
+            name: 'FireCheckPro',
+            storeName: 'offline_drafts', // Nome da tabela
+            description: 'Armazena rascunhos de relatórios e fotos offline'
+        });
+    }
+
+    // Salva a lista completa de itens (incluindo as fotos/blobs)
+    async saveDraft(items, reportNumber) {
+        try {
+            await localforage.setItem('draft_items', items);
+            await localforage.setItem('draft_report_number', reportNumber);
+            console.log('✅ Rascunho blindado offline com sucesso!');
+        } catch (err) {
+            console.error('❌ Erro ao salvar rascunho offline:', err);
+        }
+    }
+
+    // Carrega o rascunho quando o app for aberto ou a página recarregar
+    async loadDraft() {
+        try {
+            const items = await localforage.getItem('draft_items');
+            const reportNumber = await localforage.getItem('draft_report_number');
+            return { items, reportNumber };
+        } catch (err) {
+            console.error('❌ Erro ao carregar rascunho:', err);
+            return null;
+        }
+    }
+
+    // Limpa o banco de dados quando um relatório novo for iniciado ou salvo na nuvem
+    async clearDraft() {
+        try {
+            await localforage.removeItem('draft_items');
+            console.log('🧹 Rascunho offline limpo.');
+        } catch (err) {
+            console.error('❌ Erro ao limpar rascunho:', err);
+        }
+    }
+}

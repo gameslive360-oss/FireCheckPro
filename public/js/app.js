@@ -33,13 +33,14 @@ let lastSavedReportNumber = null;
 
 const draftManager = new DraftManager();
 
-async function saveStateOffiline() {
-    if (items.lenght > 0) {
+// Função auxiliar global para blindar os dados offline
+window.saveStateOffline = async function () {
+    if (items.length > 0) { // Corrigido para "length"
         await draftManager.saveDraft(items, reportNumber);
     } else {
         await draftManager.clearDraft();
     }
-}
+};
 
 if (!reportNumber) {
     reportNumber = generateUniqueId();
@@ -700,7 +701,7 @@ function addItem() {
 
     window.showToast("Item processado na lista!", "success");
     saveToFirebase();
-    saveStateOffline();
+    window.saveStateOffline();
 }
 window.editItem = function (uid) {
     const index = items.findIndex(i => i.uid === uid);
@@ -826,7 +827,7 @@ window.editItem = function (uid) {
         items.splice(index, 1);
         renderList();
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        saveStateOffline();
+        window.saveStateOffline();
 
     });
 };
@@ -847,7 +848,7 @@ window.removeItem = function (uid) {
         items = items.filter(i => i.uid !== uid);
         renderList();
         window.showToast("Item removido", "info");
-        saveStateOffline();
+        window.saveStateOffline();
     }, true);
 };
 
@@ -1099,7 +1100,7 @@ window.updateItemField = function (uid, field, value) {
 
         // Salva no LocalStorage (opcional, se você quiser persistência local imediata)
         // localStorage.setItem('backup_items', JSON.stringify(items)); 
-        saveStateOffline();
+        window.saveStateOffline();
     }
 };
 
@@ -1524,7 +1525,7 @@ window.restoreCloudReport = async function (url, reportId) {
         renderList();
         window.showFormPage();
 
-        saveStateOffline();
+        window.saveStateOffline();
 
         const newUrl = `${window.location.pathname}?id=${currentReportId}`;
         window.history.pushState({ path: newUrl }, '', newUrl);
@@ -1681,7 +1682,7 @@ window.importBackup = function (event) {
             }
 
             renderList();
-            saveStateOffline();
+            window.saveStateOffline();
             window.showToast("Backup restaurado!");
 
         } catch (err) {
@@ -1983,7 +1984,7 @@ window.useReportAsBase = async function (sourceType, reportId = null) {
         window.toggleHeader();
         renderList();
         window.showFormPage();
-        saveStateOffline();
+        window.saveStateOffline();
         window.showToast("Base clonada com sucesso!", "success");
 
     } catch (e) {

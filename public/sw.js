@@ -73,3 +73,10 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+// Permite que a interface do usuário force o SW a atualizar imediatamente
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

@@ -2980,3 +2980,54 @@ window.deleteCloudReport = async function (reportId) {
         window.showToast("Erro ao excluir: " + error.message, "error");
     }
 };
+
+/* ==========================================================================
+   15. PWA UPDATE MANAGER (NOTIFICAÇÃO DE NOVA VERSÃO)
+   ========================================================================== */
+let newWorker;
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+            newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                // Se um novo SW foi baixado e já existe um antigo rodando
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Mostra o modal de atualização!
+                    const modalUpdate = document.getElementById('modal-update');
+                    if (modalUpdate) {
+                        modalUpdate.classList.remove('hidden');
+                        modalUpdate.classList.add('flex');
+                        if (window.lucide) window.lucide.createIcons();
+                    }
+                }
+            });
+        });
+    });
+}
+
+// Clique no botão de Atualizar
+const btnUpdateApp = document.getElementById('btn-update-app');
+if (btnUpdateApp) {
+    btnUpdateApp.addEventListener('click', () => {
+        // Feedback visual de carregamento
+        btnUpdateApp.innerHTML = `<i data-lucide="loader-2" class="animate-spin w-5 h-5"></i> Limpando cache e atualizando...`;
+        btnUpdateApp.disabled = true;
+        if (window.lucide) window.lucide.createIcons();
+
+        // Envia a mensagem para o sw.js substituir os arquivos velhos
+        if (newWorker) {
+            newWorker.postMessage('SKIP_WAITING');
+        }
+    });
+}
+
+// Ouve quando o novo Service Worker finalmente assume o controle
+let refreshing = false;
+navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+        refreshing = true;
+        // Recarrega a página automaticamente com os arquivos mais recentes
+        window.location.reload();
+    }
+});
